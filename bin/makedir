@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#
+# ================================================
+#  This Script Create Basic Directories of EMINFO
+# ================================================
+#
+
+### BASE_DIR DEF
+[ -z ${BASE_DIR} ]  && {
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+	source ${BASE_DIR}/bin/include 2>&-
+}
+
+### Directories DEF
+array_directories=( 
+	${BIN_DIR} 
+	${CONF_DIR} 
+	${DOC_DIR} 
+	${HANDLER_DIR} 
+	${OPT_DIR} 
+	${TOOL_DIR} 
+	${PLUGIN_DIR} 
+	${INNER_DIR} 
+	${TMP_DIR} 
+	${RUN_DIR} 
+	${LOG_DIR} 
+	${BACK_DIR} 
+	${SNAPSHOT_DIR} 
+)
+
+### Create Directory
+for ((i=0;i<${#array_directories[@]};i++)) 
+do
+	mkdir -v -p -m 755 "${array_directories[i]}"
+done
+

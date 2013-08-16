@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+#
+#
+# This Script Responsible for Sending Mails.
+# 
+#
+# Usage:     ./sendmail -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" 
+#
+# Example:   ./sendmail -f check_sysload -s AlFt5885 -i "{warn}:{file}{ /etc/inittab /tmp/1M /tmp/4M }"
+# Example:   ./sendmail -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load Average: [19.3] >= UpLimit: [15] }"
+#
+
+
+#
+# Script Configs Begin
+#
+
+# smtp server address
+mail_server="mx2.eyou.com"
+
+# smtp auth port
+mail_server_port="25"
+
+# smtp auth user
+auth_user="eyoutest@eyou.com"
+
+# smtp auth password
+auth_pass="hello123..."
+
+# timeout to connect smtp server
+time_out="30"
+
+# mailbody charset: utf8 | gb2312
+charset="utf8"
+
+#
+# Script Configs End
+#
+
+
+
+[ -z "${BASE_DIR}" ] && {
+        path=$(cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        source ${BASE_DIR}/bin/include 2>&-
+}
+
+
+show_usage(){
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  "
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\""
+  exit 1
+}
+
+# read args
+while getopts f:s:i:  opt
+do
+        case ${opt} in
+        "f")
+                plugin_name="${OPTARG}"   ;;
+        "s")
+                jobid="${OPTARG}"         ;;
+        "i")
+                # LANG=C
+                content="${OPTARG}"       ;;
+        esac
+done
+[ -z "${plugin_name}" ] && plugin_name="FNULL"    #### plugin_name ~ ( {plugin_name} , NULL  )
+[ -z "${jobid}" ] && jobid="00000000"		### jobid ~ ( NNNNNNNN , ovld , tmout )
+[ -z "${content}" ] && show_usage
+from="${plugin_name}.${jobid}"
+
+
+write_log -f "${SENDMAIL_LOG}" ""
+write_log -f "${SENDMAIL_LOG}" "[${from}]" "begin to sendmail..."
+[ "${plugin_name}" == "FNULL" -o "${jobid}" == "00000000" ] && {
+        write_log -f ${SENDMAIL_LOG} "[${from}]" missing arguments [-f/-s], maybe script running from command line.
+}
+
+
+if [ "$(echo -ne "${content}" | awk -v RS="{[^{]*}" 'END{print NR}')" -lt "3" ]; then
+	write_log -f "${SENDMAIL_LOG}" "[${from}]" "input data invalid, can't read out: [${content}]. EXIT"
+	write_log -f "${SENDMAIL_LOG}" ""
+	write_log -f "${SENDMAIL_LOG}" ""
+	exit 1
+fi
+
+# read global.name / read plugin comment / read plugin mail-receviers 
+NAME=$(get_global_name)
+comment=$(get_comment "${plugin_name}")
+if [ "${jobid}" == "ovld" ]; then  
+	receviers=$(get_mail_receviers "plugin_default")  # Read Default mail_receviers directly while jobid="ovld"
+else
+	receviers=$(get_mail_receviers "${plugin_name}")
+fi
+write_log -f "${SENDMAIL_LOG}" "[${from}]" "set name=[${NAME}], comment=[${comment}], receviers=[${receviers}]. CONTINUE"
+
+
+### attach_ini_mail 
+attach_ini_mail_args=
+attach_ini_mail=$(read_eminfo_config global attach_ini_mail)
+if [ "${attach_ini_mail}" == "yes" ]; then
+	attach_ini_mail_args=" -a "${CONFIG_FILE}" "
+	write_log -f "${SENDMAIL_LOG}" "[${from}]" "add attachment Config-INI:[${CONFIG_FILE}]"
+else
+	write_log -f "${SENDMAIL_LOG}" "[${from}]" "no need to attach Config-INI"
+fi
+
+### attch_snap_mail
+attach_snap_mail_args=
+# Don't attach snapshot on following special case.
+if [ "${jobid}" == "ovld" -o "${jobid}" == "00000000" -o "${plugin_name}" == "FNULL" ]; then
+	attach_snap_mail="no"
+else
+	attach_snap_mail=$(get_attach_snap_mail "${plugin_name}")
+fi
+if [ "${attach_snap_mail}" == "yes" ]; then
+	write_log -f "${SENDMAIL_LOG}" "[${from}]" "attach sanp mail enabled, now trying to take snapshot"
+	snap_file=$( eval ${TAKESNAP_SH} -f "${plugin_name}" -s "${jobid}.sendmail" 2>&- )
+	if [ -f "${snap_file}" -a -s "${snap_file}" ]; then
+		write_log -f "${SENDMAIL_LOG}" "[${from}]" "add attachment Snap-TAR-File:[${snap_file}]"
+		attach_snap_mail_args=" -a "${snap_file}" "
+	else
+		write_log -f "${SENDMAIL_LOG}" "[${from}]" "Error: Snap-TAR-File:[${snap_file}] not exist or empty"
+	fi
+else
+	write_log -f "${SENDMAIL_LOG}" "[${from}]" "no need to attach Snap-TAR-File"
+fi
+
+### read mail_level and mail_type
+mail_level=$(read_output 1 "${content}" | tr '[a-z]' '[A-Z]')
+mail_type=$(read_output 2 "${content}" | tr '[A-Z]' '[a-z]')
+
+### sendmail depend on different {mail_type}.
+case "${mail_type}" in
+  "file")
+	### 1. process attach files list.
+	attach_file_list=$(read_output 3 "${content}")
+	att_file_args=  t_num=0    t_size=0   
+	num_max=5   size_max=5120    ### set max files-number and max files-size.
+	for x in `echo "${attach_file_list}"`
+	do
+	    if [ -f "${x}" -a -s "${x}" ]; then  ### att file do exists.
+		size=$(ls -s "${x}" 2>&- | awk '{print $1}')
+		[ -z "${size}" -o ! -z "${size//[0-9]}" ] && size=0
+		((t_size+=${size}))  ### exist file size +${size}
+		((t_num+=1))  ### exist file number +1
+
+		(( ${t_num} > ${num_max} )) && {  ### check max file number
+		    write_log -f "${SENDMAIL_LOG}" "[${from}]" "WARN: total att_num [${t_num}] overlimit. [${x}] DROPPED"
+		    break
+		}
+
+		(( ${t_size} > ${size_max} )) && {  ### check max file size
+		    write_log -f "${SENDMAIL_LOG}" "[${from}]" "WARN: total att_size [${t_size}K] overlimit. [${x}] DROPPED"
+		    break
+		}
+
+		if [ -z "${att_file_args}" ]; then
+			att_file_args=" ${x} " 
+			write_log -f "${SENDMAIL_LOG}" "[${from}]" "OK: add first att-file: [${x}] size=[${size}K] totalsize=[${t_size}K] totalnumber=[${t_num}] "
+		else
+			att_file_args=" ${att_file_args} -a ${x} "
+			write_log -f "${SENDMAIL_LOG}" "[${from}]" "OK: add att-file: [${x}] size=[${size}K] totalsize=[${t_size}K] totalnumber=[${t_num}] "
+		fi
+
+	    else
+		write_log -f "${SENDMAIL_LOG}" "[${from}]" "WARN: att_file not exist or empty. [${x}] SKIP"
+	    fi
+	done
+	#echo "${att_file_args}"
+
+	### 2. send emails
+	if [ -z "${att_file_args//[ ]}" ]; then
+	    write_log -f "${SENDMAIL_LOG}" "[${from}]" "ERROR: all of att_file not exist or empty. EXIT"
+	else
+            n=0  t_s=0  t_e=0  result=
+	    t=$(echo -ne "${receviers}" | awk -v RS="@" 'END{print --NR}')
+	    for x in `echo "${receviers}"`
+	    do
+		((n+=1))
+		write_log -f "${SENDMAIL_LOG}" "[${from}]" "[${n}/${t}]: sending mail to [${x}] ..."
+		result=$( ${SENDEMAIL} -f "${auth_user}" -s "${mail_server}:${mail_server_port}" \
+		-xu "${auth_user}" -xp "${auth_pass}" \
+		-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
+		-t "${x}" -u "${NAME} / ${comment} / ${mail_level} Mail" -m "Refer to attachments for details." \
+		-a ${att_file_args}  ${attach_snap_mail_args} ${attach_ini_mail_args} 2>&1 )
+		[ "$?" == "0" ] && ((t_s+=1)) || ((t_e+=1))
+		write_log -f "${SENDMAIL_LOG}" "[${from}]" "[${n}/${t}]: sending mail to [${x}] end. result: ${result}"
+	    done
+	fi
+	;;
+
+  "str")
+	### 1. convert plugin output to mailbody files.
+	mailbody_path=$( conv_output2mailbody "${content}" )
+
+	### 2. send emails.
+	n=0  t_s=0   t_e=0  result=
+	t=$(echo -ne "${receviers}" | awk -v "RS=@" 'END{print --NR}')
+	for x in `echo "${receviers}"`
+	do
+	    ((n+=1))
+	    write_log -f "${SENDMAIL_LOG}" "[${from}]" "[${n}/${t}]: sending mail to [${x}] ..."
+	    result=$( ${SENDEMAIL} -f "${auth_user}" -s "${mail_server}:${mail_server_port}" \
+	    -xu "${auth_user}" -xp "${auth_pass}" \
+	    -o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
+	    -t "${x}" -u "${NAME} / ${comment} / ${mail_level} Mail" -o message-file="${mailbody_path}" \
+	    ${attach_snap_mail_args} ${attach_ini_mail_args} 2>&1 )
+	    [ "$?" == "0" ] && ((t_s+=1)) || ((t_e+=1))
+	    write_log -f "${SENDMAIL_LOG}" "[${from}]" "[${n}/${t}]: sending mail to [${x}] end. result: ${result}"
+	done
+	;;
+  *)
+	write_log -f "${SENDMAIL_LOG}" "[${from}]" "ERROR: mail type invalid: [${mail_type}] EXIT"
+	;;
+  esac
+
+
+write_log -f "${SENDMAIL_LOG}" "[${from}]" "end to sendmail. sesult: [total=${t}  success=${t_s}  fail=${t_e}]"
+write_log -f "${SENDMAIL_LOG}" ""
+write_log -f "${SENDMAIL_LOG}" ""

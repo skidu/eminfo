@@ -1,0 +1,141 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style> a:link{color:blue} a:visited{color:blue} a:hover{color:red} a:active{color:blue}</style>
+<script>
+function pageScroll(){
+window.scrollBy(0,-150);
+scrolldelay = setTimeout('pageScroll()',100);
+var sTop=document.documentElement.scrollTop+document.body.scrollTop;
+if(sTop==0) clearTimeout(scrolldelay);
+}
+</script>
+</head>
+
+&nbsp;&nbsp;
+<a href="index.html"> 首页</a>
+&nbsp;&nbsp;
+<a href="file.html"> 目录和文件</a>
+&nbsp;&nbsp;
+<a href="plugin.html">  插件说明</a>
+&nbsp;&nbsp;
+<a href="handler.html"> handler说明</a>
+&nbsp;&nbsp;
+<a href="config.html">  配置文件说明</a>
+&nbsp;&nbsp;
+<a href="log.html">  日志说明</a>
+&nbsp;&nbsp;
+<a href="usage.html">  使用说明</a>
+&nbsp;&nbsp;
+<a href="faq.html"> FAQ </a>
+&nbsp;&nbsp;
+<a href="download.html">  下载</a>
+&nbsp;&nbsp;
+<a href="changlog.html"> ChangeLog</a>
+&nbsp;&nbsp;
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+
+<pre>
+
+
+插件可以使用任何语言编写, 但是必须符合如下两个要求: 
+
+
+<strong>1. 插件返回值必须为 0 1 2 3 4</strong>
+
+返回值含义: 
+
+# Return Codes
+STATE_OK=0		### 返回eminfo检查结果OK
+STATE_WARNING=1		### 返回eminfo告警一次
+STATE_CRITICAL=2	### 返回eminfo告警一次
+STATE_UNKNOWN=3		### 返回eminfo告警一次
+STATE_NOOP=4 		### 返回eminfo什么都不要做
+
+注: 若返回值不对,则将不会有任何handler对该插件生效
+
+
+<strong>2. 该插件的输出必须符合如下规范:</strong>
+
+{level}:{type}:{content}
+
+level:		取值范围:	ok | warn | crit | unknown | noop
+type:		取值范围: 	str | file
+content:	取值范围: 	字符串 | 文件列表(多个文件空格分隔)
+
+注: type如果为str   则: content 可以细化为: title | summary | item_1 ### item_2 ### item_N ###
+			content 中允许包含HTML标记, ### 被解析为 HTML换行
+    type如果为file  则: content 中指定的1个或多个文件(空格分隔)会被作为报警信附件发送
+			最多可以含有5个文件, 共计大小不超过5M, 超过部分的文件被舍弃, 不存在自动跳过
+
+
+
+<strong>插件输出示例:</strong>
+
+
+
+<font color=red>检查邮件系统队列堆积信件数的插件</font>
+
+# ./check_mailq_num
+{ok}:{str}:{Queuing Letters Number OK | 14 letters | letters in local: 5 ### letters in remote: 9 ### }
+# echo $?
+0
+
+
+<font color=red>发送报表的插件</font>
+
+# ./report_sysinfo 
+{ok}:{file}:{ /var/log/secure_report.2013.4.10.csv /var/log/secure /etc/passwd /tmp/.hack.tgz }
+# echo $?
+0
+
+
+<font color=red>检查系统负载的插件</font>
+
+# ./check_sysload 
+{warn}:{str}:{System Load Check CRITICAL | Load Average: [12.18] >= UpLimit: [10] }
+# echo $?
+1
+
+
+<font color=red>数据库备份的插件</font>
+
+# ./mysql_dumpbak
+{ok}:{str}:{Mysql Dump BackUp OK | 3/3 tables backup successfully. | mysql_host: [127.0.0.1] ### mysql_port: [3306] ### mysqluser: [dumper] ### mysqlpass: [] ### ### dump directory: [/maildb/mysqlbak//20130514010006] ### ### Dump Table: [eyou_mail.domain_key] return OK. size: 8K ### Dump Table: [eyou_mail.domain_basic] return OK. size: 8K ### Dump Table: [eyou_mail.user_mail_index] return OK. size: 5192664K ### }
+# echo $?
+0
+
+
+<font color=red>POP服务健康检查的插件</font>
+
+# ./check_pop_svr 
+{crit}:{str}:{POP CRITICAL | 2/3 pop3 check failed | check [127.0.0.1:110] return [] ### check [mail.eyou.net:110] return [] ### check [mail.yili.com:110] return [+OK POP3 ready] ### }
+# echo $?
+2
+
+
+<font color=red>Mysql存活检查的插件</font>
+
+# ./check_mysqlping 
+{ok}:{str}:{Mysql Ping OK | Mysql is Alive | mysqlhost: [127.0.0.1] ### mysqlport: [3306] ### mysqluser: [root] ### mysqlpass: [] ### mysql ping return: [mysqld is alive]. ###}
+# echo $?
+0
+
+
+<font color=red>远程邮件投递测试的插件</font>
+
+# ./remote_mail_test 
+{crit}:{str}:{Remote Mail Test CRITICAL | 3/7 remote mail test failed | remote mail to [root_bbk@live.cn] return [ Email was sent successfully!]. ### talked with mx-host: [mx1.hotmail.com.]. ### subject: [EMINFO Remote Test Mail at 2013-05-13_09:16:27] ### ### remote mail to [zhang.elinks@gmail.com] return [ Email was sent successfully!]. ### talked with mx-host: [gmail-smtp-in.l.google.com.]. ### subject: [EMINFO Remote Test Mail at 2013-05-13_09:16:40] ### ### remote mail to [root_bbk@126.com] return [ Email was sent successfully!]. ### talked with mx-host: [126mx01.mxmail.netease.com.]. ### subject: [EMINFO Remote Test Mail at 2013-05-13_09:16:44] ### ### remote mail to [linxue061zgz@126.com] return [ Email was sent successfully!]. ### talked with mx-host: [126mx01.mxmail.netease.com.]. ### subject: [EMINFO Remote Test Mail at 2013-05-13_09:16:44] ### ### remote mail to [linxue061zgz@sina.com] return [ ERROR => Received 452 4.5.2 Could not resolve sender domain.]. ### talked with mx-host: [freemx.sinamail.sina.com.cn.]. ### subject: [EMINFO Remote Test Mail at 2013-05-13_09:16:52] ### ### remote mail to [1052257495@qq.com] return [ ERROR => Received 550 Mail content denied. http//service.mail.qq.com/cgi-bin/help?subtype=1&&id=20022&&no=1000726]. ### talked with mx-host: [mx1.qq.com.]. ### subject: [EMINFO Remote Test Mail at 2013-05-13_09:16:54] ### ### Sorrsy: cannot search mx records on domain: [bbk89.com]. SKIP ### ### }
+# echo $?
+2
+
+
+</pre>
+
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+<div style="position:fixed;right:10px;bottom:50px;width:15px;height:72px;background-color:yellow;cursor:hand;" onclick="pageScroll()">返回顶部<div>

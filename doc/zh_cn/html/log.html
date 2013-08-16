@@ -1,0 +1,74 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style> a:link{color:blue} a:visited{color:blue} a:hover{color:red} a:active{color:blue}</style>
+<script>
+function pageScroll(){
+window.scrollBy(0,-150);
+scrolldelay = setTimeout('pageScroll()',100);
+var sTop=document.documentElement.scrollTop+document.body.scrollTop;
+if(sTop==0) clearTimeout(scrolldelay);
+}
+</script>
+</head>
+
+&nbsp;&nbsp;
+<a href="index.html"> 首页</a>
+&nbsp;&nbsp;
+<a href="file.html"> 目录和文件</a>
+&nbsp;&nbsp;
+<a href="plugin.html">  插件说明</a>
+&nbsp;&nbsp;
+<a href="handler.html"> handler说明</a>
+&nbsp;&nbsp;
+<a href="config.html">  配置文件说明</a>
+&nbsp;&nbsp;
+日志说明
+&nbsp;&nbsp;
+<a href="usage.html">  使用说明</a>
+&nbsp;&nbsp;
+<a href="faq.html"> FAQ </a>
+&nbsp;&nbsp;
+<a href="download.html">  下载</a>
+&nbsp;&nbsp;
+<a href="changlog.html"> ChangeLog</a>
+&nbsp;&nbsp;
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+
+<pre>
+
+    <strong>日志文件: </strong>
+
+	log/eminfo.log    	主日志: eminfo运行日志和用户插件运行日志
+	log/inner.log     	内部功能插件运行日志
+	log/postlog.log   	信息上报日志
+	log/sendmail.log  	发送信件日志
+	log/takesnap.log  	系统快照日志
+
+
+    <strong>日志事件标识: (eminfo.log日志的第三个字段)</strong>
+
+	S0000000    	eminfo启动/停止
+	R0000000	eminfo重载函数和变量
+	E0000000    	函数中判断的已知异常和错误:  		格式异常/语法错误/参数错误
+	CRIT0000	更新运行调度时间发生严重错误		函数: update_lastrun_and_nextrun
+	STP00000    	终止进程/终止插件的过程			函数: stop_ps_by_pid_file / stop_single_plugin
+	D0000000    	清理坏锁/坏pid的过程			函数: clear_dead_lock_pid
+	P0000000    	插件pid不存在的情况下加锁的过程		函数: add_runlock_on_pid_notexist
+	L0000000    	插件pid存在的情况下检查锁的过程		函数: check_runlock_on_pid_exist
+	TMT00000    	插件超时后的处理过程			函数: process_plugin_timeout
+	OVLD0000    	系统过载后的处理流程			函数: process_sysoverload
+	INIT0000	初始化插件的调度运行状态		函数: init_plugin
+	TRAP0000	eminfo捕获信号15/1
+	随机(random)	插件投入运行一次
+
+
+</pre>
+
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+<div style="position:fixed;right:10px;bottom:50px;width:15px;height:72px;background-color:yellow;cursor:hand;" onclick="pageScroll()">返回顶部<div>

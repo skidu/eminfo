@@ -1,0 +1,18 @@
+# 插件默认配置段 plugin_default 配置项 mail_receviers 所指定的资源文件
+#  
+# 格式: 每行一个或者多个邮箱地址 (多个地址空格分隔)
+# 不再需要的邮箱可以开头用 # 注释掉
+# 这里指定的邮箱将会成为所有插件的默认邮箱
+# 
+
+
+### author's mailbox address.
+root_bbk@126.com
+zhangguangzheng@eyou.net
+
+### leader mailbox address.
+# boss@xxxx.com   leader@xxxx.com
+
+### test mailbox address.
+# eyoutest@eyou.com
+# zhangsan@eyou.com  lisi@eyou.com

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+check() {
+  local inet_face=$1 
+
+  if [ -z "${inet_face//[ ]}" ]; then
+        echo "inet_face required, for example eth0"
+	return 1
+  elif [ ! -d "/sys/class/net/${inet_face}" ]; then
+        echo "[/sys/class/net/${inet_face}] not an exists direcoty, maybe interface [${inet_face}] not exists"
+	return 1
+  else
+        local ibytes=0 obytes=0 ipacks=0 opacks=0
+        local l_ibytes=0 l_obytes=0 l_ipacks=0 l_opacks=0
+        local ib=0 ob=0 ip=0 op=0
+	while : 
+        do
+                ibytes=$(cat /sys/class/net/${inet_face}/statistics/rx_bytes 2>&-)
+                obytes=$(cat /sys/class/net/${inet_face}/statistics/tx_bytes 2>&-)
+                ipacks=$(cat /sys/class/net/${inet_face}/statistics/rx_packets 2>&-)
+                opacks=$(cat /sys/class/net/${inet_face}/statistics/tx_packets 2>&-)
+                if [ -z "${ibytes}" -o ! -z "${ibytes//[0-9]}" -o -z "${obytes}" -o ! -z "${obytes//[0-9]}" ]; then
+                        echo "$(date +%F_%T): ibytes=[${ibytes}] or obytes=[${obytes}] is not numberic"
+                        return 1
+                elif [ -z "${ipacks}" -o ! -z "${ipacks//[0-9]}" -o -z "${opacks}" -o ! -z "${opacks//[0-9]}" ]; then
+			echo "$(date +%F_%T): ipacks=[${ipacks}] or opacks=[${opacks}] is not numberic"
+                        return 1
+                else
+			[ "${l_ibytes}" == "0" ] || {
+                        	ib=$(echo "(${ibytes} - ${l_ibytes})/1024" | bc 2>&-)
+                        	ob=$(echo "(${obytes} - ${l_obytes})/1024" | bc 2>&-)
+                        	ip=$(echo "${ipacks} - ${l_ipacks}" | bc 2>&-)
+                        	op=$(echo "${opacks} - ${l_opacks}" | bc 2>&-)
+			}
+			l_ibytes=${ibytes}
+			l_obytes=${obytes}
+			l_ipacks=${ipacks}
+			l_opacks=${opacks}
+			echo "$(date +%F_%T): ${inet_face} in(kb/s)=${ib} out(kb/s)=${ib} inpacks=${ip} outpacks=${op}" | column -t
+                        sleep 1
+                fi
+        done
+  fi
+}
+check "$1"

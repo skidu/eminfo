@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+#
+#
+# ==========================================================================
+#  This file contains some other releted functions.
+# ==========================================================================
+
+
+
+[ -z ${BASE_DIR} ] && {
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+
+
+
+
+####################################
+#                                  #
+#  --*--< Global Variables >--*--  #
+#                                  #
+####################################
+
+
+Country_ipv4file="${BASE_DIR}/opt/country-ipv4.lst"
+Cnipv4_cachefile="${BASE_DIR}/opt/.cn-ipv4.cache"
+
+
+
+
+####################################
+#                                  #
+#  --*--< Public Functions >--*--  #
+#                                  #
+####################################
+
+
+build_cncache(){
+  local n=0
+  > ${Cnipv4_cachefile}
+  awk -F":" '($3~/\<cn\>/) {print $2}' ${Country_ipv4file} 2>&- | while read addr
+  do
+        echo "${addr%/*} ${addr#*/} $(ipcalc -n $addr 2>&-)"  >> ${Cnipv4_cachefile}
+        printf "%d ...\r" $n
+        ((n+=1))
+  done
+  echo build done.
+}
+
+
+ipv4_ornot() {
+  local ip=$1
+  if [ -n "${ip}" ]; then
+	local tmp=$( echo -e "${ip}" | grep -E -o "\<([0-9]{1,3}\.){3}[0-9]{1,3}\>" )
+	[ ! -z "${tmp}" ] && {
+		echo yes
+	} || {
+		echo no
+	}
+  else
+	echo "ipv4_ornot error: need input [ipv4_address]"
+ 	return 1
+  fi
+}
+
+prv_ipv4_ornot(){
+  local ip=$1
+  if [ -n "${ip}" ]; then
+        if [ "$(ipv4_ornot "${ip}")" == "yes" ]; then
+  		[ "$(ipcalc -n ${ip}/8)"  == "NETWORK=10.0.0.0" -o "$(ipcalc -n ${ip}/8)" == "NETWORK=127.0.0.0" -o  "$(ipcalc -n ${ip}/12)" == "NETWORK=172.16.0.0" -o "$(ipcalc -n ${ip}/16)" == "NETWORK=192.168.0.0" ] && echo yes || echo no
+        else
+		echo "prv_ipv4_ornot error: input ipv4_address: [${ip}] invalid"
+		return 1
+	fi
+  else
+	echo "prv_ipv4_ornot error: need input [ipv4_address]"
+	return 1
+  fi
+}
+
+cn_ipv4_ornot() {
+  local ip=$1
+
+  if [ -n "${ip}" ]; then
+	if [ "$(ipv4_ornot "${ip}")" == "yes" ]; then
+        	local area1=${ip%%.*}
+	else
+		echo "cn_ipv4_ornot error: input ipv4_address: [${ip}] invalid"
+		return 1
+	fi
+  else
+	echo "cn_ipv4_ornot error: need input [ipv4_address]"
+        return 1
+  fi
+
+  [ "$(prv_ipv4_ornot "${ip}")" == "yes" ] && {
+	echo yes
+	return 0
+  }
+
+  [ ! -f "${Cnipv4_cachefile}" -o ! -s "${Cnipv4_cachefile}" ] && {
+	echo "cn_ipv4_ornot warnning: cn cache file [${Cnipv4_cachefile}] not exist or empty. build cache first ..."
+	build_cncache
+  }
+  local search_area=$(awk -F"." '($1~/^'${area1}'\>/)' "${Cnipv4_cachefile}"  2>&- )
+  if [ -z "${search_area}" ]; then
+	echo no
+  else
+	echo -e "${search_area}" > /tmp/.search_area.eminfo 2>&1
+	while read host mask network
+        do
+                [ "$(ipcalc -n $ip/${mask})" == "${network}" ] && {
+                        echo yes
+                        return  0
+                }
+        done < /tmp/.search_area.eminfo
+	echo no
+  fi
+}
+
+get_localip() {
+  /sbin/ip a | grep -E -o "inet[ \t]*([0-9]{1,3}\.){3}[0-9]{1,3}"  | tr -d 'inet'
+}
+
+# cn_ipv4_ornot 192.168.131.1

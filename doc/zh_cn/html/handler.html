@@ -1,0 +1,79 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style> a:link{color:blue} a:visited{color:blue} a:hover{color:red} a:active{color:blue}</style>
+<script>
+function pageScroll(){
+window.scrollBy(0,-150);
+scrolldelay = setTimeout('pageScroll()',100);
+var sTop=document.documentElement.scrollTop+document.body.scrollTop;
+if(sTop==0) clearTimeout(scrolldelay);
+}
+</script>
+</head>
+
+&nbsp;&nbsp;
+<a href="index.html"> 首页</a>
+&nbsp;&nbsp;
+<a href="file.html"> 目录和文件</a>
+&nbsp;&nbsp;
+<a href="plugin.html"> 插件说明</a>
+&nbsp;&nbsp;
+handler说明
+&nbsp;&nbsp;
+<a href="config.html"> 配置文件说明</a>
+&nbsp;&nbsp;
+<a href="log.html"> 日志说明</a>
+&nbsp;&nbsp;
+<a href="usage.html"> 使用说明</a>
+&nbsp;&nbsp;
+<a href="faq.html"> FAQ </a>
+&nbsp;&nbsp;
+<a href="download.html"> 下载</a>
+&nbsp;&nbsp;
+<a href="changlog.html"> ChangeLog</a>
+&nbsp;&nbsp;
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+
+<pre>
+
+   handler的作用是响应插件的不同返回状态, 而自动化采取的一系列动作.
+
+   eminfo的handler分两类:   1.内部功能handler   2.用户自定义handler
+
+     
+     <strong>1. 内部功能handler </strong>
+
+        目前有三个内部功能handler:  sendmail(发送信件)  takesnap(创建快照)  postlog(信息上报)
+        三个handler文件放在 <font color=green>handler/</font> 目录下
+
+	1) sendmail:  响应插件的不同返回状态, 负责提醒信件的发送
+	   相关参数:  mail_notify_type 			指定了在什么情况下才发送提醒信件
+		      mail_receviers			指定了邮件收件人列表
+		      attach_snap_mail			指定了是否在提醒信中添加系统快照为附件
+
+	2) takesnap:  响应插件的不同返回状态, 负责创建系统快照
+  	   相关参数:  take_snapshot_type		指定了在什么情况下才创建系统快照
+
+	3) postlog:   响应插件的不同返回状态, 负责上报信息到指定HTTPSQS服务器
+   	   相关参数:  post_notify_type			指定了在什么情况下才上报信息
+	   注:  此handler默认情况下不可用, 需搭建HTTPSQS服务器并配置postlog脚本后方可使用,
+		详情可以参考FAQ页面: <a href="faq.html#p4">如何将插件执行结果上报到中心服务器?</a>
+
+
+     <strong>2. 用户自定义handler </strong>
+
+        用户handler是插件编写者为了自动响应插件返回值而编写的自动处理程序, 一般用于故障的自动处理.
+	用户handler文件也放在 <font color=green>handler/</font> 目录下
+
+	    相关参数:  auto_handle_type			指定了在什么情况下才激活用户自定义handler
+		       auto_handler			用户自定义handler文件名
+
+	注: 目前只能有一个用户handler (后续版本会考虑多个自定义的用户handler)
+</pre>
+
+<br><br>
+<a href="index.html"> 返回首页 </a>
+<div style="position:fixed;right:10px;bottom:50px;width:15px;height:72px;background-color:yellow;cursor:hand;" onclick="pageScroll()">返回顶部<div>

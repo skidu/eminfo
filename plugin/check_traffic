@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+
+
+if [ -z "${BASE_DIR}" ]; then
+	path=$(cd $(dirname $0) && pwd)  
+	BASE_DIR=${path%/*}
+	source ${BASE_DIR}/bin/include 2>&-
+fi
+
+
+
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=    	### { ok | warn | crit | unknown }
+TYPE=    	### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+port_list=$( read_eminfo_config check_port port_list )
+
+# if null return STATE_UNKNOWN.
+
+# if null or invalid set default.
+[ -z "${check_list//[ ]}" ] && check_list=" eth0:10M/s:10M/s:0:0 "
+
+# check function here
+check(){
+
+### return code: 0|1|2
+#  0: OK
+#  1: CRIT
+#  2: UNKNOWN:(ptype or port or tmout invalid)
+check_single(){
+
+  local inet_face=$1 ibytes_limit=$2 obytes_limit=$3 ipacks_limit=$4 opacks_limit=$5
+  local return_code=0
+  local output=
+
+  [ -z "${ipacks_limit}" ] && ipacks_limit=0  ### set default, 0 means unlimited
+  [ -z "${opacks_limit}" ] && opacks_limit=0  ### set default, 0 means unlimited
+  if [ -z "${inet_face//[ ]}" -o -z "${ibytes_limit//[ ]}" -o -z "${obytes_limit//[ ]}" ]; then     ### return UNKNOWN
+	((unknum++))
+	output="$(html_red "inet_face/ibytes_limit/obytes_limit required: inet_face=[${inet_face}] or ibytes_limit=[${ibytes_limit}] or obytes_limit=[${obytes_limit}] must be specified") ### ### "
+	return_code=2
+  elif [ ! -d "/sys/class/net/${inet_face}" ]; then
+	((unknum++))
+	output="$(html_red "[/sys/class/net/${inet_face}] not an exists direcoty, maybe interface [${inet_face}] not exists") ### ### "
+	return_code=2
+  else
+	local count=5 interval=1   ### set capture count and sleep interval.
+	local ibytes=0 obytes=0 ipacks=0 opacks=0
+	local l_ibytes=0 l_obytes=0 l_ipacks=0 l_opacks=0
+	local ib=0 ob=0 ip=0 op=0
+	### another way:  cat /proc/net/dev
+ 	for ((i=0;i<=${count};i++))
+	do 
+		ibytes=$(cat /sys/class/net/${inet_face}/statistics/rx_bytes 2>&-)
+		obytes=$(cat /sys/class/net/${inet_face}/statistics/tx_bytes 2>&-)
+		ipacks=$(cat /sys/class/net/${inet_face}/statistics/rx_packets 2>&-)
+		opacks=$(cat /sys/class/net/${inet_face}/statistics/tx_packets 2>&-)
+		if [ -z "${ibytes}" -o ! -z "${ibytes//[0-9]}" -o -z "${obytes}" -o ! -z "${obytes//[0-9]}" ]; then
+			output="${output} Sampling [$i]: $(html_red "ibytes=[${ibytes}] or obytes=[${obytes}] is not numberic") ### ### "
+			return_code=2
+			echo -e "${output}"
+			return ${return_code}
+		elif [ -z "${ipacks}" -o ! -z "${ipacks//[0-9]}" -o -z "${opacks}" -o ! -z "${opacks//[0-9]}" ]; then
+			output="${output} Sampling [$i]: $(html_red "ipacks=[${ipacks}] or opacks=[${opacks}] is not numberic") ### ### "
+			return_code=2
+			echo -e "${output}"
+			return ${return_code}		
+		else							### port/tmout ok, continue
+			[ "${l_ibytes}" == "0" ] && l_ibytes=${ibytes}
+			[ "${l_obytes}" == "0" ] && l_obytes=${obytes}
+			[ "${l_ipacks}" == "0" ] && l_ipacks=${ipacks}
+			[ "${l_opacks}" == "0" ] && l_opacks=${opacks}
+			ib=$(echo "${ibytes} - ${l_ibytes}" | bc 2>&-)
+			ob=$(echo "${obytes} - ${l_obytes}" | bc 2>&-)
+			ip=$(echo "${ipacks} - ${l_ipacks}" | bc 2>&-)
+			op=$(echo "${opacks} - ${l_opacks}" | bc 2>&-)
+			((ib+=${ib}))
+			((ob+=${ob}))
+			((ip+=${ip}))
+			((op+=${op}))
+			sleep ${interval}
+		fi
+	done
+  fi
+
+  echo -e "${output}"
+  return ${return_code}
+}
+
+  local result=" ### Check List: [${port_list}] ### ### "
+  local oknum=0 errnum=0 unknum=0 total=0
+  [ -f "/usr/bin/nc" -a -x "/usr/bin/nc" ] || {
+	EXIT_STATUS=${STATE_UNKNOWN};
+        LEVEL="unknown";
+        TYPE="str";
+        CONTENT="utilite [/usr/bin/nc] not prepared."
+        return
+  }
+
+  # for port_num in `echo "${port_list}" | tr ',' ' '`
+  for pairs in `echo "${port_list}" | tr ',' ' '`
+  do
+	((total++))
+	sepnum=$(echo -e "${pairs}" | awk -F":" 'END{print --NF}')
+	case "${sepnum}" in
+	"1")
+		ptype=
+		ip=$(echo -e "${pairs}" | cut -d: -f1)
+		port=$(echo -e "${pairs}" | cut -d: -f2)
+		tmout=
+		;;
+	"2")
+		f1=$(echo -e "${pairs}" | cut -d: -f1)
+		if [ "${f1}" == "tcp" -o "${f1}" == "udp" ]; then
+			ptype=${f1} 
+			ip=$(echo -e "${pairs}" | cut -d: -f2)
+			port=$(echo -e "${pairs}" | cut -d: -f3)
+			tmout=
+		else
+			ptype=
+			ip=$(echo -e "${pairs}" | cut -d: -f1)
+			port=$(echo -e "${pairs}" | cut -d: -f2)
+			tmout=$(echo -e "${pairs}" | cut -d: -f3)
+		fi
+		;;
+	"3")
+		ptype=$(echo -e "${pairs}" | cut -d: -f1)
+		ip=$(echo -e "${pairs}" | cut -d: -f2)
+		port=$(echo -e "${pairs}" | cut -d: -f3)
+		tmout=$(echo -e "${pairs}" | cut -d: -f4)
+		;;
+	*)
+		((unknum++))
+		result="${result} ### $(html_red "Pairs: [${pairs}] is invalid") ### ### "
+		continue 1
+		;;
+	esac
+	result="${result} ### $(html_green "Check Pairs: [${pairs}]") ### "
+
+   	tmpstr=$(check_single "${ptype}" "${ip}" "${port}" "${tmout}")
+	rc=$?
+	case "${rc}" in
+	"0")
+		((oknum++))	;;
+	"1")
+		((errnum++))	;;
+	"2")
+		((unknum++))	;;
+	esac
+	result="${result} "${tmpstr}" "
+  done
+
+  [ "${errnum}" != "0" ] && {
+	EXIT_STATUS=${STATE_CRITICAL};
+	LEVEL="crit";
+	TYPE="str";
+	CONTENT="Check Port CRITICAL | total: ${errnum}/${total} check failed. | "${result}" "
+  } || {
+	[ "${oknum}" == "${total}" ] && {
+		EXIT_STATUS=${STATE_OK};
+		LEVEL="ok";
+		TYPE="str";
+		CONTENT="Check Port OK | total: ${oknum}/${total} check success. | "${result}" "
+	} || {
+		[ "${unknum}" != "0" ] && {
+			EXIT_STATUS=${STATE_UNKNOWN};
+			LEVEL="unknown";
+			TYPE="str";
+			CONTENT="Check Port UNKNOWN | total: ${unknum}/${total} check unknown. | "${result}" "
+		}
+	}
+  } 
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}

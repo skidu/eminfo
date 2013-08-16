@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+
+if [ -z "${BASE_DIR}" ]; then
+        path=$(cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        source ${BASE_DIR}/bin/include 2>&-
+fi
+
+
+
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+pslist_file=$(read_eminfo_config check_process pslist_file)
+
+# if null return STATE_UNKNOWN.
+[ -z "${pslist_file}" ] && {
+	EXIT_STATUS=${STATE_UNKNOWN}
+        LEVEL="unknown"
+        TYPE="str"
+        CONTENT="pslist_file Null."
+        echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+        exit ${EXIT_STATUS}
+} || {
+	if [ -f "/${pslist_file##*file:}" -a -s "/${pslist_file##*file:}" ]; then
+		pslist_file="/${pslist_file##*file:}"
+        elif [ -f "${BASE_DIR}/${pslist_file##*file:}" -a -s "${BASE_DIR}/${pslist_file##*file:}" ]; then
+                pslist_file="${BASE_DIR}/${pslist_file##*file:}"
+        else
+                EXIT_STATUS=${STATE_UNKNOWN}
+                LEVEL="unknown"
+                TYPE="str"
+                CONTENT="pslist_file [${pslist_file}] not exist or empty."
+                echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+                exit ${EXIT_STATUS}
+        fi
+}
+# echo "${pslist_file}"; exit
+
+# if null or invalid set default.
+
+# check function here.
+check() {
+  local errnum=0 total=0 result=
+   
+  /bin/awk '($0!~/^[ \t]*#/ && $0!~/^[ \t]*$/)' "${pslist_file}" > /tmp/.check_process.eminfo 2>&-
+  while read -a line
+  do
+	[ "${#line[@]}" != "3" ] && continue
+	local pname="${line[0]}" pnum="${line[1]}" pattern="${line[2]}"
+	[ -z "${pname//[ ]}" -o -z "${pattern//[ ]}" ] && continue	### important 
+	[ -z "${pnum}" -o ! -z "${pnum//[0-9]}" ] && local pnum=1       ### null/invalid => set default
+
+	((total++))
+	result="${result} psname=[${pname}], psnum=[${pnum}], srchregx=[${pattern}] ### "
+	local psnum=$(/bin/ps -eo cmd= | grep -E -o -x "${pattern}" | wc -l)
+	if [ "$(echo "${psnum} < ${pnum}" | bc 2>&-)" == "1" ]; then
+		((errnum++))
+		result="${result} $(html_red "WARN:  [${pname}] running process number: [${psnum}] < [${pnum}].") ### ### "
+	else
+		result="${result} OK:  [${pname}] running process number: [${psnum}] >= [${pnum}]. ### ### "
+	fi
+  done < /tmp/.check_process.eminfo
+
+  [ "${errnum}" != "0" ] && {
+        EXIT_STATUS=${STATE_CRITICAL};
+        LEVEL="crit";
+        TYPE="str";
+        CONTENT="Check Process CRITICAL | ${errnum}/${total} Process Alert | ${result} "
+  } || {
+        EXIT_STATUS="${STATE_OK}"
+        LEVEL="ok"
+        TYPE="str"
+        CONTENT="Check Process OK | No Process Alert | ${result} "
+  }
+}
+
+
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}

@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+
+if [ -z "${BASE_DIR}" ]; then
+	path=$(cd $(dirname $0) && pwd)  
+	BASE_DIR=${path%/*}
+	source ${BASE_DIR}/bin/include 2>&-
+fi
+
+
+
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=    	### { ok | warn | crit | unknown }
+TYPE=    	### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+port_list=$( read_eminfo_config check_tcpconn_num port_list )
+
+# if null return STATE_UNKNOWN.
+
+# if null or invalid set default.
+[ -z "${port_list//[ ]}" ] && port_list=" 80:200 "
+
+# check function here
+check(){
+
+### return code: 0|1|2
+#  0: OK
+#  1: CRIT
+#  2: UNKNOWN:(total is not numberic,maybe port not listening)
+check_single(){
+  local s_port=$1  limit=$2  statfile=$3
+  local return_code=0
+  local conn_stat=$( awk '($4~/:'${s_port}'\>/){num[$NF]++;total++} END{print "Total:",total; for(c in num) printf("%s:%s\n",c,num[c]) }' "${statfile}" 2>&- )
+  local ip_stat=$( awk '$4~/:'${s_port}'\>/ {print $5}' "${statfile}" 2>&- | awk -F: '($(NF-1)!=""){Num[$(NF-1)]++} END{for (c in Num) {printf("%s  %s\n"),c,Num[c] }}' ) 
+  local total=$(echo -e "${conn_stat}" | awk -F: '/^Total\>/{print $2;exit}' | tr -d ' ')
+  [ -z "${total}" -o ! -z "${total//[0-9]}" ] && {
+	local output=" $(html_red "check [${s_port}:${limit}]: return: [${total}] is not numberic") ### Maybe port: [${s_port}] not listening ### "
+	return_code=2
+  } || {
+	[ "$(echo " ${total} >= ${limit} " | bc 2>&-)" == "1" ] && {
+		local output="$(html_red "Total: [${total}] >= Limit: [${limit}]" ) ### "
+		return_code=1
+	} || {
+		local output="$(html_green "Total: [${total}] < Limit: [${limit}]" ) ### "
+		return_code=0
+	}
+  	local output="${output} $(echo -e "${conn_stat} ### ### IP Connect Stat: ### ${ip_stat} ### " | sed -e 's/$/ ### /g' | tr -d '\n' )"
+  }
+  echo -e "${output}"
+  return ${return_code}
+}
+
+  local result=" ### Check List: [${port_list}] ### ### "
+  local oknum=0 errnum=0 unknum=0 total=0
+  local statfile="/tmp/.check_tcpconn_num.statfile.eminfo"
+  netstat -an > "${statfile}" 2>&-
+  [ ! -f "${statfile}" -o ! -s "${statfile}" ] && {
+	EXIT_STATUS=${STATE_UNKNOWN};
+        LEVEL="unknown";
+        TYPE="str";
+        CONTENT="netstat file: [${statfile}] not exist or empty."
+        return
+  }
+
+  for port_num in `echo "${port_list}" | tr ',' ' '`
+  do
+	((total++))
+	local port="${port_num%%:*}" num="${port_num##*:}"
+	result="${result} ### $(html_green "Check Tcp-Port [${port}], Uplimit [${num}]") ### "
+	[ -z "${port}" -o ! -z "${port//[0-9]}" -o -z "${num}" -o ! -z "${num//[0-9]}" ] && {
+		((unknum++))
+		result="${result} $(html_red "[${port_num}] is invalid: [${port}] or [${num}] not numberic") ### ### "
+		continue 1
+	}
+
+   	tmpstr=$(check_single "${port}" "${num}" "${statfile}")
+	rc=$?
+	case "${rc}" in
+	"0")
+		((oknum++))	;;
+	"1")
+		((errnum++))	;;
+	"2")
+		((unknum++))	;;
+	esac
+	result="${result} "${tmpstr}" "
+  done
+
+  [ "${errnum}" != "0" ] && {
+	EXIT_STATUS=${STATE_CRITICAL};
+	LEVEL="crit";
+	TYPE="str";
+	CONTENT="TCP-Connection Number Check CRITICAL | total: ${errnum}/${total} check failed. | "${result}" "
+  } || {
+	[ "${oknum}" == "${total}" ] && {
+		EXIT_STATUS=${STATE_OK};
+		LEVEL="ok";
+		TYPE="str";
+		CONTENT="TCP-Connection Number Check OK | total: ${oknum}/${total} check success. | "${result}" "
+	} || {
+		[ "${unknum}" != "0" ] && {
+			EXIT_STATUS=${STATE_UNKNOWN};
+			LEVEL="unknown";
+			TYPE="str";
+			CONTENT="TCP-Connection Number Check UNKNOWN | total: ${unknum}/${total} check unknown. | "${result}" "
+		}
+	}
+  } 
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}

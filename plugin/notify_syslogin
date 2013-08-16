@@ -1,0 +1,121 @@
+#!/bin/bash
+
+
+if [ -z "${BASE_DIR}" ]; then
+        path=$(cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        source ${BASE_DIR}/bin/include 2>&-
+fi
+
+
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=        ### { ok | warn | crit | unknown }
+TYPE=         ### { str| file }
+CONTENT=      ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+allow_iplist=$( read_eminfo_config notify_syslogin allow_iplist )
+
+# if null return STATE_UNKNOWN.
+
+# if null or invalid set default.
+
+# set initdb file here.
+lastdb_file="/tmp/.last_syslogin_db.eminfo"
+
+# basic function defination.
+gen_logdb() {
+  local logfile="$1"
+  awk 'BEGIN{IGNORECASE=1;} (/Accepted Password for/){print $0}' "${logfile}" 2>&-
+}
+# gen_logdb ; exit
+
+rebuild_logdb() {
+  local logfile="$1"
+  chattr -iaAc "${lastdb_file}" 1>&- 2>&-
+  gen_logdb "${logfile}" > "${lastdb_file}"
+  chattr +iaAc "${lastdb_file}" 1>&- 2>&-
+}
+
+# check function here.
+check() {
+  local result=  title=
+  local newdb_file="/tmp/.new_syslogin_db.eminfo"
+
+  [ -f "/etc/syslog.conf" -a -s "/etc/syslog.conf" ] && local conffile="/etc/syslog.conf"
+  [ -f "/etc/rsyslog.conf" -a -s "/etc/rsyslog.conf" ] && local conffile="/etc/rsyslog.conf"
+  [ -f "${conffile}" -a -s "${conffile}" ] || {
+        EXIT_STATUS=${STATE_UNKNOWN};
+        LEVEL="unknown";
+        TYPE="str";
+        CONTENT="syslog config file [${conffile}] not exist or empty"
+	return
+  }
+
+  local logfile=$( awk '(/^authpriv\>/){print $2}' "${conffile}" 2>&- | sed -e 's/^-//')
+  [ -f "${logfile}" -a -s "${logfile}" ] || {
+	EXIT_STATUS=${STATE_UNKNOWN};
+	LEVEL="unknown";
+        TYPE="str";
+        CONTENT="authpriv log file [${logfile}] not exist or empty"
+	return 
+  }
+  
+  [ -f "${lastdb_file}" -a -s "${lastdb_file}" ] || rebuild_logdb "${logfile}"
+  gen_logdb "${logfile}" > "${newdb_file}"
+
+  if [ -f "${newdb_file}" -a -s "${newdb_file}" -a -f "${lastdb_file}" -a -s "${lastdb_file}" ]; then
+        local add=0 last= new= tmp= lastonly= newonly=
+
+        # check new record
+        last=$( cat "${lastdb_file}" )
+        new=$( cat "${newdb_file}" )
+        tmp=$( echo -e "${last}\n""${new}" | sort | uniq -u  )   ### \n is important
+        newonly=$( echo -e "${tmp}\n""${new}" | sort | uniq -d )
+
+        [ -n "${newonly}" ] && add=1
+  else
+	EXIT_STATUS=${STATE_UNKNOWN};
+        LEVEL="unknown";
+        TYPE="str";
+        CONTENT="lastdb_file / newdb_file empty or not exist"
+	echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+	exit ${EXIT_STATUS}
+  fi
+
+  rebuild_logdb "${logfile}"
+
+  case "${add}" in 
+  "0")
+	EXIT_STATUS="${STATE_OK}"
+        LEVEL="ok"
+        TYPE="str"
+        CONTENT="Notify System Login Check OK | No New System Login Records Found"
+	return
+	;;
+  "1")
+	title="Notify New System Login Record"
+	result="$(html_green "New Record:") ### ### $(echo -e "${newonly}" | sed -e 's/$/ ### /g;' | tr -d '\n' )"
+  	EXIT_STATUS=${STATE_CRITICAL};
+  	LEVEL="crit";
+  	TYPE="str";
+  	CONTENT="Notify System Login Check CRITICAL | ${title} | ${result} "
+	return
+	;;
+  esac
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}

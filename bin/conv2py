@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+#
+#
+# 负责汉字转换拼音的脚本 
+#
+#
+# 说明: 
+# 	可接收整句汉字的输入,但输入中不能包含英文字符(包括英文标点符号)和空格
+# 	可接受的标点符号只包括: 中文逗号 和 中文句号
+# 
+# 
+# 示例:  ./conv2py  如果发件人是具有组修改和组发信权限的帐号，则直接发送，不受任何限制 
+# 示例:  ./conv2py  包括公司项目前期的部署实施和用户培训，后期服务器的维护监控以及故障排查等。
+#
+
+# pinyin.txt 生成来源 (5版汉字拼音对照数据库: db_default_chinese_char_pinyin.sql)
+# sed -ne '43p' db_default_chinese_char_pinyin.sql | grep -E -o "\([^\(]+\)" | tr -d "[\(\)\']" | awk -F"," '{print $1,$3}' | sort |uniq 
+
+
+
+[ -z ${BASE_DIR} ]  && {
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        source ${BASE_DIR}/bin/include 2>&-
+}
+
+
+
+conv() { 
+  local chiword=$1 result=
+  [ -s "${PINYIN_FILE}" ] || {
+  	echo "${PINYIN_FILE}" not exist or empty. exit
+  	return 1
+  }
+  
+  array_tmp_result=( $( awk '($1~/^'${chiword}'$/) {print $2}' "${PINYIN_FILE}"  2>&- ) )
+  [ -z "${array_tmp_result}" ] && {
+	result="NULL"
+  } || {
+	# echo ${#tmp_result[@]}  :::   ${tmp_result[@]}
+	[ "${#array_tmp_result[@]}" -le 1 ] && {
+		result="${array_tmp_result[0]}"
+	} || {
+		result="${array_tmp_result[0]}"
+		for ((i=1;i<${#array_tmp_result[@]};i++)); do
+			result="${result}(${array_tmp_result[$i]})"
+	 	done
+	}
+  }
+  echo -ne "${result}"
+}
+# conv "多"
+# conv "\345\244\232"
+
+input=$*
+length=$(echo -e "${input//[\r\n\t ]}"  | wc -c)
+# echo length: ${length}
+
+# 先探测单个汉字可能的字节长度: 2 3 4
+array_clen=( 2 3 4 )
+for clen in ${array_clen[@]}
+do
+	result="$( conv "$(echo "${input}" | cut -b1-${clen})" )"
+	[ "${result}" != "NULL" ] && {
+		chi_len=${clen}
+		break
+	}
+done
+[ -z "${chi_len}" -o ! -z "${chi_len//[0-9]}" ] && {
+	echo "Can Not Detect First Chinese Word Length. Exit."
+	exit 1
+}
+# echo chi_len: ${chi_len}
+
+# 根据探测到的字节长度计算字符个数
+wnum=$(echo "${length} / ${chi_len}" | bc 2>&-)
+[ -z "${wnum}" -o ! -z "${wnum//[0-9]}" ] && {
+	echo "Can Not Detect Chinese Word Number. Exit."
+	exit 2
+}
+# echo num: ${wnum}
+
+head=1 tail=${chi_len}
+{
+# for((i=1;i<=${wnum};i++)); do
+for((num=1;num<=${wnum};num++)); do
+	conv "$(echo "${input}" | cut -b${head}-${tail})";echo -ne " "
+	head=$(( ${tail}+1 ))
+	tail=$(( ${tail} + ${chi_len} ))
+done 
+}
+
+
+
+
+

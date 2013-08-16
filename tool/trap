@@ -1,0 +1,10 @@
+#!/bin/bash
+
+trap 'echo "hello exit"'  1 2 3 15 24 9
+n=0
+while : 
+do
+	echo $n
+	((n++))
+	sleep 1
+done

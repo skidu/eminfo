@@ -1,0 +1,163 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style> a:link{color:blue} a:visited{color:blue} a:hover{color:red} a:active{color:blue}</style>
+<script>
+function pageScroll(){
+window.scrollBy(0,-150);
+scrolldelay = setTimeout('pageScroll()',100);
+var sTop=document.documentElement.scrollTop+document.body.scrollTop;
+if(sTop==0) clearTimeout(scrolldelay);
+}
+</script>
+</head>
+
+&nbsp;&nbsp;
+<a href="index.html"> 首页</a>
+&nbsp;&nbsp;
+<a href="file.html"> 目录和文件</a>
+&nbsp;&nbsp;
+<a href="plugin.html">  插件说明</a>
+&nbsp;&nbsp;
+<a href="handler.html"> handler说明</a>
+&nbsp;&nbsp;
+<a href="config.html">  配置文件说明</a>
+&nbsp;&nbsp;
+<a href="log.html">  日志说明</a>
+&nbsp;&nbsp;
+使用说明
+&nbsp;&nbsp;
+<a href="faq.html"> FAQ </a>
+&nbsp;&nbsp;
+<a href="download.html">  下载</a>
+&nbsp;&nbsp;
+<a href="changlog.html"> ChangeLog</a>
+&nbsp;&nbsp;
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+
+<pre>
+
+  <strong> 安装: </strong>
+
+	rpm -ivh eminfo-xxx.rpm
+
+	安装目录在: /usr/local/eminfo/, 安装完毕后默认注册为系统服务, 若要开机启动eminfo, 可执行:
+	chkconfig eminfo on
+	或者
+	echo "/usr/local/eminfo/eminfo start" >> /etc/rc.local
+
+
+  <strong> 基本配置: </strong>
+
+	首次运行eminfo之前, 需要进行一些基本的配置, 包括:
+
+	  1) 设置服务器标识名称
+		编辑 conf/eminfo.ini, 修改 [global] 段的配置项name, 如: 
+		<font color=red>name = ftp_1.eyou.net</font>
+
+	  2) 设置插件运行的系统负载上限 
+	     也就是说当 /proc/loadavg 的第一个字段高于此上限时会取消所有插件的调度执行, 并强制触发handler: 快照/发信/上报
+		编辑 conf/eminfo.ini, 修改 [global] 段的配置项sysload_uplimit, 如
+		<font color=red>sysload_uplimit = 30</font>
+		
+	  3) 设置所有插件的默认配置
+
+		3.1) 设置默认的信件收件人:
+			此配置是必须要定义的, 当系统过载的时候会发信到此处定义的收件人列表
+			编辑 conf/eminfo.ini, 修改 [plugin_default] 段的配置项mail_receviers, 如:
+			<font color=red>mail_receviers = root_bbk@126.com  zhangguangzheng@eyou.net</font>     (格式1)
+			或者
+			<font color=red>mail_receviers = file:opt/receviers.lst</font>				(格式2)
+
+			如果采用格式2(file:列表文件), 则列表文件内可以每行填写一个或者多个收件人邮箱,
+			行首支持用(#)注释, 单行多个收件人以空格分隔.
+	
+	   	3.2) 设置其他:
+			其他的默认配置一般不用修改, 如果对配置文件很熟悉了可以根据个人喜好自己定义.
+
+
+	更多更完整的配置, 请参考<a href="config.html">配置文件说明</a>
+
+
+  <strong> 命令行参数: </strong>
+
+        ./eminfo help				帮助
+	./eminfo start				启动eminfo
+	./eminfo stop				停止eminfo
+        ./eminfo status         		查看eminfo运行状态
+	./eminfo reload				不重启eminfo的情况下重新载入 bin/include
+	./eminfo list				列出所有插件的调度运行信息
+	./eminfo list  check_sysload    	列出单个插件check_sysload调度运行信息
+	./eminfo inti  all			初始化所有插件的调度运行状态 (所有插件将立即被重新调度执行)
+	./eminfo init  check_smtp_svr		初始化插件check_smtp_svr的调度运行状态 (check_smtp_svr插件将被立即重新调度执行)
+        ./eminfo view  all			查看所有插件和eminfo结合的的  配置项 => 配置值
+	./eminfo view  check_pop_svr		查看单个插件check_pop_svr和eminfo结合的  配置项 => 配置值
+	./eminfo precheck       		检查当前系统的运行环境
+
+
+	安装完成后亦已经注册了系统服务, 所以也可以使用linux的服务控制命令:
+
+	service eminfo start			启动eminfo
+	service eminfo stop			停止eminfo
+	service eminfo restart			重启eminfo
+	service eminfo status			查看eminfo运行状态
+	service eminfo list			列出所有插件的调度运行信息
+	service eminfo reload			不重启eminfo的情况下重新载入 bin/include
+
+
+  <strong> 添加用户插件: </strong>
+
+    没有插件的话, eminfo将一无所用, 因此根据你的运维需求, 马上开始编写插件吧(参考<a href="writeplugin.html">插件编写规则</a>)
+    当然eminfo也有若干<a href="plugin.html#p1">自带插件</a>, 简单配置后即可使用.
+
+
+    1.) 放置插件到plugin目录
+
+	这里假设你编写了一个HTTP服务的健康检查的插件check_http_svr, 必须将编写好的插件放到<font color=green> plugin/ </font>目录下
+
+
+    2.) 注册并激活插件
+	
+	在配置文件eminfo.ini中添加一个插件配置段:
+	  <font color=red>
+	  [check_http_svr]
+	  enable = yes
+	  comment = HTTP Service Check
+	  frequency = 3min
+	  exec_tmout = 1min
+	  maxerr_times = 3
+          mail_receviers = abc@xxx.com cde@xxx.com
+	 </font>
+	配置说明: [check_http_svr]  		:  注册一个插件check_http_svr 
+	          enable = yes      		:  设定这个插件状态为激活
+		  comment = HTTP Service Check  :  插件的注释说明
+		  frequency = 3min		:  插件执行频率为3分钟
+		  exec_tmout = 1min		:  插件超时时间为1分钟
+		  maxerr_times = 3		:  允许插件连续3次返回告警后再触发handler
+		  mail_receviers = 		:  提醒信的收件人列表
+
+	以上是显式定义的6个插件参数, 其余未在插件配置段显式定义的参数会读取<a href="config.html#pd">[plugin_default]</a>的默认值
+	这里也说明一下这些默认值: 
+		
+		take_snapshot_type = default	:  当插件返回 crit warn unkn tmout 的时候触发创建系统快照的handler
+		mail_notify_type = default	:  当插件返回 crit warn unkn tmout 的时候触发信件提醒的handler
+		post_notify_type = none		:  任何情况下都不触发上报信息的handler
+		attach_snap_mail = yes		:  把系统快照压缩包作为提醒信的附件发送
+		auto_handle_type = default	:  此处的default相当于none, 任何情况下都不触发用户自定义handler
+		auto_handler = default_handler	:  默认自定义的handler
+		debug = yes			:  开启调试日志
+		
+    	用户插件和eminfo结合共有如上13个参数控制, 详细可以参考配置文件说明中<a href="config.html#pd">[plugin_default]</a>配置段
+
+
+    3.) 到此用户插件就添加完毕了, 对配置文件 eminfo.ini 的读取方式是<font color=green>随需随取</font>的,
+    当enable = yes被保存之后, 插件就开始第一次被调度运行了.
+
+</pre>
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+<div style="position:fixed;right:10px;bottom:50px;width:15px;height:72px;background-color:yellow;cursor:hand;" onclick="pageScroll()">返回顶部<div>

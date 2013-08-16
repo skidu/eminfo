@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+
+if [ -z "${BASE_DIR}" ]; then
+        path=$(cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        source ${BASE_DIR}/bin/include 2>&-
+fi
+
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=        ### { ok | warn | crit | unknown }
+TYPE=         ### { str| file }
+CONTENT=      ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+sample_email_file=$( read_eminfo_config remote_mail_test sample_email_file )
+mail_body_file=$( read_eminfo_config remote_mail_test mail_body_file )
+helo_greeting_fqdn=$( read_eminfo_config remote_mail_test helo_greeting_fqdn )
+
+# if null or invalid set default.
+[ -z "${helo_greeting_fqdn}" ] && helo_greeting_fqdn="eyou.net."
+
+# if null return STATE_UNKNOWN
+[ -z "${sample_email_file}" ] && {
+	EXIT_STATUS=${STATE_UNKNOWN}
+        LEVEL="unknown"
+        TYPE="str"
+        CONTENT="sample_email_file not set."
+        echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+        exit ${EXIT_STATUS}
+} || {
+	if [ -f "/${sample_email_file##*file:}" -a -s "/${sample_email_file##*file:}" ]; then
+                sample_email_file="/${sample_email_file##*file:}"
+        elif [ -f "${BASE_DIR}/${sample_email_file##*file:}" -a -s "${BASE_DIR}/${sample_email_file##*file:}" ]; then
+                sample_email_file="${BASE_DIR}/${sample_email_file##*file:}"
+	else
+		EXIT_STATUS=${STATE_UNKNOWN}
+		LEVEL="unknown"
+		TYPE="str"
+		CONTENT="sample_email_file [${sample_email_file}] not exist or empty"
+		echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+		exit ${EXIT_STATUS}
+	fi
+}
+
+[ -z "${mail_body_file}" ] && {
+        EXIT_STATUS=${STATE_UNKNOWN}
+        LEVEL="unknown"
+        TYPE="str"
+        CONTENT="mail_body_file not set."
+        echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+        exit ${EXIT_STATUS}
+} || {
+        if [ -f "/${mail_body_file##*file:}" -a -s "/${mail_body_file##*file:}" ]; then
+                mail_body_file="/${mail_body_file##*file:}"
+        elif [ -f "${BASE_DIR}/${mail_body_file##*file:}" -a -s "${BASE_DIR}/${mail_body_file##*file:}" ]; then
+                mail_body_file="${BASE_DIR}/${mail_body_file##*file:}"
+        else
+                EXIT_STATUS=${STATE_UNKNOWN}
+                LEVEL="unknown"
+                TYPE="str"
+                CONTENT="mail_body_file [${mail_body_file}] not exist or empty"
+                echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+                exit ${EXIT_STATUS}
+        fi
+}
+# echo "${sample_email_file}" "${mail_body_file}" ; exit
+
+
+
+# check function here.
+check() {
+  local total=0  sum=0  str=  base_domain=  ### {object number} {faile number} {return information}
+  local v4_config="/var/eyou/etc/eyou_smtpd_config"
+  local v5_config="/usr/local/eyou/mail/etc/eyou_mail.ini"
+  if [ -f "${v5_config}" -a -s "${v5_config}" ]; then
+	base_domain=$(awk -F"=" '($1~/server_me\>/) {$1="";print;exit;}' "${v5_config}" 2>&- | tr -d '[" \t]' )
+  else
+	[ -f "${v4_config}" -a -s "${v4_config}" ] && {
+		base_domain=$(awk '($1~/o_value\>/) {$1="";print;exit;}' "${v4_config}" 2>&- | tr -d '[ \t]' )
+	}
+  fi
+  [ -z "${base_domain}" ] && base_domain="eyou.net"
+
+  local content=$( awk -F":::" '($0!~/^[ \t]*$/ && $0!~/^[ \t]*#/)' "${sample_email_file}" 2>&- )
+  local remote_domain=$( echo -e "${content}" | awk -F":::" '{print $1}' )
+  for x in `echo "${remote_domain}"`
+  do
+	local str1=  str2=  subject="EMINFO Remote Test Mail at $(date +%F_%T)"
+	### first set mx-host if specified.
+	local mx_host=$( echo -e "${content}" | awk -F ":::" '($1~/'${x}'\>/) {print $2;exit;}' | tr -d '[ \t]' )
+	[ -z "${mx_host}" ] && { 
+		### search best mx-host for domain: ${x/#@/} if not specified.
+		local mx_host=$( host -t mx ${x/#@/} 2>&- | awk '($(NF-1)~/[0-9]+/ && $0~/'${x/#@/}'/) {print $(NF-1),$NF}' | sort -n | awk '{print $NF;exit}' )
+	}
+	[ -z "${mx_host}" ] && {
+		str=" ${str} $( html_red "Sorrsy: cannot search mx records on domain: [${x/#@/}]. SKIP" ) ### ### "
+		num=1
+		((total+=1))
+		((sum+=$num))
+		continue
+	}
+
+	xlist=$( echo -e "${content}" | awk -F ":::" '($1~/'${x}'\>/) {$1=$2="";print;exit;}' )
+	for x in `echo "${xlist}"`
+	do
+		str1=$( ${SENDEMAIL} -f "eminfo@${base_domain}" -t "${x}" -s "${mx_host}" -u "${subject}" -o message-file="${mail_body_file}"  -o fqdn="${helo_greeting_fqdn}" )
+		if [ "$?" == "0" ]; then
+			num=0		### ok: +0
+  			str2=$( echo -e "${str1}" | awk -F "sendEmail" '{$1="";print}' | awk -F: '{for(x=2;x<=NF;x++) {printf $x}}')
+			str=" $str remote mail to [${x}] return [${str2}]. ### talked with mx-host: [${mx_host}]. ### subject: [${subject}] ### ### "
+		else
+			num=1		### crit: +1
+  			str2=$( echo -e "${str1}" | awk -F "sendEmail" '{$1="";print}' | awk -F: '{for(x=2;x<=NF;x++) {printf $x}}')
+			str=" $str remote mail to [${x}] return $(html_red "[${str2}]"). ### talked with mx-host: [${mx_host}]. ### subject: [${subject}] ### ###"
+		fi
+		((total+=1))
+		((sum+=$num))
+	done
+  done
+
+  if [ "${sum}" == "0" ]; then
+        EXIT_STATUS=${STATE_OK};
+        LEVEL="ok";
+        TYPE="str";
+        CONTENT="Remote Mail Test OK | ${total}/${total} remote mail test succeed | "${str}" "
+  else
+        EXIT_STATUS=${STATE_CRITICAL};
+        LEVEL="crit";
+        TYPE="str";
+        CONTENT="Remote Mail Test CRITICAL | ${sum}/${total} remote mail test failed | "${str}" "
+  fi
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}

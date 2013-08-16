@@ -1,0 +1,392 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style> a:link{color:blue} a:visited{color:blue} a:hover{color:red} a:active{color:blue}</style>
+<script>
+function pageScroll(){
+window.scrollBy(0,-150);
+scrolldelay = setTimeout('pageScroll()',100);
+var sTop=document.documentElement.scrollTop+document.body.scrollTop;
+if(sTop==0) clearTimeout(scrolldelay);
+}
+</script>
+</head>
+
+
+&nbsp;&nbsp;
+<a href="index.html"> 首页</a>
+&nbsp;&nbsp;
+<a href="file.html"> 目录和文件</a>
+&nbsp;&nbsp;
+<a href="plugin.html">  插件说明</a>
+&nbsp;&nbsp;
+<a href="handler.html"> handler说明</a>
+&nbsp;&nbsp;
+配置文件说明
+&nbsp;&nbsp;
+<a href="log.html">  日志说明</a>
+&nbsp;&nbsp;
+<a href="usage.html">  使用说明</a>
+&nbsp;&nbsp;
+<a href="faq.html"> FAQ </a>
+&nbsp;&nbsp;
+<a href="download.html">  下载</a>
+&nbsp;&nbsp;
+<a href="changlog.html"> ChangeLog</a>
+&nbsp;&nbsp;
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+
+<pre>
+
+eminfo的配置文件只有一个: conf/eminfo.ini, 其中注释行以分号(;)开头
+配置文件是分区段的, 一个区段从[]开始, 到下一个[]结束, 各个区段的配置互不干扰
+[]内是该区段的区段名, 区段名在配置文件中应该是唯一不重复的
+如果配置文件中出现重名区段, 则按照上下顺序, 只有第一个区段和对应的配置生效
+
+
+按照功能区分, 存在以下4类配置区段:
+
+	[global]		全局配置区段, 主要是一些全局配置参数, 如服务器名/扫描频率等
+	[plugin_default]	默认值配置区段, 此区段有13个配置项, 指定了在默认情况下用户插件与eminfo结合配置方式
+	[eminfo_xxxxx]		eminfo_ 开头的是内置功能插件区段, 目前有两个插件, 分别负责清理过期文件和日志回滚
+	[xxxxx]			其余的都是用户自定义插件区段, 此区段未显式定义的插件参数, eminfo则自动读取默认配置
+				这也意味着: 在插件区段内出现的13个配置参数优先级要高于[plugin_default]区段的默认值
+
+
+注: 配置文件的任何参数修改都不需要重启eminfo, 修改完即刻生效
+    (这是因为eminfo对配置文件的读取方式是<font color=green>随需随取</font>的)
+
+
+
+
+
+下面就以一个实际的配置文件为样例, 来讲解配置文件各参数的含义: 
+
+字体约定: <font color=green>绿色字体是注释项说明</font>
+          <font color=red>红色字体是实际配置</font>
+
+
+<font color=green id=gl>
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;       Global Config Area       ;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 全局参数配置区域, 配置段名: global </font>
+<font color=red>[global]</font>
+
+<font color=green>; 服务器标识名称
+; 标识eminfo运行于哪一台服务器上, 发信时此配置会被写入提醒信主题. 如 ftp_1.eyou.net
+; 允许数字/大小写字母/下划线/点号/空格, 非法字符自动删除, 为空则取值: Linux Server </font>
+<font color=red>name = My_DevLab</font>
+
+<font color=green>; 调度扫描插件的频率 (单位秒)
+; 设置每隔多久扫描一次激活的插件并检查这些插件是否应该投入运行
+; 注意: 最小值为5, 为空/非整数数字/小于5, 会强制取值5</font>
+<font color=red>scan_interval = 5</font>
+
+<font color=green>; 发送提醒信的时候是否附加此配置文件作为附件</font>
+<font color=red>attach_ini_mail = yes</font>
+
+<font color=green>; 系统负载上限
+; 系统负载高于此上限时会取消插件的执行, 并强制触发内置的handler: 发信/系统快照/信息上报
+; 注意: 为空/非整数数字: 会强制取值30</font>
+<font color=red>sysload_uplimit = 30</font>
+
+
+<font color=green id=pd>
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;    Default Plugin Config Value      ;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 插件和eminfo结合的13个默认值配置区域, 配置段名: plugin_default
+; 对于每个插件, 如果以下配置项未在插件配置段显式指定, 则eminfo会读取此区域的配置</font>
+<font color=red>[plugin_default]</font>
+
+<font color=green>; 插件的激活状态  (默认未激活)
+; 允许的设定值:  yes no
+; 注意: 如果为空或非设定值, 会强制取值 no</font>
+<font color=red>enable = no</font>
+
+<font color=green>; 插件的注释说明 (默认:Eminfo Plugin)
+; 此配置会写入提醒信主题, 最好唯一区别于其他插件, 比如 SMTP Service Check 
+; 允许数字/大小写字母/下划线/点号/空格, 非法字符自动删除</font>
+<font color=red>comment = Eminfo Plugin</font>
+
+<font color=green>; 插件执行频率  (默认30分钟)
+; 支持的格式:  30sec / 1min / 8hour / 3day / 2week / 4month / 7year 和它们之间的任意组合形式
+; 注意: 如果配置值的格式不对, 会强制取值30min
+; 注意: 最小值为30sec, 小于30秒的设置会强制取值30sec</font>
+<font color=red>frequency = 30min</font>
+
+<font color=green>; 插件运行最大时长 (默认10分钟)
+; 当插件运行的时间超过此参数指定的超时时间后, 插件将会被eminfo终止, 并触发超时情况下被激活的handler
+; 此参数主要为避免某些特殊情况下插件超长时间运行无法返回结果, 此时已属异常, 还有可能影响系统的性能
+; 支持的格式:  30sec / 1min / 8hour / 3day / 2week / 4month / 7year 和它们之间的任意组合形式
+; 注意: 如果配置值的格式不对, 会强制取值10min</font>
+<font color=red>exec_tmout = 10min</font>
+
+<font color=green>; 插件连续返回非OK的累积次数上限 (默认为1)
+; 只有当插件连续周期内返回非OK(不包括超时被终止)的积累次数大于等于此值, 才会触发相应的handler
+; 此参数主要是为减少某些特殊情况的告警误报率 比如: 偶发性的系统负载升高, 偶尔正常群发导致队列信件数过高
+; 注意: 为空/非整数数字: 会强制取值1</font>
+<font color=red>maxerr_times = 1</font>
+
+<font color=green>; 哪些情况下触发handler:  创建系统快照 (默认default)
+; 允许设定的组合值包括 =>  crit warn unkn succ tmout all none default
+; crit          插件返回CRIT状态时.
+; warn          插件返回WARN状态时.
+; unkn          插件返回UNKNOWN状态时.
+; succ          插件返回OK状态时.
+; tmout         插件执行超时被终止时.
+; all           所有以上情况,相当于: crit warn unkn succ tmout 
+; none          关闭系统快照,任何情况下都不执行系统快照.
+; default       默认配置,也就是插件返回非succ的情况下,相当于: crit warn unkn tmout</font>
+<font color=red>take_snapshot_type = default</font>
+
+<font color=green>; 哪些情况下触发handler:  发送提醒信 (默认default)
+; 允许设定的组合值包括 =>  crit warn unkn succ tmout all none default
+; crit          插件返回CRIT状态时.
+; warn          插件返回WARN状态时.
+; unkn          插件返回UNKNOWN状态时.
+; succ          插件返回OK状态时.
+; tmout         插件执行超时被终止时.
+; all           所有以上情况,相当于: crit warn unkn succ tmout 
+; none          关闭提醒信,任何情况下都不发送提醒信.
+; default       默认配置,也就是插件返回非succ的情况下,相当于: crit warn unkn tmout</font>
+<font color=red>mail_notify_type = default</font>
+
+<font color=green>; 哪些情况下触发handler:  上报信息 (默认none)
+; 允许设定的组合值包括 =>  crit warn unkn succ tmout all none default
+; crit          插件返回CRIT状态时.
+; warn          插件返回WARN状态时.
+; unkn          插件返回UNKNOWN状态时.
+; succ          插件返回OK状态时.
+; tmout         插件执行超时被终止时.
+; all           所有以上情况,相当于: crit warn unkn succ tmout 
+; none          关闭信息上报,任何情况下都不上报信息.
+; default       默认配置,也就是插件返回非succ的情况下,相当于: crit warn unkn tmout</font>
+<font color=red>post_notify_type = none</font>
+
+<font color=green>; 信件接收人列表 (默认file:/opt/receviers.lst)
+; 支持两种格式:  1. 空格分隔    2. 列表文件 (file:/path/to/receviers.lst)
+; 列表文件可以写绝对路径, 也可以写相对路径 (相对于eminfo主程序所在目录)
+; mail_receviers = root_bbk@126.com  zhangguangzheng@eyou.net</font>
+<font color=red>mail_receviers = file:opt/receviers.lst</font>
+
+<font color=green>; 发送提醒信的时候是否把系统快照压缩包作为附件发送 (默认开启)
+; 开启此参数后, 信件接收人将不必登录系统后台即可掌握故障发生第一时刻的系统原始信息
+; 建议一些进行严重故障检查的插件开启此参数</font>
+<font color=red>attach_snap_mail = yes</font>
+
+<font color=green>; 哪些情况下触发handler: 用户自定义handler (多用于自动恢复故障，默认none)
+; 允许设定的组合值包括 =>  crit warn unkn succ tmout all none default
+; 注意: 默认关闭 ==> 谨慎开启
+; crit          插件返回CRIT状态时.
+; warn          插件返回WARN状态时.
+; unkn          插件返回UNKNOWN状态时.
+; succ          插件返回OK状态时.
+; tmout         插件执行超时被终止时.
+; all           所有以上情况,相当于: crit warn unkn succ tmout 
+; none          关闭用户handler, 任何情况下都不自动处理.
+; default       默认配置 ==> (!! 此处default 相当于 none !!)</font>
+<font color=red>auto_handle_type = default</font>
+
+<font color=green>; 用户自定义的handler 
+; 多用于故障自动处理, 编写完成后放置于 handler/ 目录</font>
+<font color=red>auto_handler = default_handler</font>
+
+<font color=green>; 是否开启调试日志 (默认开启)
+; 开启后在{EMINFO_LOG}日志中可以查看详细的插件处理流程</font>
+<font color=red>debug = yes</font>
+
+
+
+
+<font color=green id=pl>
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;       Plugin Config Area         ;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; 插件配置段
+
+
+;;; EMINFO内部功能插件
+;;; 说明:  插件名以 eminfo_ 开头的插件是EMINFO的内部功能插件
+;;; 说明:  内部功能插件都是强制激活的
+
+
+; 内部功能插件1:  定期清理EMINFO和插件产生的 临时文件/日志文件/快照文件
+; 配置项: tmpfile_reserve_time      临时文件保存时间(单位:天)
+; 配置项: logfile_reserve_time      日志文件保存时间(单位:天)
+; 配置项: snapfile_reserve_time     快照目录保存时间(单位:天) </font>
+<font color=red>[eminfo_clear_overdue]
+frequency = 30min
+tmpfile_reserve_time = 15
+logfile_reserve_time = 90
+snapfile_reserve_time = 30</font>
+
+
+<font color=green>; 内部功能插件2:  定期回滚EMINIFO的日志
+; 回滚条件:  ( 满足以下任一条件即回滚当前日志 )
+;     1: 日志文件达到指定大小上限后将被回滚. 配置项: force_size_uplimit (单位:M)
+;     2: 当前时间 小于 { 当天00:00:00 + 配置项frequency } 将被回滚.
+;     3: 日志文件最后一条记录的时间戳和最开头一条记录的时间戳不在同一天 将被回滚.</font>
+<font color=red>[eminfo_log_rotate]
+frequency = 10min
+force_size_uplimit = 1024</font>
+
+
+
+<font color=green id=plu>;;;
+;;; 用户自定义插件
+;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 插件说明: 此插件检查操作系统当前的负载
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</font>
+<font color=red>[check_sysload]
+enable = yes
+comment = System Load Check
+frequency = 3min
+exec_tmout = 1min
+maxerr_times = 3</font>
+<font color=green>; 系统当前的负载报警上限</font>
+<font color=red>uplimit = 10</font>
+
+
+
+<font color=green>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 插件说明: 此插件检查操作系统当前的CPU使用率
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</font>
+<font color=red>[check_cpu_usage]
+enable = yes
+comment = CPU Usage Check
+frequency = 5min
+exec_tmout = 2min
+maxerr_times = 3</font>
+<font color=green>; CPU使用率报警上限</font>
+<font color=red>uplimit = 75</font>
+
+
+<font color=green>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 插件说明: 此插件检查分区剩余空间和inode数量
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</font>
+<font color=red>[check_disk_freespace]
+enable = yes
+comment = Disk Free Space Check
+frequency = 10min
+exec_tmout = 2min
+maxerr_times = 1</font>
+<font color=green>; 分区可用硬盘空间下限(单位M)</font>
+<font color=red>disk_spare_space_uplimit = 10000</font>
+<font color=green>; 分区可用硬盘百分比下限</font>
+<font color=red>disk_spare_percent_uplimit = 10</font>
+<font color=green>; 分区可用Inode百分比下限</font>
+<font color=red>inode_spare_percent_uplimit = 10</font>
+<font color=green>; 排除要检测的文件系统类型</font>
+<font color=red>exclude_fstype = usbfs cifs ntfs fat vfat fat32 iso9660 tmpfs none</font>
+<font color=green>; 排除要检测的挂载点</font>
+<font color=red>exclude_partiton = /dev/shm  /boot</font>
+
+
+<font color=green>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 插件说明: 此插件检测指定TCP端口的TCP连接数
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</font>
+<font color=red>[check_tcpconn_num]
+enable = no
+comment = Check TCP-Port Connection Number
+frequency = 5min
+exec_tmout = 2min
+maxerr_times = 1</font>
+<font color=green>; 若干组 端口和TCP连接数报警上限 (格式: 端口:连接数上限, 多组用逗号(,)或者空格分隔)</font>
+<font color=red>port_list = 80:200 , 110:300 , 3306:100 , 389:500</font>
+
+
+
+<font color=green>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 插件说明: 此插件检查POP服务的运行状态
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</font>
+<font color=red>[check_pop_svr]
+enable = no
+comment = Pop Service Check
+frequency = 3min
+exec_tmout = 2min
+maxerr_times = 2</font>
+<font color=green>; 要检测的地址和POP端口 (多组地址空格分隔)</font>
+<font color=red>addr_port = mail.eyou.net:110  mail.yili.com:110  127.0.0.1:110</font>
+<font color=green>; 端口连接的超时时间</font>
+<font color=red>time_out = 5</font>
+
+
+<font color=green>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 插件说明: 此插件检查SMTP服务的运行状态
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</font>
+<font color=red>[check_smtp_svr]
+enable = no
+comment = Smtp Service Check
+frequency = 3min
+exec_tmout = 2min
+maxerr_times = 2</font>
+<font color=green>; 要检测的地址和SMTP端口 (多组地址空格分隔)</font>
+<font color=red>addr_port = 127.0.0.1:25 127.0.0.1:26 mail.yili.com:25</font>
+<font color=green>; 端口连接的超时时间</font>
+<font color=red>time_out = 5</font>
+
+
+
+<font color=green>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 插件说明: 此插件检查当前IP和其他邮件服务器之间的SMTP通讯情况
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</font>
+<font color=red>[remote_mail_test]
+enable = no
+comment = Remote Mail Test
+frequency = 8hour
+exec_tmout = 10min
+maxerr_times = 1</font>
+<font color=green>; 资源文件: 要测试的域名和对应的若干邮箱地址</font>
+<font color=red>sample_email_file = file:opt/sample_email.dat</font>
+<font color=green>; 资源文件: 要发送的邮件正文样例</font>
+<font color=red>mail_body_file =  file:opt/remote_mail.body</font>
+<font color=green>; 假如对方HELO要求FQDN格式,则在此处填写,默认留空会使用 eyou.net.</font>
+<font color=red>helo_greeting_fqdn =</font>
+
+
+<font color=green>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 插件说明: 此插件检查指定web目录下指定后缀类型的文件 增/删/改 变化
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</font>
+<font color=red>[check_webfile_md5]
+enable = no
+comment = WebFile Md5 Check
+frequency = 1hour
+exec_tmout = 5min
+maxerr_times = 1</font>
+<font color=green>; 设定检测的web目录</font>
+<font color=red>web_dir= /var/eyou/apache/htdocs /usr/local/eyou/mail/web /opt/apache/htdocs /not_exist</font>
+<font color=green>; 设定检测文件的后缀类型 (留空的话默认检测所有文件)</font>
+<font color=red>file_ext = js html htm php php3 php4 php5</font>
+<font color=green>; 设定要排除的目录</font>
+<font color=red>exclude_dir = /var/eyou/apache/htdocs/tpl_c</font>
+<font color=green>; 设定要排除的文件</font>
+<font color=red>exclude_file =</font>
+
+<font color=green>; 注意:
+; 如果是正常的文件修改动作, 或者说修改了上面4个参数中任意一个之后
+; 一定要执行 plugin/check_webfile_md5 rebuild_db 命令重建MD5数据</font>
+
+
+
+
+<font color=green>
+; 更多插件.... 
+; 请参照实际配置文件eminfo.ini, 这里不再一一说明...
+</font>
+
+</pre>
+
+<br><br>
+
+<a href="index.html"> 返回首页 </a>
+<div style="position:fixed;right:10px;bottom:50px;width:15px;height:72px;background-color:yellow;cursor:hand;" onclick="pageScroll()">返回顶部<div>
