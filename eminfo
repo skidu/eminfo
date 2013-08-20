@@ -2,7 +2,7 @@
 #
 # ================================================================================================
 #
-# Description	: a plugin platform written by shell script for linux boxes automatic-maintance 
+# Description	: pluginable platform written by perl/shell for linux ops.
 # Config	: conf/eminfo.ini
 # Pidfile	: /var/run/eminfo.pid
 #
@@ -10,7 +10,7 @@
 #
 # Author	: <zhangguangzheng@eyou.net> <zhang.elinks@gmail.com>
 #
-# HomePage	: http://code.google.com/p/eminfo/
+# HomePage	: https://github.com/sunshine0137/eminfo.git
 # 
 # Usage		: --help
 #

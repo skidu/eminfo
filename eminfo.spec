@@ -14,13 +14,7 @@ Requires(preun): chkconfig, initscripts
 Requires(postun): coreutils
 
 %description 
-  pluginable platform written by perl/shell for linux ops.
-
-%changelog
-* Sun May 11 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
-- init buildrpm for eminfo-1.0.0-beta1.rpm
-* Thu Aug 15 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
-- redesgin by perl/shell for eminfo-1.0.0-beta2.rpm
+pluginable platform written by perl/shell for linux ops.
 
 %prep
 %setup -q
@@ -51,3 +45,9 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 
 %postun
 [ -d /usr/local/eminfo ] && mv /usr/local/eminfo /usr/local/eminfo_$(date +%s)
+
+%changelog
+* Sun May 11 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
+- init buildrpm for eminfo-1.0.0-beta1.rpm
+* Thu Aug 15 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
+- redesgin by perl/shell for eminfo-1.0.0-beta2.rpm
