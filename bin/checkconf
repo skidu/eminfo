@@ -78,25 +78,25 @@ ARRAY_CONFIG_RULES=(
 
 	"eminfo_log_rotate=>force_size_uplimit"	      "int:1:2047"
 
-	"check_sysload=>uplimit"		"int:0:999"
+	#"check_sysload=>uplimit"		"int:0:999"
 
-	"check_cpu_usage=>uplimit"		"int:0:100"
+	#"check_cpu_usage=>uplimit"		"int:0:100"
 
-	"check_iowait=>uplimit"			"int:0:100"
+	#"check_iowait=>uplimit"			"int:0:100"
 
-	"check_disk_freespace=>disk_spare_space_uplimit"	"int:0:99999999"
-	"check_disk_freespace=>disk_spare_percent_uplimit"	"int:0:100"
-	"check_disk_freespace=>inode_spare_percent_uplimit"	"int:0:100"
+	#"check_disk_freespace=>disk_spare_space_uplimit"	"int:0:99999999"
+	#"check_disk_freespace=>disk_spare_percent_uplimit"	"int:0:100"
+	#"check_disk_freespace=>inode_spare_percent_uplimit"	"int:0:100"
 
-	"check_process=>pslist_file"		"file"
+	#"check_process=>pslist_file"		"file"
 
-	"check_pop_svr=>time_out"		"int:0:99"
+	#"check_pop_svr=>time_out"		"int:0:99"
 
-	"check_smtp_svr=>time_out"		"int:0:99"
+	#"check_smtp_svr=>time_out"		"int:0:99"
 
-	"remote_mail_test=>sample_email_file"	"file"
-	"remote_mail_test=>mail_body_file"	"file"
-	"remote_mail_test=>helo_greeting_fqdn"	"str:eyou.net"
+	#"remote_mail_test=>sample_email_file"	"file"
+	#"remote_mail_test=>mail_body_file"	"file"
+	#"remote_mail_test=>helo_greeting_fqdn"	"str:eyou.net"
 	
 	#"notify_syslogin=>allow_iplist"		"file"
 )

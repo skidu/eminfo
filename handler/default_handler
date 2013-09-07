@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 
+# hey, do you want to reboot your box here? 
 echo "Nothing to do."

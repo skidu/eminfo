@@ -25,7 +25,8 @@ export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:
 #                       get config file, function file and other related files.
 #                       Now you would like to exec this scripts anywhere.
 #
-BASE_DIR=$(cd "$(dirname "$0")" && pwd)
+# BASE_DIR=$(cd "$(dirname "$0")" && pwd)
+BASE_DIR="/usr/local/eminfo"
 
 # === Turn Off Job Control
 #
