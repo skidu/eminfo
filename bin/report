@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 #
-# This Script Responsible for Report Plugin's Last Running Record.
+# This Script Responsible for Report Plugin's Last Running Status.
 # 
 # Usage:     ./report {plugin_name}
 # 	     ./report all
@@ -26,14 +26,17 @@ show_usage(){
 
 print_record(){
   local pname=${1//[ ]} ts= result= line= level= type= title= summary= body= content=
-  local aline="=========================================================="
+  local aline="=========="
   local output=
-  if [ -f "${TMP_RECORD}" -a -s "${TMP_RECORD}" ]; then
-	line=$(awk '(/^'${pname}'\> /){print;exit;}' "${TMP_RECORD}" 2>&-)
+  if [ -f "${TMP_STATUS}" -a -s "${TMP_STATUS}" ]; then
+	line=$(awk '(/^'${pname}'\> /){print;exit;}' "${TMP_STATUS}" 2>&-)
 	if [ -z "${line//[ ]}" ]; then
 		ts="-"
-		result="No Record, Maybe Never been Running"
-		output="\nPlugin: ${pname}\nTime: ${ts}\nResult: ${result}\n"
+		result="No Status Record, Maybe Never been Running or No Such Plugin"
+		output="\nPlugin   : ${pname}"\
+"\nTime     : ${ts}"\
+"\nResult   : ${result}"\
+"\n"
 	else
 		ts=$(echo -e "${line}" | awk '{print $2}')
 		ts=$(date -d "1970-01-01 UTC ${ts} seconds" +%F_%T 2>&-)
@@ -44,31 +47,50 @@ print_record(){
 			case "${type}" in 
 			"str")
 				title=$(read_output 4 "${result}")
-				[ -z "${title//[ ]}" ] && title= || title="Title: ${title}"
+				[ -z "${title//[ ]}" ] && title= || title="Title    : ${title}"
 				summary=$(read_output 5 "${result}")
-				[ -z "${summary//[ ]}" ] && summary= || summary="Summary: ${summary}"
-				body=$(trim_html "$(read_output 6 "${result}")" )
-				[ -z "${body//[ ]}" ] && body= || body="Details: ${body}"
+				[ -z "${summary//[ ]}" ] && summary= || summary="Summary  : ${summary}"
+				body=$(read_output 6 "${result}")
+				body=$( ${PLUTIL} format_pstr_output_toterm "${body}")
+				[ -z "${body//[ ]}" ] && body= || body="Details  : ${body}"
 				content="${title}\n${summary}\n${body}\n"
-				output="\nPlugin: ${pname}\nTime: ${ts}\nResult:\nLevel: ${level}\nType: Strings\n${content}\n"
+				output="\nPlugin   : ${pname}"\
+"\nTime     : ${ts}"\
+"\nResult   :"\
+"\nLevel    : ${level}"\
+"\nType     : Strings"\
+"\n${content}\n"
 				;;
 			"file")
 				files=$(read_output 3 "${result}")
-				output="\nPlugin: ${pname}\nTime: ${ts}\nResult:\nLevel: ${level}\nType: Files\nFiles: ${files}\n"
+				output="\nPlugin   : ${pname}"\
+"\nTime     : ${ts}"\
+"\nResult   :"\
+"\nLevel    : ${level}"\
+"\nType     : Files"\
+"\nFiles    : ${files}"\
+"\n"
 				;;
 			*)
 				local part3=$(read_output 3 "${result}")
-				output="\nPlugin: ${pname}\nTime: ${ts}\nResult:\nOutput Type Invalid\n ${part3}\n"
+				output="\nPlugin   : ${pname}"\
+"\nTime     : ${ts}"\
+"\nResult   :"\
+"\nOutput Type Invalid, type=[${part3}]"\
+"\n"
 				;;
 			esac
 		else
-			output="\nPlugin: ${pname}\nTime: ${ts}\nResult: ${result}\n"
+			output="\nPlugin   : ${pname}"\
+"\nTime     : ${ts}"\
+"\nResult   : ${result}"\
+"\n"
 		fi
 	fi
   	echo -e "\n${output}\n${aline}\n"
 	return 0
   else
-	echo_yellow "Record File NOT Exist or Empty" ; echo
+	echo_yellow "Status File NOT Exist or Empty" ; echo
 	return 1
   fi
 }

@@ -51,6 +51,10 @@ POSTLOG_SH="${HANDLER_DIR}/postlog"
 TAKESNAP_SH="${HANDLER_DIR}/takesnap"
 SENDMAIL="${HANDLER_DIR}/sendmail"
 SENDEMAIL="${OPT_DIR}/sendEmail"
+MAKEDIR_SH="${BIN_DIR}/makedir"
+
+# PERL UTIL DEF
+PLUTIL="${BIN_DIR}/util.pl"
 
 # LOG DEF
 EMINFO_LOG="${LOG_DIR}/eminfo.log"
@@ -74,7 +78,7 @@ PID_FILE="/var/run/eminfo.pid"
 TMP_LASTRUN="${TMP_DIR}/.lastrun.dat"
 TMP_NEXTRUN="${TMP_DIR}/.nextrun.dat"
 TMP_REPEAT="${TMP_DIR}/.repeat.dat"
-TMP_RECORD="${TMP_DIR}/.record.dat"
+TMP_STATUS="${TMP_DIR}/.status.dat"
 
 # OTHER FILE DEF
 PINYIN_FILE="${OPT_DIR}/pinyin.txt"
@@ -204,7 +208,7 @@ conv_2realpath() {
 
   ### deal with broken path
   [ ! -e "${f}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 conv_2realpath broken path:\
+	write_log -f "${EMINFO_LOG}" "E0000000 conv_2realpath broken path:"\
 		"[${f}] broken at: [${f}]";
 	return 2
   }
@@ -226,13 +230,13 @@ conv_2realpath() {
   	else
 		### deal with non-absolute path
 		[ "${d}" == ".." -o "${d}" == "." -o "$(echo -e "${d}" |grep -E -o "\.\.\/|\.\/")" != "" ] && {
-			write_log -f "${EMINFO_LOG}" E0000000 conv_2realpath relative link path:\
+			write_log -f "${EMINFO_LOG}" "E0000000 conv_2realpath relative link path:"\
 				"[${d}]";
 			return 1
 		}
 		### deal with broken path
 		[ ! -d "${d}" ] && {
-			write_log -f "${EMINFO_LOG}" E0000000 conv_2realpath broken path:\
+			write_log -f "${EMINFO_LOG}" "E0000000 conv_2realpath broken path:"\
 				"[${d}] broken at: [${d}]";
 			return 2
 		}
@@ -258,7 +262,7 @@ conv_2realpath() {
 check_ps_by_pid_file() {
   local pid_file=$1  pid=
   [ -z "${pid_file}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 check_ps_by_pid_file error:\
+	write_log -f "${EMINFO_LOG}" "E0000000 check_ps_by_pid_file error:"\
 		 "missing arguments, fpid=[${fpid}]";
 	return 1
   }
@@ -281,7 +285,7 @@ get_children_pids_by_pid() {
   local array_result=()
   # if null pstree will output all pids.
   [ -z "${father_pid}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 get_children_pids_by_pid error:\
+	write_log -f "${EMINFO_LOG}" "E0000000 get_children_pids_by_pid error:"\
 		"missing arguments, father_pid=[${father_pid}]";
 	return 2
   }
@@ -292,7 +296,7 @@ get_children_pids_by_pid() {
 			 tr -d '[\(\)]' | tail -n +2 |\
 			 tr '\n\r' ' ') )
   else
-	write_log -f "${EMINFO_LOG}" E0000000 get_children_pids_by_pid error:\
+	write_log -f "${EMINFO_LOG}" "E0000000 get_children_pids_by_pid error:"\
 		"input father_pid must be interger: [${father_pid}]";
 	return 1
   fi
@@ -303,7 +307,7 @@ get_children_pids_by_pid() {
   unset array_result
 }
 
-# List all section.
+# List all section name.
 # Note: 	blank space will be trimed
 #
 list_all_section() {
@@ -338,7 +342,7 @@ list_inner_plugin_section() {
 list_section_keys(){
   local section=$1  result=
   [ -z "${section}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 list_section_keys error:\
+        write_log -f "${EMINFO_LOG}" "E0000000 list_section_keys error:"\
 		"missing section name";
         return 1
   }
@@ -358,12 +362,12 @@ list_section_keys(){
 read_eminfo_section(){
   local section=$1  value=
   if [ -z "${section}" ]; then 
-	write_log -f "${EMINFO_LOG}" E0000000 read_eminfo_section error:\
+	write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_section error:"\
 		"missing arguments, section=[${section}]";
 	return 1
   else
 	if [ ! -f "${CONFIG_FILE}" -o ! -s "${CONFIG_FILE}" ]; then
-		write_log -f "${EMINFO_LOG}" E0000000 read_eminfo_section error:\
+		write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_section error:"\
 			"config file not exists or empty.";
 		return 2
 	else
@@ -389,7 +393,7 @@ read_eminfo_section(){
 read_eminfo_config(){
   local section=$1  key=$2  value=
   if [ -z "${section}" -o -z "${key}" ]; then
-	write_log -f "${EMINFO_LOG}" E0000000 read_eminfo_config error:\
+	write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_config error:"\
 		"missing arguments, section=[${section}] key=[${key}]";
 	return 1
   else
@@ -409,7 +413,7 @@ read_eminfo_config(){
 			return 3
 		fi
 	else
-		write_log -f "${EMINFO_LOG}" E0000000 read_eminfo_config error:\
+		write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_config error:"\
 			"config file not exists or empty.";
 		return 2
 	fi
@@ -420,8 +424,8 @@ read_eminfo_config(){
 # Usage:	update_eminfo_config {plugin-name} {config-name} {value}
 # Example:	update_eminfo_config check_sysload enable no
 # Return:	
-# 0 : OK
-# 1 : ERROR
+# 0 : Update OK
+# 1 : Update ERROR
 # 2 : No Need, Nothing to do (nower value equals what you want to set)
 # 3 : Missging arguments
 # 4 : ${CONFIG_FILE} empty / not exist 
@@ -432,7 +436,7 @@ update_eminfo_config() {
   local section=$1 key=$2 ; shift 2 ; local value=$*
   local errinfo=
   if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then
-        write_log -f "${EMINFO_LOG}" E0000000 update_eminfo_config error:\
+        write_log -f "${EMINFO_LOG}" "E0000000 update_eminfo_config error:"\
 		"missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
   else
@@ -443,18 +447,18 @@ update_eminfo_config() {
 					( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
 					( k==1 && x==1 && $1~/^'${key}'\>/ ){print NR;exit;}' )
   		if [ -z "${linenum//[ ]}" ]; then
-			write_log -f "${EMINFO_LOG}" CHNG0000 update_eminfo_config notice:\
+			write_log -f "${EMINFO_LOG}" "CHNG0000 update_eminfo_config notice:"\
 				"section=[${section}] key=[${key}] not found in config file."
 			return 5
   		else
 			local nowvalue=$(read_eminfo_config "${section}" "${key}")
 			if [ "${value}" != "${nowvalue}" ]; then
-				write_log -f "${EMINFO_LOG}" CHNG0000 update_eminfo_config notice:\
+				write_log -f "${EMINFO_LOG}" "CHNG0000 update_eminfo_config notice:"\
 					"section=[${section}] key=[${key}] found in config file,"\
 					 "line-number=[${linenum}], nower value=[${nowvalue}],"\
 					 "trying to change as [${value}]"
 			else
-				write_log -f "${EMINFO_LOG}" CHNG0000 update_eminfo_config notice:\
+				write_log -f "${EMINFO_LOG}" "CHNG0000 update_eminfo_config notice:"\
 					"section=[${section}] key=[${key}] found in config file,"\
 					"line-number=[${linenum}], nower value=[${nowvalue}],"\
 					"no need to change as [${value}], nothing to do."
@@ -463,19 +467,19 @@ update_eminfo_config() {
 			errinfo=$( \
 				sed -i ''${linenum}'s#^'${key}'\>.*#'${key}' = '${value}'#' "${CONFIG_FILE}" 2>&1 1>/dev/null)
 			if [ "$?" == "0" ]; then
-				write_log -f "${EMINFO_LOG}" CHNG0000 update_eminfo_config change\
+				write_log -f "${EMINFO_LOG}" "CHNG0000 update_eminfo_config change"\
 					"section=[${section}] key=[${key}] value=[${value}] line-number=[${linenum}]"\
 					"success"
 				return 0
 			else
-				write_log -f "${EMINFO_LOG}" CHNG0000 update_eminfo_config error:\
+				write_log -f "${EMINFO_LOG}" "CHNG0000 update_eminfo_config error:"\
 					"section=[${section}] key=[${key}] value=[${value}] line-number=[${linenum}]"\
 					"errinfo=[${errinfo}]" 
 				return 1
 			fi
   		fi
 	else
-		write_log -f "${EMINFO_LOG}" E0000000 update_eminfo_config error:\
+		write_log -f "${EMINFO_LOG}" "E0000000 update_eminfo_config error:"\
 			"config file not exists or empty.";
 		return 4
 	fi
@@ -520,7 +524,7 @@ echo "Nothing to do"
 get_enable() {
   local plugin_name=$1  result=
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 get_enable error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 get_enable error: missing plugin name";
 	return 1
   }
   result=$(read_eminfo_config ${plugin_name} enable)
@@ -541,7 +545,7 @@ get_enable() {
 get_debug() {
   local plugin_name=$1  result=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 get_debug error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 get_debug error: missing plugin name";
         return 1
   }
   result=$(read_eminfo_config ${plugin_name} debug)
@@ -563,7 +567,7 @@ get_debug() {
 get_attach_snap_mail() {
   local plugin_name=$1  result=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 get_attach_snap_mail error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 get_attach_snap_mail error: missing plugin name";
         return 1
   }
 
@@ -584,7 +588,7 @@ get_attach_snap_mail() {
 get_frequency() {
   local plugin_name=$1  result=  value=   min=30
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 get_frequency error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 get_frequency error: missing plugin name";
         return 1
   }
   result=$(read_eminfo_config ${plugin_name} frequency)
@@ -593,13 +597,13 @@ get_frequency() {
   # check valid or not
   value=$( conv_time2sec "${result}" )
   if [ "${value}" == "invalid" ]; then
-	write_log -f "${EMINFO_LOG}" E0000000 get_frequency on\
+	write_log -f "${EMINFO_LOG}" "E0000000 get_frequency on"\
 		"[${plugin_name}]: return is invalid:"\
 		"[${result}] ==> auto set to 30min.";
 	result="30min"
   elif [ ! -z "${value}" -a -z "${value//[0-9]}" ]; then
 	[ "$(echo "${value} < ${min}" | bc 2>&-)" == "1" ] && {
-		write_log -f "${EMINFO_LOG}" E0000000 get_frequency on\
+		write_log -f "${EMINFO_LOG}" "E0000000 get_frequency on"\
 			"[${plugin_name}]: return [${result}] is smaller than minimum"\
 			"==> auto set to 30sec";
 		result="30sec"
@@ -614,7 +618,7 @@ get_frequency() {
 get_exec_tmout() {
   local plugin_name=$1  result=  value=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 get_exec_tmout error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 get_exec_tmout error: missing plugin name";
         return 1
   }
   result=$(read_eminfo_config ${plugin_name} exec_tmout)
@@ -623,7 +627,7 @@ get_exec_tmout() {
   # check valid or not
   value=$( conv_time2sec "${result}" )
   [ "${value}" == "invalid" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 get_exec_tmout on "[${plugin_name}]:"\
+        write_log -f "${EMINFO_LOG}" "E0000000 get_exec_tmout on [${plugin_name}]:"\
 		"return is invalid: [${result}]"\
 		"==>auto set to 10min.";
         result="10min"
@@ -638,7 +642,7 @@ get_exec_tmout() {
 get_mail_receviers() {
   local plugin_name=$1  result=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 get_mail_receviers error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 get_mail_receviers error: missing plugin name";
         return 1
   }
   result=$(read_eminfo_config ${plugin_name} mail_receviers)
@@ -660,7 +664,7 @@ get_mail_receviers() {
 get_comment() {
   local plugin_name=$1  result=  default="Eminfo Plugin"
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 get_comment error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 get_comment error: missing plugin name";
 	return 1
   }
   result=$(read_eminfo_config ${plugin_name} comment)
@@ -688,7 +692,7 @@ get_global_name() {
 get_maxerr_times() {
   local plugin_name=$1  result=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 get_maxerr_times error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 get_maxerr_times error: missing plugin name";
         return 1
   }
   result=$(read_eminfo_config ${plugin_name} maxerr_times)
@@ -712,7 +716,7 @@ get_action_type() {
   local result=  output=  item=
   local valid_list=" crit warn unkn succ tmout all none default "
   [ -z "${plugin_name}" -o -z "${action_type}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 get_action_type error:\
+        write_log -f "${EMINFO_LOG}" "E0000000 get_action_type error:"\
 		"missing plugin_name or action_type : [$*]";
         return 1
   }
@@ -769,7 +773,7 @@ take_action_ornot() {
   local result=
   local valid_list=" crit warn unkn succ tmout all none default "
   [ -z "${plugin_name}" -o -z "${action_type}" -o -z "${event}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 take_action_ornot error:\
+        write_log -f "${EMINFO_LOG}" "E0000000 take_action_ornot error:"\
 		"missing plugin_name or action_type or event : [$*]";
         return 1
   }
@@ -816,20 +820,11 @@ conv_time2sec(){
   if [ ! -z "${after}" -a -z "${after//[0-9]}" ]; then
 	result=$(echo "${after//[!0-9]} - ${now}" | bc 2>&-)
   else
-	write_log -f "${EMINFO_LOG}" E0000000 conv_time2sec error:\
+	write_log -f "${EMINFO_LOG}" "E0000000 conv_time2sec error:"\
 		"input invalid: ${timelong}";
 	result="invalid"
   fi
   echo "${result}"
-}
-
-# Trim HTML-TAG in plugin output.
-# Example: trim_html ${content}
-#
-trim_html(){
-  local content="$*"
-  local result=$( echo -e "${content}" | sed -e 's/<[^<^>]*>//g; s/&nbsp;//g; s/###/\n/g' )
-  echo -e "${result}"
 }
 
 # Read each part of plugin output
@@ -840,33 +835,25 @@ trim_html(){
 # 
 read_output(){
   local part=$1 ; shift
-  local strings=$*  result= content=
+  local strings=$*  result=
 
-  [ "$(echo -n "${strings}" | awk -v RS="{[^{]*}" 'END{print NR}')" -lt "3" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 read_output error: input data invalid
-	return 1
-  }
+  #[ "$(echo -n "${strings}" | awk -v RS="{[^{}]*}" 'END{print NR}')" -ne "3" ] && {
+  #	write_log -f "${EMINFO_LOG}" "E0000000 read_output error: input data invalid";
+  #	return 1
+  #}
 
   case "${part}" in
-  1|2|3)
-	result=$(echo "${strings}" | grep -E -o "(\{[^\{]*\})" | sed -n ''${part}'{s/^[ \t]*{//;s/}[ \t]*$//;p}')   ;;
-  "4")
-        content=$(read_output 3 "${strings}")
-  	result=$(echo "${content%%|*}" | sed -e 's/^[ \t]*//;s/[ \t]*$//')	;;
-  "5")
-        content=$(read_output 3 "${strings}")
-  	result="${content#*|}"
-	result=$(echo "${result%|*}" | sed -e 's/^[ \t]*//;s/[ \t]*$//')	;;
-  "6")
-        content=$(read_output 3 "${strings}")
-  	result=$(echo "${content##*|}" | sed -e 's/^[ \t]*//;s/[ \t]*$//')	;;
+  1|2|3|4|5|6)
+	result=$( ${PLUTIL} part_pstr_output "$part" "${strings}" 2>&1 )
+  	echo "${result}"
+	# for debug as following.
+	# write_log -f "${EMINFO_LOG}" "E0000000 read_output OK: wanted part number [$part]:[${result}]";
+	;;
   *)
-	write_log -f "${EMINFO_LOG}" E0000000 read_output error: input part number invalid: ${part}
+	write_log -f "${EMINFO_LOG}" "E0000000 read_output error: wanted part number invalid: ${part}";
 	return 2	
 	;;
   esac
-  
-  echo "${result}"
 }
 
 # Convert plugin output to html mailbody
@@ -888,14 +875,15 @@ conv_output2mailbody() {
   echo "$(html_green "Title:")  &nbsp;&nbsp;&nbsp;&nbsp; ${title} <br><br>"
   echo "$(html_green "Summary:") &nbsp;&nbsp;&nbsp;&nbsp; ${summary} <br><br>"
   echo "$(html_green "Details:") <br><br>"
-  echo "${details}" | awk -F"###" '{ for(i=1;i<=NF;i++) {printf "%s<br>\n",$i} }'
+  # echo "${details}" | awk -F"###" '{ for(i=1;i<=NF;i++) {printf "%s<br>\n",$i} }'
+  echo "${details}" | sed -e 's/###/<br>\n/g';
   } >> "${mailbody}"
   rc=$?
   if [ "${rc}" == "0" ]; then
-	write_log -f "${EMINFO_LOG}" 00000000 convert output to mailbody file success:\
+	write_log -f "${EMINFO_LOG}" "00000000 convert output to mailbody file success:"\
 		"[${mailbody}] [level=${level} title=${title} summary=${summary}]";
   else
-	write_log -f "${EMINFO_LOG}" E0000000 convert output to mailbody file error:\
+	write_log -f "${EMINFO_LOG}" "E0000000 convert output to mailbody file error:"\
 		"[${mailbody}]";
   fi
 
@@ -915,7 +903,7 @@ conv_output2postdata() {
   type=$(read_output 2 "${strings}")
   body=$(read_output 3 "${strings}")
   [ "${type}" == "str" ] && body=$(echo -e "${body}" | sed -e 's/<[^<^>]*>//g; s/&nbsp;//g;')  ### trim html tag if type=str
-  other="some other stuff here"
+  other="others";
   echo "${name}${SPLIT}${level}${SPLIT}${body}${SPLIT}${other}"
 }
 
@@ -925,7 +913,7 @@ conv_output2postdata() {
 get_lastrun() {
   local plugin_name=$1  result=  headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 get_lastrun error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 get_lastrun error: missing plugin name";
 	return 1
   }
   if [ ! -s ${TMP_LASTRUN} ]; then
@@ -948,7 +936,7 @@ get_lastrun() {
 get_nextrun() {
   local plugin_name=$1 result=  headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 get_nextrun error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 get_nextrun error: missing plugin name";
 	return 1
   }
   if [ ! -s ${TMP_NEXTRUN} ]; then
@@ -974,9 +962,15 @@ update_lastrun_and_nextrun() {
   local now=$(date +%s) 
   local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 update_lastrun_and_nextrun error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 update_lastrun_and_nextrun error: missing plugin name";
 	return 1
   }
+
+  if [ -z "$( echo "${plugin_name}" | grep -E -o "^eminfo_" )" ]; then
+	local logfile="${EMINFO_LOG}"
+  else
+	local logfile="${INNER_LOG}"                                                                                   
+  fi
 
   touch ${TMP_LASTRUN} ${TMP_NEXTRUN}
   [ ! -s ${TMP_LASTRUN} ] && echo -e "${headline}" > ${TMP_LASTRUN}
@@ -991,11 +985,11 @@ update_lastrun_and_nextrun() {
 	errinfo=$( sed -i '$s/$/\n'${plugin_name}' '${now}'/' ${TMP_LASTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-		write_log -f "${EMINFO_LOG}" CRIT0000 update_lastrun_and_nextrun on plugin:\
+		write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on plugin:"\
 			"[${plugin_name}] for [empty, add new lastrun item as nower: ${now}]"\
 			"error: [${errinfo}]";
 	else
-		write_log -f "${EMINFO_LOG}" 00000000 update_lastrun_and_nextrun on plugin:\
+		write_log -f "${logfile}" "00000000 update_lastrun_and_nextrun on plugin:"\
 			"[${plugin_name}] for [empty, add new lastrun item as nower: ${now}]"\
 			"success";
 	fi
@@ -1004,11 +998,11 @@ update_lastrun_and_nextrun() {
 	errinfo=$( sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${now}'/' ${TMP_LASTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-                write_log -f "${EMINFO_LOG}" CRIT0000 update_lastrun_and_nextrun on plugin:\
+                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on plugin:"\
 			"[${plugin_name}] for [update lastrun time as nower: ${now}]"\
 			"error: [${errinfo}]";
 	else
-		write_log -f "${EMINFO_LOG}" 00000000 update_lastrun_and_nextrun on plugin:\
+		write_log -f "${logfile}" "00000000 update_lastrun_and_nextrun on plugin:"\
 			"[${plugin_name}] for [update lastrun time as nower: ${now}]"\
 			"success";
 	fi
@@ -1026,12 +1020,12 @@ update_lastrun_and_nextrun() {
         errinfo=$( sed -i '$s/$/\n'${plugin_name}' '${nextrun}'/' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-                write_log -f "${EMINFO_LOG}" CRIT0000 update_lastrun_and_nextrun on plugin:\
-			"[${plugin_name}] for [empty => add new nextrun item as ${nextrun}]"\
+                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on plugin:"\
+			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun}]"\
 			"error: [${errinfo}]";
 	else
-                write_log -f "${EMINFO_LOG}" 00000000 update_lastrun_and_nextrun on plugin:\
-			"[${plugin_name}] for [empty => add new nextrun item as ${nextrun}]"\
+                write_log -f "${logfile}" "00000000 update_lastrun_and_nextrun on plugin:"\
+			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun}]"\
 			"success";
 	fi
   else
@@ -1039,11 +1033,11 @@ update_lastrun_and_nextrun() {
         errinfo=$( sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${nextrun}'/' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-                write_log -f "${EMINFO_LOG}" CRIT0000 update_lastrun_and_nextrun on plugin:\
+                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on plugin:"\
 			"[${plugin_name}] for [update nextrun as ${nextrun}]"\
 			"error: [${errinfo}]";
 	else
-                write_log -f "${EMINFO_LOG}" 00000000 update_lastrun_and_nextrun on plugin:\
+                write_log -f "${logfile}" "00000000 update_lastrun_and_nextrun on plugin:"\
 			"[${plugin_name}] for [update nextrun as ${nextrun}]"\
 			"success";
         fi
@@ -1052,52 +1046,59 @@ update_lastrun_and_nextrun() {
 }
 
 
-# Update record of plugin result.
+# Update status of plugin result.
 # Note:         only called on plugin finished or output result.
 #
-update_record() {
+update_status() {
   local plugin_name=${1//[ ]} rc= errinfo= ; shift
   local content=$*
   local now=$(date +%s)
   local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
   
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 update_record error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 update_status error: missing plugin name";
         return 1
   }
-  
-  touch ${TMP_RECORD}
-  [ ! -s ${TMP_RECORD} ] && echo -e "${headline}" > ${TMP_RECORD}
 
-  local l_record=$(awk '/^'${plugin_name}'\>/' ${TMP_RECORD} 2>&-)
+  if [ -z "$( echo "${plugin_name}" | grep -E -o "^eminfo_" )" ]; then
+	local logfile="${EMINFO_LOG}"
+  else
+	local logfile="${INNER_LOG}"                                                                                   
+  fi
+
+  
+  touch ${TMP_STATUS}
+  [ ! -s ${TMP_STATUS} ] && echo -e "${headline}" > ${TMP_STATUS}
+
+  local l_record=$(awk '/^'${plugin_name}'\>/' ${TMP_STATUS} 2>&-)
   if [ -z "${l_record//[ ]}" ]; then
-	echo "${plugin_name} ${now} ${content}" >> ${TMP_RECORD} 2>/dev/null
+	echo "${plugin_name} ${now} ${content}" >> ${TMP_STATUS} 2>/dev/null
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-	       write_log -f "${EMINFO_LOG}" E0000000 update_record on plugin:\
+	       write_log -f "${logfile}" "E0000000 update_status on plugin:"\
 			"[${plugin_name}] for [append newitem] error";
 	else
-	       write_log -f "${EMINFO_LOG}" 00000000 update_record on plugin:\
+	       write_log -f "${logfile}" "00000000 update_status on plugin:"\
 			"[${plugin_name}] for [append newitem] success";
 	fi
   else
 	### following sed command can NOT deal with special chars. (if ${content} contains /)
-	# sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${now}' '${content}'/' ${TMP_RECORD}
-	errinfo=$( sed -i '/^'${plugin_name}'\>/d' ${TMP_RECORD} 2>&1 1>/dev/null )
+	# sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${now}' '${content}'/' ${TMP_STATUS}
+	errinfo=$( sed -i '/^'${plugin_name}'\>/d' ${TMP_STATUS} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-	       write_log -f "${EMINFO_LOG}" E0000000 update_record on plugin:\
+	       write_log -f "${logfile}" "E0000000 update_status on plugin:"\
 			"[${plugin_name}] for [delete olditem error: ${errinfo}]";
 	else
-	       write_log -f "${EMINFO_LOG}" 00000000 update_record on plugin:\
+	       write_log -f "${logfile}" "00000000 update_status on plugin:"\
 			"[${plugin_name}] for [delete olditem] success"
-	       echo "${plugin_name} ${now} ${content}" >> ${TMP_RECORD} 2>/dev/null
+	       echo "${plugin_name} ${now} ${content}" >> ${TMP_STATUS} 2>/dev/null
 	       rc=$?
 	       if [ "${rc}" != "0" ]; then
-			write_log -f "${EMINFO_LOG}" E0000000 update_record on plugin:\
+			write_log -f "${logfile}" "E0000000 update_status on plugin:"\
 				"[${plugin_name}] for [append newitem] error";
 	       else
-			write_log -f "${EMINFO_LOG}" 00000000 update_record on plugin:\
+			write_log -f "${logfile}" "00000000 update_status on plugin:"\
 				"[${plugin_name}] for [append newitem] success";
 	       fi
 	fi
@@ -1117,7 +1118,7 @@ check_repeat_errcount() {
   local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
   
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 check_repeat_errcount error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 check_repeat_errcount error: missing plugin name";
         return 1
   }
 
@@ -1150,7 +1151,7 @@ add_repeat_errcount() {
   local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
 
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 add_repeat_errcount error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 add_repeat_errcount error: missing plugin name";
         return 1
   }
 
@@ -1163,12 +1164,12 @@ add_repeat_errcount() {
 	errinfo=$( sed -i '$s/$/\n'${plugin_name}' 1/' ${TMP_REPEAT} 2>&1 1>/dev/null )
    	rc=$?
 	if [ "${rc}" != "0" ]; then
-		write_log -f "${EMINFO_LOG}" E0000000 add_repeat_errcount on plugin:\
-			"[${plugin_name}] for [empty => add new item as 1]"\
+		write_log -f "${EMINFO_LOG}" "E0000000 add_repeat_errcount on plugin:"\
+			"[${plugin_name}] for [empty, add new item as 1]"\
 			"error: [${errinfo}]";
 	else
-		write_log -f "${EMINFO_LOG}" 00000000 add_repeat_errcount on plugin:\
-			"[${plugin_name}] for [empty => add new item as 1]"\
+		write_log -f "${EMINFO_LOG}" "00000000 add_repeat_errcount on plugin:"\
+			"[${plugin_name}] for [empty, add new item as 1]"\
 			"success";
 	fi
   else
@@ -1177,11 +1178,11 @@ add_repeat_errcount() {
 		errinfo=$( sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' 1/' ${TMP_REPEAT} 2>&1 1>/dev/null )
 		rc=$?
 		if [ "${rc}" != "0" ]; then
-			write_log -f "${EMINFO_LOG}" E0000000 add_repeat_errcount on plugin:\
+			write_log -f "${EMINFO_LOG}" "E0000000 add_repeat_errcount on plugin:"\
 				"[${plugin_name}] for [invalid => not numberic [${repeat_errcount}] and update as 1]"\
 				"error: [${errinfo}]";
 		else
-			write_log -f "${EMINFO_LOG}" 00000000 add_repeat_errcount on plugin:\
+			write_log -f "${EMINFO_LOG}" "00000000 add_repeat_errcount on plugin:"\
 				"[${plugin_name}] for [invalid => not numberic [${repeat_errcount}] and update as 1]"\
 				"success";
 		fi
@@ -1191,11 +1192,11 @@ add_repeat_errcount() {
 		errinfo=$( sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${num}'/' ${TMP_REPEAT} 2>&1 1>/dev/null )
 		rc=$?
 		if [ "${rc}" != "0" ]; then
-			write_log -f "${EMINFO_LOG}" E0000000 add_repeat_errcount on plugin:\
+			write_log -f "${EMINFO_LOG}" "E0000000 add_repeat_errcount on plugin:"\
 				"[${plugin_name}] for [valid => [${repeat_errcount}] and update as +1]"\
 				"error: [${errinfo}]";
 		else
-			write_log -f "${EMINFO_LOG}" 00000000 add_repeat_errcount on plugin:\
+			write_log -f "${EMINFO_LOG}" "00000000 add_repeat_errcount on plugin:"\
 				"[${plugin_name}] for [valid => [${repeat_errcount}] and update as +1]"\
 				"success";
 		fi
@@ -1212,7 +1213,7 @@ zero_repeat_errcount() {
   local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
 
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 zero_repeat_errcount error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 zero_repeat_errcount error: missing plugin name";
         return 1
   }
 
@@ -1223,10 +1224,10 @@ zero_repeat_errcount() {
   errinfo=$( sed -i '/^'${plugin_name}'\>/d' ${TMP_REPEAT} 2>&1 1>/dev/null)
   rc=$?
   if [ "${rc}" == "0" ]; then
-	write_log -f "${EMINFO_LOG}" 00000000 zero_repeat_errcount on plugin:\
+	write_log -f "${EMINFO_LOG}" "00000000 zero_repeat_errcount on plugin:"\
 		"[${plugin_name}] success.";
   else
-	write_log -f "${EMINFO_LOG}" E0000000 zero_repeat_errcount on plugin:\
+	write_log -f "${EMINFO_LOG}" "E0000000 zero_repeat_errcount on plugin:"\
 		"[${plugin_name}] error: [${errinfo}]";
   fi
 
@@ -1266,7 +1267,7 @@ list_running_plugin_section() {
 gen_tmpfile() {
   local plugin_name=$1  rc=  errinfo=
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 gen_tmpfile error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 gen_tmpfile error: missing plugin name";
 	return 1
   }
 
@@ -1277,10 +1278,10 @@ gen_tmpfile() {
   rc=$?
   if [ "${rc}" == "0" ]; then
   	echo "${filepath}"
-	write_log -f "${EMINFO_LOG}" 00000000 gen_tmpfile success:\
+	write_log -f "${EMINFO_LOG}" "00000000 gen_tmpfile success:"\
 		"[${filepath}]";
   else
-	write_log -f "${EMINFO_LOG}" E0000000 gen_tmpfile error:\
+	write_log -f "${EMINFO_LOG}" "E0000000 gen_tmpfile error:"\
 		"touch tmpfile [${filepath}]"\
 		"return error: [${errinfo}]";
   fi
@@ -1295,7 +1296,7 @@ gen_tmpfile() {
 time2run_ornot() {
   local plugin_name=$1 result=
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 time2run_ornot error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 time2run_ornot error: missing plugin name";
 	return 1
   }
   local nextrun=$(get_nextrun ${plugin_name})
@@ -1310,7 +1311,7 @@ time2run_ornot() {
 gen_lock() {
   local plugin_name=$1  rc=  errinfo=  logfile=  p_path=
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 gen_lock error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 gen_lock error: missing plugin name";
   	return 1
   }
   [ -z "$( echo "${plugin_name}" | grep -E -o "^eminfo_" )" ] && {
@@ -1324,10 +1325,10 @@ gen_lock() {
   errinfo=$( ln -s "${p_path}" "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${logfile}" E0000000 gen_lock on plugin:\
+	write_log -f "${logfile}" "E0000000 gen_lock on plugin:"\
 		"[${plugin_name}] error: [${errinfo}]";
   else
-	write_log -f "${logfile}" 00000000 gen_lock on plugin:\
+	write_log -f "${logfile}" "00000000 gen_lock on plugin:"\
 		"[${plugin_name}] success.";
   fi
 
@@ -1340,7 +1341,7 @@ gen_lock() {
 un_lock() {
   local plugin_name=$1  rc=  errinfo=  logfile=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 un_lock error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 un_lock error: missing plugin name";
         return 1
   }
   [ -z "$( echo "${plugin_name}" | grep -E -o "^eminfo_" )" ] && {
@@ -1352,10 +1353,10 @@ un_lock() {
   errinfo=$( unlink "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${logfile}" E0000000 un_lock on plugin:\
+	write_log -f "${logfile}" "E0000000 un_lock on plugin:"\
 		"[${plugin_name}] error: [${errinfo}]";
   else
-	write_log -f "${logfile}" 00000000 un_lock on plugin:\
+	write_log -f "${logfile}" "00000000 un_lock on plugin:"\
 		"[${plugin_name}] success";
   fi
   return "${rc}"
@@ -1367,7 +1368,7 @@ un_lock() {
 del_fpid() {
   local plugin_name=$1  rc=  errinfo=  logfile=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 del_fpid error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 del_fpid error: missing plugin name";
         return 1
   }
   [ -z "$( echo "${plugin_name}" | grep -E -o "^eminfo_" )" ] && {
@@ -1379,10 +1380,10 @@ del_fpid() {
   errinfo=$( rm -f "${RUN_DIR}/${plugin_name}.pid" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${logfile}" E0000000 del_fpid on plugin:\
+	write_log -f "${logfile}" "E0000000 del_fpid on plugin:"\
 		"[${plugin_name}] error: [${errinfo}]";
   else
-	write_log -f "${logfile}" 00000000 del_fpid on plugin:\
+	write_log -f "${logfile}" "00000000 del_fpid on plugin:"\
 		"[${plugin_name}] success.";
   fi
   return "${rc}"
@@ -1396,7 +1397,7 @@ del_fpid() {
 check_lock() {
   local plugin_name=$1 result=
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 check_lock error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 check_lock error: missing plugin name";
 	return 1
   }
   # [ -e ${RUN_DIR}/${plugin_name}.lock ] && {   ###  never check broken link: never return linkerror
@@ -1412,13 +1413,13 @@ check_lock() {
 	if [ "${f}" == "${p_path}" -a -f "${p_path}" ]; then
 		result=$(stat -c %Y ${RUN_DIR}/${plugin_name}.lock 2>&-) 
 		[ -z "${result}" -o ! -z "${result//[0-9]}" ] && {
-			write_log -f "${logfile}" E0000000 check_lock on "[${plugin_name}] error: "\
+			write_log -f "${logfile}" "E0000000 check_lock on [${plugin_name}] error: "\
 				"runlock timestamp is not numberic: [${result}], "\
 				"return linkerror";
 			result="linkerror"
 		}
 	else
-		write_log -f "${logfile}" E0000000 check_lock on "[${plugin_name}] error: "\
+		write_log -f "${logfile}" "E0000000 check_lock on [${plugin_name}] error: "\
 				"runlock link->target is mistake or target not exist: "\
 				"[${f}] ==> [${p_path}], "\
 				"return linkerror";
@@ -1460,19 +1461,19 @@ clear_dead_lock_pid() {
 
 	[ -L "${RUN_DIR}/${_p}.lock" ] && {
 		if [ "$(check_lock  "${_p}")" == "linkerror" ]; then   ### condition: 1
-			write_log -f ${logfile} D0000000 EMINFO remove linkerror lock for\
+			write_log -f ${logfile} "D0000000 EMINFO remove linkerror lock for"\
 				"[${_p}]: link error";
 			un_lock "${_p}"
 		fi
 		if [ ! -f "${RUN_DIR}/${_p}.pid" ]; then  ### condition: 2
-			write_log -f ${logfile} D0000000 EMINFO remove dead lock for\
+			write_log -f ${logfile} "D0000000 EMINFO remove dead lock for"\
 				"[${_p}]: pid not exists";
 			un_lock "${_p}"        
 		else
 			check_ps_by_pid_file "${RUN_DIR}/${_p}.pid" 1>/dev/null 2>&1
 			_rc=$?
 			if [ "$_rc" != "0" ]; then  ### condition: 3
-				write_log -f ${logfile} D0000000 EMINFO remove dead lock and pid for\
+				write_log -f ${logfile} "D0000000 EMINFO remove dead lock and pid for"\
 					"[${_p}]: pid exists but process not running";
 				un_lock "${_p}"  
 				del_fpid "${_p}"
@@ -1483,7 +1484,7 @@ clear_dead_lock_pid() {
 		check_ps_by_pid_file "${RUN_DIR}/${_p}.pid" 1>/dev/null 2>&1
 		_rc=$?
 		if [ "$_rc" != "0" ]; then  ### condition: 4
-			write_log -f ${logfile} D0000000 EMINFO remove dead pid for "[${_p}]";
+			write_log -f ${logfile} "D0000000 EMINFO remove dead pid for [${_p}]";
 			del_fpid "${_p}"
 		fi
 	fi
@@ -1521,30 +1522,35 @@ clear_dead_lock_pid() {
 stopps_by_pidfile() {
   local fpid=$1
   [ -z "${fpid}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 stopps_by_pidfile error: missing arguments, "fpid=[${fpid}]"
+	write_log -f "${EMINFO_LOG}" "E0000000 stopps_by_pidfile error:"\
+		"missing arguments, fpid=[${fpid}]";
   	return 1
   }
 
   if [ -f "${fpid}" ]; then
 	read line < ${fpid}    ### step: 1
-	write_log -f "${EMINFO_LOG}" STP00000 EMINFO read pids from pidfile: "[${fpid}]" result: "[${line}]"
+	write_log -f "${EMINFO_LOG}" "STP00000 EMINFO read pids from pidfile:"\
+		"[${fpid}] result: [${line}]";
 
 	for x in `echo ${line}`;do
 		[ -z "${x//[0-9]/}" -a -d "/proc/${x}" ] && {
 			local children_pids=$(get_children_pids_by_pid ${x})    ### step: 1.1
-			write_log -f "${EMINFO_LOG}" STP00000 EMINFO get_children_pids for pid:"[${x}] result:[${children_pids}]"
+			write_log -f "${EMINFO_LOG}" "STP00000 EMINFO get_children_pids for pid:"\
+				"[${x}] result:[${children_pids}]";
 
 			for cpid in `echo ${children_pids}`    ### step: 1.2
 			do
 				local cmdline=$(ps -p "${cpid}" -o cmd= 2>&-)
-				write_log -f "${EMINFO_LOG}" STP00000 EMINFO terminating child pid: "[${cpid}] => [${cmdline}] SIG:TERM"
+				write_log -f "${EMINFO_LOG}" "STP00000 EMINFO terminating child pid:"\
+					"[${cpid}] => [${cmdline}] SIG:TERM";
 				kill -15  "${cpid}" 1>&- 2>&-
 			done
 
 			local cmdline1=$(cat /proc/${x}/cmdline 2>&-)    ### step: 1.3
 
 			local cmdline=$(ps -p "${x}" -o cmd= 2>&-)
-			write_log -f "${EMINFO_LOG}" STP00000 EMINFO terminating father pid: "[${x}] => [${cmdline}] SIG:TERM "
+			write_log -f "${EMINFO_LOG}" "STP00000 EMINFO terminating father pid:"\
+				"[${x}] => [${cmdline}] SIG:TERM ";
 			kill -15 "${x}" 1>&- 2>&-	 ### step: 1.4
 			sleep 1
 
@@ -1553,7 +1559,8 @@ stopps_by_pidfile() {
 				local kn=1  kmax=3
 				until [ "${cmdline1}" != "${cmdline2}" ]     ### step: 1.6
 				do
-					write_log -f "${EMINFO_LOG}" STP00000 EMINFO father pid: "[${x}] => [${cmdline2}] still running, kill it by SIG:KILL, times:[${kn}]"
+					write_log -f "${EMINFO_LOG}" "STP00000 EMINFO father pid:"\
+						"[${x}] => [${cmdline2}] still running, kill it by SIG:KILL, times:[${kn}]";
 					kill -9 ${x} 1>&- 2>&-
 					sleep 0.1
 					local cmdline2=$(cat /proc/${x}/cmdline 2>&-)
@@ -1562,7 +1569,8 @@ stopps_by_pidfile() {
 					[ "$( echo "${kn}>${kmax}" | bc 2>&- )" == "1" ] && break
 				done
 			else
-				write_log -f "${EMINFO_LOG}" STP00000 EMINFO terminate father pid: "[${x}] => [${cmdline}] SIG:TERM success"
+				write_log -f "${EMINFO_LOG}" "STP00000 EMINFO terminate father pid:"\
+					"[${x}] => [${cmdline}] SIG:TERM success";
 			fi
 		}
 	done
@@ -1571,14 +1579,17 @@ stopps_by_pidfile() {
   	errinfo=$( rm -f "${fpid}" 2>&1 1>/dev/null )    ### step: 2
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-		write_log -f "${EMINFO_LOG}" STP00000 EMINFO remove pidfile: "[${fpid}] error: [${errinfo}]"
+		write_log -f "${EMINFO_LOG}" "STP00000 EMINFO remove pidfile:"\
+			"[${fpid}] error: [${errinfo}]";
 		return 2
 	else
-		write_log -f "${EMINFO_LOG}" STP00000 EMINFO remove pidfile: "[${fpid}] success"
+		write_log -f "${EMINFO_LOG}" "STP00000 EMINFO remove pidfile:"\
+			"[${fpid}] success";
 		return 0
 	fi
   else
-	write_log -f "${EMINFO_LOG}" E0000000 stopps_by_pidfile error: input pidfile not exists: "[${fpid}]"
+	write_log -f "${EMINFO_LOG}" "E0000000 stopps_by_pidfile error:"\
+		"input pidfile not exists: [${fpid}]";
 	return 3
   fi
 }
@@ -1591,10 +1602,11 @@ stop_single_plugin() {
   local plugin_name=$1  
   local pidfile="${RUN_DIR}/${plugin_name}.pid"
   if [ -z "${plugin_name}" ]; then
-	write_log -f "${EMINFO_LOG}" E0000000 stop_single_plugin error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 stop_single_plugin error: missing plugin name";
 	return 1
   else
-	write_log -f "${EMINFO_LOG}" STP00000 EMINFO stop plugin "[${plugin_name}]: 1 => stop process on pidfile: [${pidfile}]"
+	write_log -f "${EMINFO_LOG}" "STP00000 EMINFO stop plugin"\
+		"[${plugin_name}]: 1 => stop process on pidfile: [${pidfile}]";
 	# local plugin_pid=$(cat "${pidfile}" 2>&-)
 	# local plugin_cmd=$(cat /proc/${plugin_pid}/cmdline 2>&-)
 	# if [ "$(sub_str "${plugin_cmd}" "${plugin_name}")" == "yes" ]; then
@@ -1605,7 +1617,8 @@ stop_single_plugin() {
 		# return 1
 	# fi
   	stopps_by_pidfile "${pidfile}"
-	write_log -f "${EMINFO_LOG}" STP00000 EMINFO stop plugin "[${plugin_name}]: 2 => remove lockfile"
+	write_log -f "${EMINFO_LOG}" "STP00000 EMINFO stop plugin"\
+		"[${plugin_name}]: 2 => remove lockfile";
   	un_lock "${plugin_name}"
   fi
 }
@@ -1618,13 +1631,15 @@ stop_single_plugin() {
 timeout_ornot() {
   local plugin_name=$1 result=
   [ -z "${plugin_name}" ] && {
-	write_log -f "${EMINFO_LOG}" E0000000 timeout_ornot error: missing plugin name
+	write_log -f "${EMINFO_LOG}" "E0000000 timeout_ornot error: missing plugin name";
 	return 1
   }
   local exec_tmout=$(conv_time2sec "$(get_exec_tmout ${plugin_name})")
   local starttime=$(check_lock ${plugin_name})
   if [ -z "${starttime}" -o ! -z "${starttime//[0-9]/}" ]; then
-	write_log -f "${EMINFO_LOG}" E0000000 timeout_ornot error: starttime "[${starttime}]" not numberic on plugin "[${plugin_name}]": maybe not running.
+	write_log -f "${EMINFO_LOG}" "E0000000 timeout_ornot error:"\
+		"starttime [${starttime}] not numberic on plugin "\
+		"[${plugin_name}]: maybe not running.";
 	result="error"
   else
 	local durationtime=$(echo " "$(date +%s)" - "${starttime}" " | bc 2>&-) 
@@ -1643,7 +1658,7 @@ timeout_ornot() {
 add_runlock_on_pid_notexist(){
   local plugin_name=$1 _rc=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 add_runlock_on_pid_notexist error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 add_runlock_on_pid_notexist error: missing plugin name";
         return 1
   }
   [ -z "$( echo "${plugin_name}" | grep -E -o "^eminfo_" )" ] && {
@@ -1655,10 +1670,12 @@ add_runlock_on_pid_notexist(){
   gen_lock "${plugin_name}"
   _rc=$?
   if [ "${_rc}" != "0" ]; then
-	write_log -f ${logfile} P0000000 EMINFO add runlock on "[${plugin_name}]": without pidfile but add runlock: failed. EXIT
+	write_log -f ${logfile} "P0000000 EMINFO add runlock on"\
+		"[${plugin_name}]: without pidfile but add runlock: failed. EXIT";
 	return 1
   else
-	write_log -f ${logfile} P0000000 EMINFO add runlock on "[${plugin_name}]": without pidfile and add runlock: succeed. OK
+	write_log -f ${logfile} "P0000000 EMINFO add runlock on"\
+		"[${plugin_name}]: without pidfile and add runlock: succeed. OK";
 	return 0
   fi
 }
@@ -1680,7 +1697,7 @@ add_runlock_on_pid_notexist(){
 check_runlock_on_pid_exist() {
   local plugin_name=$1  r_c=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" E0000000 check_runlock_on_pid_exist error: missing plugin name
+        write_log -f "${EMINFO_LOG}" "E0000000 check_runlock_on_pid_exist error: missing plugin name";
         return 1
   }
 
@@ -1695,7 +1712,8 @@ check_runlock_on_pid_exist() {
 	#### this will lead to plenty of records in {EMINFO_LOG}  while plugin running for a long time.
 	## write_log -f ${logfile} L0000000 EMINFO plugin "[${plugin_name}]" already running. CHECK EXEC_TMOUT
 	if [ "$(timeout_ornot "${plugin_name}")" == "yes" ]; then   ### condition: 0
-		write_log -f ${logfile} L0000000 EMINFO plugin "[${plugin_name}]" running but timeout. STOP IT
+		write_log -f ${logfile} "L0000000 EMINFO plugin"\
+			"[${plugin_name}] running but timeout. STOP IT";
 		process_plugin_timeout "${plugin_name}"
 		return 0
 	else    
@@ -1707,7 +1725,8 @@ check_runlock_on_pid_exist() {
 
   [ "${lockinfo}" == "linkerror" ] && {
 	un_lock "${plugin_name}"
-	write_log -f ${logfile} L0000000 EMINFO plugin "[${plugin_name}]" running but linkerror. UNLOCK IT
+	write_log -f ${logfile} "L0000000 EMINFO plugin"\
+		"[${plugin_name}] running but linkerror. UNLOCK IT";
 	return 2      ### condition: 2
   }
 
@@ -1715,15 +1734,18 @@ check_runlock_on_pid_exist() {
 	gen_lock "${plugin_name}"
         r_c=$?
 	if [ "${r_c}" != "0" ]; then
-		write_log -f ${logfile} L0000000 EMINFO add runlock on "[${plugin_name}]": without runlock but add runlock failed. EXIT
+		write_log -f ${logfile} "L0000000 EMINFO add runlock on"\
+			"[${plugin_name}]: without runlock but add runlock failed. EXIT";
 		return 3      ### condition: 3
 	else		
-		write_log -f ${logfile} L0000000 EMINFO add runlock on "[${plugin_name}]": without runlock and add runlock succeed. OK 
+		write_log -f ${logfile} "L0000000 EMINFO add runlock on"\
+			"[${plugin_name}]: without runlock and add runlock succeed. OK";
 		return 4      ### condition: 4
 	fi
   }
 
-  write_log -f ${logfile} L0000000 EMINFO plugin "[${plugin_name}]" something unknown occure. EXIT
+  write_log -f ${logfile} "L0000000 EMINFO plugin"\
+	"[${plugin_name}] something unknown occure. EXIT";
   return 5 	### condition: 5
 }
 
@@ -1830,7 +1852,7 @@ list_plugin_status() {
 #
 enable_plugin(){
   local plugin_name=$1  rc=
-  write_log -f "${EMINFO_LOG}" ENAB0000 enable_plugin trying to enable plugin "[${plugin_name}]"
+  write_log -f "${EMINFO_LOG}" "ENAB0000 enable_plugin trying to enable plugin [${plugin_name}]";
   update_eminfo_config "${plugin_name}" "enable" "yes"
   rc=$?
   return "${rc}"
@@ -1841,7 +1863,7 @@ enable_plugin(){
 #
 disable_plugin() {
   local plugin_name=$1  rc=
-  write_log -f "${EMINFO_LOG}" DSAB0000 disable_plugin trying to disable plugin "[${plugin_name}]"
+  write_log -f "${EMINFO_LOG}" "DSAB0000 disable_plugin trying to disable plugin [${plugin_name}]";
   update_eminfo_config "${plugin_name}" "enable" "no"
   rc=$?
   return "${rc}"
@@ -1857,12 +1879,12 @@ disable_plugin() {
 init_plugin() {
   local plugin_name=$1
   if [ -z "${plugin_name}" ]; then
-	write_log -f "${EMINFO_LOG}" INIT0000 resetting all plugins ...
+	write_log -f "${EMINFO_LOG}" "INIT0000 resetting all plugins ...";
 	: > ${TMP_LASTRUN} >/dev/null 2>&1
   	: > ${TMP_NEXTRUN} >/dev/null 2>&1
   	: > ${TMP_REPEAT}  >/dev/null 2>&1
   else
-	write_log -f "${EMINFO_LOG}" INIT0000 resetting plugin: "[${plugin_name}]" ...
+	write_log -f "${EMINFO_LOG}" "INIT0000 resetting plugin: [${plugin_name}] ..."
  	sed -i '/^'${plugin_name}'\>/d' ${TMP_LASTRUN} > /dev/null 2>&1
  	sed -i '/^'${plugin_name}'\>/d' ${TMP_NEXTRUN} > /dev/null 2>&1
  	sed -i '/^'${plugin_name}'\>/d' ${TMP_REPEAT}  > /dev/null 2>&1
@@ -1930,7 +1952,7 @@ view_extra_config() {
 #
 process_plugin() {
 
-  local plugin_name=$1  output=
+  local plugin_name=$1  output=  plain_output=
 
   # Step 1: set jid / set debug flag / set logfile
   local jid=$(mktemp -u XXXXXXXX)      ### set random/unique jid
@@ -1943,23 +1965,25 @@ process_plugin() {
   [ -z "${SYSLOAD_UPLIMIT}" -o ! -z "${SYSLOAD_UPLIMIT//[0-9]}" ] && SYSLOAD_UPLIMIT=30
   local sysload=$( cut -d" " -f1 /proc/loadavg 2>&- )
   if [ "$(echo  "${sysload} > $SYSLOAD_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
-	write_log -f "${EMINFO_LOG}" ${jid} ${plugin_name} system overloaded: "[${sysload}]" uplimit: "[${SYSLOAD_UPLIMIT}]" EXIT
+	write_log -f "${EMINFO_LOG}" "${jid} ${plugin_name} system overloaded:"\
+		"[${sysload}] uplimit: [${SYSLOAD_UPLIMIT}] EXIT";
 	process_sysoverload "${plugin_name}" "${sysload}" "${SYSLOAD_UPLIMIT}"
 	update_lastrun_and_nextrun "${plugin_name}"
 	del_fpid "${plugin_name}"
 	un_lock "${plugin_name}"
-	write_log ${jid} ${plugin_name} update lastrun time / release LOG / release runlock done. FINISHED.
+	write_log ${jid} ${plugin_name}\
+		"update lastrun time / release LOG / release runlock done. FINISHED.";
 	unset _LOG
 	return 1
   else
-	write_log ${jid} ${plugin_name} system load normal: "[${sysload}]" CONTINUE
+	write_log ${jid} ${plugin_name} "system load normal: [${sysload}] CONTINUE";
   fi
 
   # Step 3: check if input plugin-name registered in config file or not
-  write_log ${jid} ${plugin_name} START
+  write_log ${jid} ${plugin_name} "START";
   if [ -z "${plugin_name}" ]; then   ### check null
-	write_log ${jid} plugin_name empty. please specify plugin_name. EXIT
-	update_record "${plugin_name}" "EXIT on Null Name"
+	write_log ${jid} "plugin_name empty. please specify plugin_name. EXIT";
+	update_status "${plugin_name}" "EXIT on Null Name"
 	update_lastrun_and_nextrun "${plugin_name}"
 	del_fpid "${plugin_name}"
 	un_lock "${plugin_name}"
@@ -1967,43 +1991,46 @@ process_plugin() {
 	return 1
   else
   	if [ "$(read_eminfo_section "${plugin_name}" )" != "${plugin_name}" ]; then   ### check registered
-		write_log ${jid} ${plugin_name} not registered in config file. EXIT
-		update_record "${plugin_name}" "EXIT on Not Registered"
+		write_log ${jid} ${plugin_name} "not registered in config file. EXIT";
+		update_status "${plugin_name}" "EXIT on Not Registered";
 		update_lastrun_and_nextrun "${plugin_name}"
 		del_fpid "${plugin_name}"
 		un_lock "${plugin_name}"
 		unset _LOG
 		return 2
 	else
-		write_log ${jid} ${plugin_name} registered in config file. CONTINUE
+		write_log ${jid} ${plugin_name} "registered in config file. CONTINUE";
 	fi
   fi
 
   # Step 4: check if input plugin-name enabled in config file or not
   local status=$(get_enable "${plugin_name}")
   if [ "${status}" != "yes" ]; then	### skip disabled plugins
-	write_log ${jid} ${plugin_name} not enabled. "status=[${status}]" EXIT
-	update_record "${plugin_name}" "EXIT on Not Enabled"
+	write_log ${jid} ${plugin_name} "not enabled."\
+		"status=[${status}] EXIT";
+	update_status "${plugin_name}" "EXIT on Not Enabled"
 	update_lastrun_and_nextrun "${plugin_name}"
 	del_fpid "${plugin_name}"
 	un_lock "${plugin_name}"
 	unset _LOG
 	return 0
   else
-	write_log ${jid} ${plugin_name} enabled. "status=[${status}]" CONTINUE
+	write_log ${jid} ${plugin_name} "enabled. status=[${status}] CONTINUE";
   fi
 
   # Step 5: check if plugin file exists under PLUGIN_DIR or not
   if [ ! -f "${PLUGIN_DIR}/${plugin_name}" ]; then
-	write_log ${jid} ${plugin_name} plugin file: "[${PLUGIN_DIR}/${plugin_name}]" not exist. EXIT
-	update_record "${plugin_name}" "EXIT on Plugin File Not Found"
+	write_log ${jid} ${plugin_name} "plugin file:"\
+		"[${PLUGIN_DIR}/${plugin_name}] not exist. EXIT";
+	update_status "${plugin_name}" "EXIT on Plugin File Not Found"
 	update_lastrun_and_nextrun "${plugin_name}"
 	del_fpid "${plugin_name}"
 	un_lock "${plugin_name}"
 	unset _LOG
 	return 3
   else
-	write_log ${jid} ${plugin_name} plugin file: "[${PLUGIN_DIR}/${plugin_name}]" exist. "==>" exec. CONTINUE
+	write_log ${jid} ${plugin_name} "plugin file:"\
+		"[${PLUGIN_DIR}/${plugin_name}] exist ==> exec. CONTINUE";
   fi
 
   # Step 6: exec plugin / obtain returned code / obtain returned stuff
@@ -2012,30 +2039,37 @@ process_plugin() {
   #@# local output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )  
   output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )
   local rc=$?
-  write_log -f ${EMINFO_LOG} ${jid} ${plugin_name} execution completed. return code: "[${rc}]".  return string: "[${output}]". CONTINUE
-  update_record "${plugin_name}" "${output}"
+  # trim html tag in plugin output. convert html output into plain.
+  plain_output=$( ${PLUTIL} format_pstr_output_toplain "${output}" ) 
+  write_log -f ${EMINFO_LOG} ${jid} ${plugin_name} "execution completed."\
+	"return code: [${rc}]  return string: [${plain_output}]. CONTINUE";
+  update_status "${plugin_name}" "${output}"
 
 
   # Step 7: special steps.   
   # while plugin return status = 0(OK) or 4(NOOP)
   # return status: 0:OK  
   if [ "${rc}" == "0" ]; then    
-	write_log ${jid} ${plugin_name} "return status: [OK]. try to zero repeat errcount. CONTINUE"
+	write_log ${jid} ${plugin_name}\
+		"return status: [OK]. try to zero repeat errcount. CONTINUE";
 	## reset accumulated return-err number => 0
 	zero_repeat_errcount "${plugin_name}"
   # return status: 4:NOOP
   elif [ "${rc}" == "4" ]; then  ### plugin finished. 
-	write_log ${jid} ${plugin_name} "return status: [NOOP]. Noting to do.  EXIT"
-	# update_record "${plugin_name}" "EXIT on Return NOOP"
+	write_log ${jid} ${plugin_name}\
+		"return status: [NOOP]. Noting to do.  EXIT";
+	# update_status "${plugin_name}" "EXIT on Return NOOP"
 	update_lastrun_and_nextrun "${plugin_name}"
 	del_fpid "${plugin_name}"
 	un_lock "${plugin_name}"
-	write_log ${jid} ${plugin_name} update lastrun time / release LOG / release runlock done. FINISHED.
+	write_log ${jid} ${plugin_name}\
+		"update lastrun time / release LOG / release runlock done. FINISHED.";
 	unset _LOG
 	return 0
   # return status: (1/2/3) == (! 0/4)
   else  
-	write_log ${jid} ${plugin_name} "return code: [${rc}]. try to +1 on repeat errcount. CONTINUE" 
+	write_log ${jid} ${plugin_name}\
+		"return code: [${rc}]. try to +1 on repeat errcount. CONTINUE";
 	### accumulated error number +1
   	add_repeat_errcount "${plugin_name}"
   	local array_repeat_err_stuff=()
@@ -2044,14 +2078,17 @@ process_plugin() {
 	local _now_errcount=${array_repeat_err_stuff[1]} 
 	local _errcount_uplimit=${array_repeat_err_stuff[2]}
   	if [ "${_yes_ornot}" == "1" ]; then  # plugin continue
-		write_log ${jid} ${plugin_name} reached maximize errtimes: "[(${_now_errcount}) >= (${_errcount_uplimit})]". CONTINUE
+		write_log ${jid} ${plugin_name} "reached maximize errtimes:"\
+			"[(${_now_errcount}) >= (${_errcount_uplimit})] CONTINUE";
   	else  # plugin finished
-		write_log ${jid} ${plugin_name} have-not-yet reached maximize errtimes: "[(${_now_errcount}) < (${_errcount_uplimit})]". EXIT
-		# update_record "${plugin_name}" "EXIT on Not Reached MaxErr Limit"
+		write_log ${jid} ${plugin_name} "have-not-yet reached maximize errtimes:"\
+			"[(${_now_errcount}) < (${_errcount_uplimit})] EXIT";
+		# update_status "${plugin_name}" "EXIT on Not Reached MaxErr Limit"
         	update_lastrun_and_nextrun "${plugin_name}"
         	del_fpid "${plugin_name}"
         	un_lock "${plugin_name}"
-        	write_log ${jid} ${plugin_name} update lastrun time / release LOG / release runlock done. FINISHED.
+        	write_log ${jid} ${plugin_name}\
+			"update lastrun time / release LOG / release runlock done. FINISHED.";
         	unset _LOG
         	return 0
   	fi
@@ -2060,50 +2097,56 @@ process_plugin() {
   # Step 8: check action: take_snapshot_type
   local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot_type ${rc})
   if [ "${t_snap}" != "yes" ]; then
-	write_log ${jid} ${plugin_name} take snapshot disabled. SKIP
+	write_log ${jid} ${plugin_name} "take snapshot disabled. SKIP";
   else
-	write_log ${jid} ${plugin_name} take snapshot enabled. CONTINUE
+	write_log ${jid} ${plugin_name} "take snapshot enabled. CONTINUE";
 	${TAKESNAP_SH} -f "${plugin_name}" -s "${jid}" 1>/dev/null 2>&1
-	write_log ${jid} ${plugin_name} take snapshot finished. detailis in ${TAKESNAP_LOG##*/}. CONTINUE
+	write_log ${jid} ${plugin_name} "take snapshot finished."\
+		"detailis in ${TAKESNAP_LOG##*/}. CONTINUE";
   fi
 	
   # Step 9: check action: mail_notify_type
   local m_alert=$(take_action_ornot "${plugin_name}" mail_notify_type ${rc})
   if [ "${m_alert}" != "yes" ]; then
-	write_log ${jid} ${plugin_name} mail notify disabled. SKIP
+	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
   else
-	write_log ${jid} ${plugin_name} mail notify enabled. CONTINUE
+	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
 	${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}"
-	write_log ${jid} ${plugin_name} mail notify finished. details in ${SENDMAIL_LOG##*/}. CONTINUE
+	write_log ${jid} ${plugin_name} "mail notify finished."\
+		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
   fi
 
   # Step 10: check action: post_notify_type
   local p_alert=$(take_action_ornot "${plugin_name}" post_notify_type ${rc})
   if [ "${p_alert}" != "yes" ]; then
-	write_log ${jid} ${plugin_name} post notify disabled. SKIP
+	write_log ${jid} ${plugin_name} "post notify disabled. SKIP";
   else
-	write_log ${jid} ${plugin_name} post notify enabled. CONTINUE
+	write_log ${jid} ${plugin_name} "post notify enabled. CONTINUE";
 	${POSTLOG_SH} -f "${plugin_name}" -s "${jid}" -i "${output}" # eval  will return syntax error. why ?
-	write_log ${jid} ${plugin_name} post notify finished. details in ${POSTLOG_LOG##*/}. CONTINUE
+	write_log ${jid} ${plugin_name} "post notify finished."\
+		"details in ${POSTLOG_LOG##*/}. CONTINUE";
   fi
 
   # Step 11: check action: auto_handle
   local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type ${rc})
   if [ "${a_hand}" != "yes" ]; then
-	write_log ${jid} ${plugin_name} auto handle disabled. SKIP
+	write_log ${jid} ${plugin_name} "auto handle disabled. SKIP";
   else
-	write_log ${jid} ${plugin_name} auto handle enabled. CONTINUE
+	write_log ${jid} ${plugin_name} "auto handle enabled. CONTINUE";
 	local handler=$(read_eminfo_config "${plugin_name}" auto_handler)
 	[ -z "${handler}" ] && handler=$(read_eminfo_config plugin_default auto_handler)
 	if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
-		write_log ${jid} ${plugin_name} auto handler: "[${HANDLER_DIR}/${handler}]" exists. CONTINUE
+		write_log ${jid} ${plugin_name} "auto handler:"\
+			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
  		[ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
 		local hd_output=
 		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
 		local hd_rc=$?
-		write_log ${jid} ${plugin_name} auto handler execution completed. return code:"[${hd_rc}]". return string: "[${hd_output}]" CONTINUE
+		write_log ${jid} ${plugin_name} "auto handler execution completed."\
+			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
   	else
-		write_log ${jid} ${plugin_name} auto handler: "[${HANDLER_DIR}/${handler}]" not exist or empty. SKIP
+		write_log ${jid} ${plugin_name} "auto handler:"\
+			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
 	fi
   fi
 
@@ -2111,7 +2154,8 @@ process_plugin() {
   update_lastrun_and_nextrun "${plugin_name}"
   del_fpid "${plugin_name}"
   un_lock "${plugin_name}"
-  write_log ${jid} ${plugin_name} update lastrun time / release LOG / release runlock done. FINISHED
+  write_log ${jid} ${plugin_name}\
+	"update lastrun time / release LOG / release runlock done. FINISHED";
   unset _LOG
   return 0
 }
@@ -2128,27 +2172,30 @@ process_inner_plugin() {
   local jid=$(mktemp -u XXXXXXXX)    
 
   # Step 2: check plugin script 
-  write_log -f ${INNER_LOG} ${jid} ${plugin_name} START
+  write_log -f ${INNER_LOG} ${jid} ${plugin_name} "START"
   if [ ! -f "${INNER_DIR}/${plugin_name}" ]; then
-        write_log -f ${INNER_LOG} ${jid} ${plugin_name} plugin file: "[${INNER_DIR}/${plugin_name}]" not exist. EXIT
+        write_log -f ${INNER_LOG} ${jid} ${plugin_name} "plugin file:"\
+		"[${INNER_DIR}/${plugin_name}] not exist. EXIT";
         del_fpid "${plugin_name}"
         un_lock "${plugin_name}"
         return 3
   else
-        write_log -f ${INNER_LOG} ${jid} ${plugin_name} plugin file: "[${INNER_DIR}/${plugin_name}]" exist. "==>" exec. CONTINUE
+        write_log -f ${INNER_LOG} ${jid} ${plugin_name} "plugin file:"\
+		"[${INNER_DIR}/${plugin_name}] exist ==> exec. CONTINUE";
   fi
 
   # Step 3: execute plugin / get return stuff
   [ ! -x "${INNER_DIR}/${plugin_name}" ] && chmod a+x "${INNER_DIR}/${plugin_name}"
   output=$( eval "${INNER_DIR}/${plugin_name}" 2>&1 )
-  write_log -f ${INNER_LOG} ${jid} ${plugin_name} execution completed. return: "[${output}]"
+  write_log -f ${INNER_LOG} ${jid} ${plugin_name} "execution completed."\
+	"return: [${output}]";
 
  # Step 4: plugin finished
- update_record "${plugin_name}" "${output}"
+ update_status "${plugin_name}" "${output}"
  update_lastrun_and_nextrun "${plugin_name}"
  del_fpid "${plugin_name}"
  un_lock "${plugin_name}"
- write_log -f ${INNER_LOG} ${jid} ${plugin_name} execution DONE.
+ write_log -f ${INNER_LOG} ${jid} ${plugin_name} "execution DONE."
 
 }
 
@@ -2158,10 +2205,11 @@ process_inner_plugin() {
 # 
 process_plugin_timeout() {
   local plugin_name=$1
-  local output="{tmout}:{str}:{ Plugin Execution TimeOut | $(html_red "${plugin_name}") execution timeout, has been terminated. }"
+  local output="{tmout}:{str}:{ Plugin Execution TimeOut"\
+	"| $(html_red "${plugin_name}") execution timeout, has been terminated. }";
 
-  # Step 0: update record
-  update_record "${plugin_name}" "Cancle on Plugin TimeOut"
+  # Step 0: update status
+  update_status "${plugin_name}" "Cancle on Plugin TimeOut"
 
   # Step 1: stop timeout plugin 
   stop_single_plugin "${plugin_name}"
@@ -2171,48 +2219,54 @@ process_plugin_timeout() {
   # Step 2: take snapshot
   local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot_type "tmout")
   if [ "${t_snap}" != "yes" ]; then
-        write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} take snapshot disabled. SKIP
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} take snapshot disabled. SKIP";
   else
-        write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} take snapshot enabled. CONTINUE
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} take snapshot enabled. CONTINUE";
         ${TAKESNAP_SH} -f "${plugin_name}" -s "tmout" 1>/dev/null 2>&1
-        write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} take snapshot finished. detailis in ${TAKESNAP_LOG##*/}. CONTINUE
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} take snapshot finished."\
+		"detailis in ${TAKESNAP_LOG##*/}. CONTINUE";
   fi
 
   # Step 3: send timeout notify mail
   local m_alert=$(take_action_ornot "${plugin_name}" mail_notify_type "tmout")
   if [ "${m_alert}" != "yes" ]; then
-        write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} mail notify disabled. SKIP
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify disabled. SKIP";
   else
-	write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} mail notify enabled. CONTINUE
+	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify enabled. CONTINUE";
 	${SENDMAIL} -f "${plugin_name}" -s "tmout" -i "${output}"
-	write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} send timeout mail: finished. details in ${SENDMAIL_LOG##*/}. CONTINUE
+	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} send timeout mail:"\
+		"finished. details in ${SENDMAIL_LOG##*/}. CONTINUE";
   fi
 
   # Step 4: post timeout information
   local p_alert=$(take_action_ornot "${plugin_name}" post_notify_type "tmout")
   if [ "${p_alert}" != "yes" ]; then
-        write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} post notify disabled. SKIP
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify disabled. SKIP";
   else
-        write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} post notify enabled. CONTINUE
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify enabled. CONTINUE";
         ${POSTLOG_SH} -f "${plugin_name}" -s "tmout" -i "${output}"  # eval will return syntax error. why?
-        write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} post alert finished. details in ${POSTLOG_LOG##*/}. CONTINUE
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post alert finished."\
+		"details in ${POSTLOG_LOG##*/}. CONTINUE";
   fi
 
   # Step 5: auto handler while timeout
   local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type "tmout")
   if [ "${a_hand}" != "yes" ]; then
- 	write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} auto handle disabled. SKIP 
+ 	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle disabled. SKIP";
   else
-	write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} auto handle enabled. CONTINUE
+	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle enabled. CONTINUE";
 	local handler=$(read_eminfo_config "${plugin_name}" auto_handler)
         [ -z "${handler}" ] && handler=$(read_eminfo_config plugin_default auto_handler)
         if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
-                write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} auto handler: "[${HANDLER_DIR}/${handler}]" exists. CONTINUE
+                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\
+			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
                 [ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
                 eval "${HANDLER_DIR}/${handler}"
-                write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} auto handle: execution completed. CONTINUE
+                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle:"\
+			"execution completed. CONTINUE";
         else
-                write_log -f "${EMINFO_LOG}" TMT00000 ${plugin_name} auto handler: "[${HANDLER_DIR}/${handler}]" not exist or empty. SKIP
+                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\
+			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
         fi
   fi
 }
@@ -2224,22 +2278,29 @@ process_plugin_timeout() {
 # 
 process_sysoverload() {
   local plugin_name=$1  sysload_now=$2  sysload_limit=$3
-  local output="{ovld}:{str}:{ System OverLoad | $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T) ### Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}] ### Plugin: [${plugin_name}] has been cancled ### }"
+  local output="{ovld}:{str}:{ System OverLoad"\
+	"| $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T)"\
+	"### Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]"\
+	"### Plugin: [${plugin_name}] has been cancled }";
 
-  # Step 0: update record.
-  update_record "${plugin_name}" "Cancle on System Overload"
+  # Step 0: update status.
+  update_status "${plugin_name}" "Cancle on System Overload"
 
   # Step 1: take snapshot whatever.
-  write_log -f "${EMINFO_LOG}" OVLD0000 EMINFO sysload overloaded: "[${sysload_now} >= ${sysload_limit}]" "1 => take snapshot"
+  write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
+	"[${sysload_now} >= ${sysload_limit}] 1 => take snapshot";
   ${TAKESNAP_SH} -f "${plugin_name}" -s "ovld" >/dev/null 2>&1
 
   # Step 2: send alert mail whatever.
-  write_log -f "${EMINFO_LOG}" OVLD0000 EMINFO sysload overloaded: "[${sysload_now} >= ${sysload_limit}]" "2 => send alert mail"
+  write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
+	"[${sysload_now} >= ${sysload_limit}] 2 => send alert mail";
   ${SENDMAIL} -f "${plugin_name}" -s "ovld" -i "${output}"
 
   # Step 3: post alert information whatever.
-  write_log -f "${EMINFO_LOG}" OVLD0000 EMINFO sysload overloaded: "[${sysload_now} >= ${sysload_limit}]" "3 => post alert data"
-  ${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}"   # eval will return syntax error. why?
+  write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
+	"[${sysload_now} >= ${sysload_limit}] 3 => post alert data";
+  # <eval> will return syntax error. why?
+  ${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}"   
 }
 
 
@@ -2266,7 +2327,6 @@ process_sysoverload() {
 # update_lastrun_and_nextrun  check_sysload
 # list_plugin_status  1 2 
 # check_ps_by_pid_file /tmp/1.pid
-# conv_output2mailbody  "{ok}:{str}:{System Load OK | hello summary | I am details1 ### I am details 2 ### }"
 # process_plugin_timeout   check_sysload
 # check_repeat_errcount  check_sysload
 # check_repeat_errcount  hello
@@ -2299,9 +2359,9 @@ process_sysoverload() {
 
 # conv_output2postdata "{level}:{str}:{title | summary | details: item1. ### item2. ### item3. ### }"
 # conv_output2mailbody "{crit}:{str}:{System Load Check CRITICAL | Load Average: [0.18] >= UpLimit: [0] }"
-# conv_output2mailbody "{crit}:{str}:{Notify System Login Check CRITICAL | Notify New System Login Record | <strong><font color=green>New Record:</font></strong> ### ### Jun 15 02:53:19 mylab sshd[18388]: Accepted password for root from 192.168.131.1 port 2596 ssh2 ### Jun 15 02:53:19 mylab sshd[18429]: Accepted password for root from 192.168.131.1 port 2599 ssh2 ### Jun 15 02:53:20 mylab sshd[18470]: Accepted password for root from 192.168.131.1 port 2602 ssh2 ### }"
+# conv_output2mailbody "{warn}:{str}:{Notify System Login Check CRITICAL | Notify New System Login Record | <strong><font color=green>New Record:</font></strong> ### ### Jun 15 02:53:19 mylab sshd[18388]: Accepted password for root from 192.168.131.1 port 2596 ssh2 ### Jun 15 02:53:19 mylab sshd[18429]: Accepted password for root from 192.168.131.1 port 2599 ssh2 ### Jun 15 02:53:20 mylab sshd[18470]: Accepted password for root from 192.168.131.1 port 2602 ssh2 ### }"
 
-# sed -e 's/<[^<^>]*>//g; s/&nbsp;//g;'  | tr  '###' '\n'  
+# sed -e 's/<[^<^>]*>//g; s/&nbsp;//g; s/###/\n/g;';
 # view_base_config report_sysinfo 
 # view_extra_config report_sysinfo 
 
@@ -2315,7 +2375,7 @@ process_sysoverload() {
 #[ "$1" == "test" ] && echo "code after sendmail."
 # conv_time2sec 1800sec
 
-# update_record report_sysinfo "{ok}:{file}:{ /var/log/secure_report.2013.4.10.csv /var/log/secure /etc/passwd /tmp/.hack.tgz }"
+# update_status report_sysinfo "{ok}:{file}:{ /var/log/secure_report.2013.4.10.csv /var/log/secure /etc/passwd /tmp/.hack.tgz }"
 
 # update_eminfo_config check_sysload enable yes
 # echo $?

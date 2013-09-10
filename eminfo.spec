@@ -38,6 +38,7 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 
 %post
 /sbin/chkconfig --add %{name}
+ln -sv /usr/local/eminfo/eminfo /usr/bin/eminfo
 
 %preun
 /sbin/service %{name} stop >/dev/null 2>&1

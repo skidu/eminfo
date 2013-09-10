@@ -214,7 +214,7 @@ case "${mail_type}" in
   *)
 	write_log -f "${SENDMAIL_LOG}" "[${from}]" "ERROR: mail type invalid: [${mail_type}] EXIT"
 	;;
-  esac
+esac
 
 
 write_log -f "${SENDMAIL_LOG}" "[${from}]" "end to sendmail. sesult: [total=${t}  success=${t_s}  fail=${t_e}]"

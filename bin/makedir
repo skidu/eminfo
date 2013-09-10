@@ -30,8 +30,12 @@ array_directories=(
 )
 
 ### Create Directory
+rc=0
 for ((i=0;i<${#array_directories[@]};i++)) 
 do
 	mkdir -v -p -m 755 "${array_directories[i]}"
+	if [ "$?" != "0" ]; then
+		((rc++))
+	fi
 done
-
+exit ${rc}

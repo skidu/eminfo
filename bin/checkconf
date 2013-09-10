@@ -114,10 +114,10 @@ check_type_str(){
   local default=$(echo -e "${rule}"|awk -F":" '{$1="";print;exit;}')
   local result=  rc=
   [ -z "${input//[ ]}" ] && {
-	result="NULL, will set default value: [${default}]"
+	result="NULL, set default [${default}]"
 	rc=${STATE_WARN}
   } || {
-	result="OK, [${input}] is not null"
+	result="OK, [${input}]"
 	rc=${STATE_OK}
   }
   echo -e "${result}"
@@ -132,26 +132,26 @@ check_type_emls(){
   local default=$(echo -e "${rule}"|awk -F":" '{$1="";print;exit;}')
   local result=  rc=
   [ -z "${input//[ ]}" ] && {
-        result="NULL, will set default value: [${default}]"
+        result="NULL, set default [${default}]"
         rc=${STATE_WARN}
   } || {
 	local oknum=0 errnum=0 total=0
 	for eml in `echo -e "${input}"`
 	do
 		if [ "${eml}" == "$(echo -e "${eml}" | grep -E -o "\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*")" ]; then
-			result="${result} [${eml}] is valid email address,"
+			result="${result} [${eml}] valid email address;"
 			((oknum++))
 		else
-			result="${result} [${eml}] is not valid email address,"
+			result="${result} [${eml}] invalid email address;"
 			((errnum++))
 		fi
 		((total++))
 	done
 	[ "${errnum}" != "0" ] && {
-		result="CRIT, [${errnum}/${total}] email address check invalid. ${result}"
+		result="CRIT, [${errnum}/${total}] invalid email address. ${result}"
 		rc=${STATE_CRIT}
 	} || {
-		result="OK, [${oknum}/${total}] email address check all right. ${result}"
+		result="OK, [${oknum}/${total}] valid email address. ${result}"
 		rc=${STATE_OK}
 	}
   }
@@ -179,14 +179,14 @@ check_type_int(){
 	rc=${STATE_CRIT}
   } || {
 	[ ! -z "${input//[0-9]}" ] && {
-		result="CRIT, must be numberic and between [${min}] and [${max}]"
+		result="CRIT, must be number"
 		rc=${STATE_CRIT}
 	} || {
 		[ "$(echo "${input}>=${min}" | bc 2>&-)" == "1" -a "$(echo "${input}<=${max}" | bc 2>&1)" == "1" ] && {
-			result="OK, numberic and between [${min}] and [${max}]"
+			result="OK, number and between [${min}-${max}]"
 			rc=${STATE_OK}
 		} || {
-			result="CRIT, numberic but not between [${min}] and [${max}]"
+			result="CRIT, must between [${min}-${max}]"
 			rc=${STATE_CRIT}
 		}
 	}
@@ -210,13 +210,13 @@ check_type_set(){
   	for s in `echo -e "${sets}"`
   	do
 		[ "${s}" == "${input}" ] && {
-			result="OK, [${input}] is in sets [${sets}]"
+			result="OK, [${input}] belongs in [${sets}]"
 			rc=${STATE_OK}
 			break
 		}
   	done
 	[ -z "${result}" ] && {
-		result="CRIT, [${input}] is not in sets [${sets}]"
+		result="CRIT, [${input}] not belongs in [${sets}]"
 		rc=${STATE_CRIT}
 	}
   }
@@ -248,18 +248,18 @@ check_type_cbset(){
 		done
 		[ "${tag}" == "0" ] && {
 			((errnum++))
-			result="${result} [${i}] is invalid,"
+			result="${result} [${i}] invalid,"
 		} || {
 			((oknum++))
-			result="${result} [${i}] is all right,"
+			result="${result} [${i}] all right,"
 		}
 		((total++))
 	done
 	[ "${errnum}" != "0" ] && {
-		result="CRIT, [${errnum}/${total}] check invalid, allowed sets include: [${sets}], ${result}"
+		result="CRIT, [${errnum}/${total}] invalid, allowed: [${sets}], ${result}"
 		rc=${STATE_CRIT}
 	} || {
-		result="OK, [${oknum}/${total}] check all right, allowed sets include: [${sets}], ${result}"
+		result="OK, [${oknum}/${total}] all right, ${result}"
 		rc=${STATE_OK}
 	}
   }
@@ -284,24 +284,24 @@ check_type_file(){
 	do
 		if [ -f "/${file}" -a -s "/${file}" ]; then
 			((oknum++))
-			result="${result} file [${file}] exists,"
+			result="${result} file [${file}] exists;"
 		elif [ -f "${BASE_DIR}/${file}" -a -s "${BASE_DIR}/${file}" ]; then
 			((oknum++))
-			result="${result} file [${BASE_DIR}/${file}] exists,"
+			result="${result} file [${file}] exists;"
 		elif [ -f "${BASE_DIR}/${sdir}/${file}" -a -s "${BASE_DIR}/${sdir}/${file}" ]; then
 			((oknum++))
-			result="${result} file [${BASE_DIR}/${sdir}/${file}] exists,"
+			result="${result} file [${sdir}/${file}] exists;"
 		else
 			((errnum++))
-			result="${result} file [${file}] not exists or empty file,"
+			result="${result} file [${file}] not exists or empty;"
 		fi
 		((total++))
 	done
 	[ "${errnum}" != "0" ] && {
-                result="CRIT, [${errnum}/${total}] file check failed, ${result}"
+                result="CRIT, [${errnum}/${total}] failed, ${result}"
                 rc=${STATE_CRIT}
         } || {
-                result="OK, [${oknum}/${total}] file check all right, ${result}"
+                result="OK, [${oknum}/${total}] all right, ${result}"
                 rc=${STATE_OK}
         }
   }
@@ -346,10 +346,10 @@ check_ortypes(){
   retr2=$( eval "check_type_${type2} \"${rule2}\" \"${input}\" " 2>&1 )
   rc2=$?
   if [ "${rc1}" == "0" -o "${rc2}" == "0" ]; then
-	result="OK, OR CHECK ONE SUCCEED: check_type_${type1} return [${retr1}]; check_type_${type2} return [${retr2}]"
+	result="OK, [${type1}] return [${rc1}]; [${type2}] return [${rc2}]"
 	rc=${STATE_OK}
   else
-	result="CRIT, OR CHECK BOTH FAILED: check_type_${type1} return [${retr1}]; check_type_${type2} return [${retr2}]" 
+	result="CRIT, [${type1}] return [${rc1}]; [${type2}] return [${rc2}]" 
 	rc=${STATE_CRIT}
   fi
   echo -e "${result}"
@@ -411,11 +411,11 @@ blankline=$( cat ${CONFIG_FILE} | awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){p
 if [ -z "${blankline//[ ]}" ]; then
 	((oknum++))
 	((totalnum++))
-	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : check all right for config file ${CONFIG_FILE##*/} does NOT contain blank section name"
+	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${CONFIG_FILE##*/}] NOT contains blank section"
 else
 	((critnum++))
 	((totalnum++))
-	echo -e "$(echo_red [CRIT]) : line [ ${blankline} ] contains blank section name in config file ${CONFIG_FILE##*/}"
+	echo -e "$(echo_red [CRIT]) : [${CONFIG_FILE##*/}] contains blank section in [${blankline}]"
 fi
 
 # 3. check section name contain blank or not ?
@@ -423,12 +423,12 @@ blankname=$( cat ${CONFIG_FILE} | awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){p
 if [ -z "${blankname//[ ]}" ]; then
 	((oknum++))
 	((totalnum++))
-	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : check all right for section name does NOT contain blank chars"
+	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${CONFIG_FILE##*/}] each section NOT contains blank chars"
 else
 	((critnum++))
 	((totalnum++))
 	blankname=$(echo -e "${blankname}" | tr '\n' ';' )
-	echo -e "$(echo_red [CRIT]) : line [ ${blankname} ], section name contains blank chars"
+	echo -e "$(echo_red [CRIT]) : line [ ${blankname} ], section contains blank chars"
 fi
 
 # 4. check config file contains duplicated section name or not ?
@@ -436,12 +436,12 @@ duplsection=$( cat ${CONFIG_FILE} | tr -d ' \t' | awk '($0~/^[ \t]*\[[ \t]*.*[ \
 if [ -z "${duplsection//[ ]}" ]; then
 	((oknum++))
 	((totalnum++))
-	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : check all right for config file ${CONFIG_FILE##*/} does NOT contain duplicated section name"
+	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${CONFIG_FILE##*/}] NOT contains duplicated section"
 else
 	((critnum++))
 	((totalnum++))
 	duplsection=$(echo -e "${duplsection}" | awk '{printf "%s duplicated section: %s, ",$1,$2}')
-	echo -e "$(echo_red [CRIT]) : duplicated section name [ ${duplsection} ] in config file ${CONFIG_FILE##*/}"
+	echo -e "$(echo_red [CRIT]) : [${CONFIG_FILE##*/}] contains duplicated section [${duplsection}]"
 fi
 
 # 5. check if exists duplicated key name under one same section or not ?
@@ -451,12 +451,12 @@ do
 	if [ -z "${duplkey//[ ]}" ]; then
 		((oknum++))
 		((totalnum++))
-		[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : check all right for section [${section}] does NOT contain duplicated key name"
+		[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${section}] NOT contains duplicated key"
 	else
 		((critnum++))
 		((totalnum++))
 		duplkey=$(echo -e "${duplkey}" | awk '{printf "%s duplicated keys: %s, ",$1,$2}')
-		echo -e "$(echo_red [CRIT]) : duplicated key name [ ${duplkey} ] under section [${section}]"
+		echo -e "$(echo_red [CRIT]) : [${section}] contains duplicated key [${duplkey}]"
 	fi
 done
 
