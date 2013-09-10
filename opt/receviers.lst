@@ -1,8 +1,8 @@
 # default file which [plugin_default]->mail_receviers specified.
 
 ### test mailbox address.
-# eyoutest@eyou.com
-# tom@eyou.com  marry@eyou.com
+eyoutest@eyou.com
+tom@eyou.com  marry@eyou.com
 
 ### leader mailbox address.
 # boss@xxxx.com   leader@xxxx.com  

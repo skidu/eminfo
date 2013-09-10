@@ -444,7 +444,15 @@ case "$#" in
 			case "$rc" in
 			"0")  echo "enable [$2] success [$(echo_green OK)]"				;;
 			"2")  echo "enable [$2] skip [$(echo_yellow NoNeed: already enabled)]"		;;
-			"5")  echo "enable [$2] skip [$(echo_yellow NoConf: config name [enable] not found)]"	;;
+			"5")  echo "enable [$2] warn [$(echo_yellow NoConf: config [enable] not found)]"
+			      echo "trying to add config [enable] for [$2]"
+			      add_eminfo_config "$2" "enable" "yes"
+			      rc=$?
+			      case "$rc" in
+				"0") echo "enable [$2] success [$(echo_green OK)]" ;;
+				*)   echo "enable [$2] failed [$(echo_red FAIL)], details in ${EMINFO_LOG}]" ;;
+			      esac
+													;;
 			*)    echo "enable [$2] failed [$(echo_red FAIL)], details in ${EMINFO_LOG}" 	;;
 			esac
 			exit $rc;
@@ -456,12 +464,22 @@ case "$#" in
 	"disable"|"d")
 		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
                         disable_plugin  "$2"
-			case "$?" in
+			rc=$?
+			case "$rc" in
                         "0")  echo "disable [$2] success [$(echo_green OK)]"                                ;;
                         "2")  echo "disable [$2] skip [$(echo_yellow NoNeed: already disabled)]"            ;;
-                        "5")  echo "disable [$2] skip [$(echo_yellow NoConf: config name [enable] not found)]"       ;;
+                        "5")  echo "disable [$2] skip [$(echo_yellow NoConf: config name [enable] not found)]"
+			      echo "trying to add config [enable] for [$2]"
+			      add_eminfo_config "$2" "enable" "no"
+			      rc=$?
+			      case "$rc" in
+				"0") echo "disable [$2] success [$(echo_green OK)]" ;;
+				*)   echo "disable [$2] failed [$(echo_red FAIL)], details in ${EMINFO_LOG}]" ;;
+			      esac
+			       										    ;;
                         *)    echo "disable [$2] failed [$(echo_red FAIL)], details in ${EMINFO_LOG}"       ;;
                         esac
+			exit $rc;
 		else
                         echo plugin  $(echo_yellow "[$2]") : not registered in config file.
 			exit 9;

@@ -80,51 +80,67 @@ from="${plugin_name}.${jobid}"
 
 # main begin 
 write_log -f ${POSTLOG_LOG} ""
-write_log -f ${POSTLOG_LOG} "[${from}]" begin to postLog
+write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
 
 [ "${plugin_name}" == "FNULL" -o "${jobid}" == "00000000" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}]" missing arguments [-f/-s], maybe script running from command line.
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"WARN: missing arguments [-f/-s], maybe script running from command line."
 }
 
 [ -z "${charset//[ ]}" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}] charset empty, set default charset=[utf-8]"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"WARN: charset empty, set default charset=[utf-8]"
 	charset="utf-8"
 }
 
 [ -z "${post_time_out//[ ]}" -o ! -z "${post_time_out//[0-9]}" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}] post_time_out:[${post_time_out}] is invalid, set default post_time_out=[10]"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"WARN: invalid post timeout [$post_time_out], set post_time_out=[10]"
 	post_time_out="10"
 }
 
 [ -z "${post_server_port//[ ]}" -o ! -z "${post_server_port//[0-9]}" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}] post_server_port:[${post_server_port}] is invalid, set default post_server_port=[1218]"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"WARN: invalid post_port [${post_server_port}], set post_server_port=[1218]"
 	post_server_port="1218"
 }
 
 [ -z "${post_server//[ ]}" -o -z "${queue_name//[ ]}" -o -z "${auth_pass//[ ]}" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}]" configurations not complete: "[post_server,queue_name,auth_pass must be specified].  EXIT"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"ERROR: configurations not complete:"\
+		"[post_server,queue_name,auth_pass can't be empty]. EXIT"
   	exit 1
 }
-write_log -f ${POSTLOG_LOG} "[${from}] set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[${auth_pass}]"
+write_log -f ${POSTLOG_LOG} "[${from}]"\
+	"INFO: set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[${auth_pass}]"
 
 postdata=$(conv_output2postdata "${content}")
 s_n=$(echo "${postdata}" | awk -v RS="${SPLIT}" 'END{print --NR}')
 if [ "$s_n" != "3" ]; then
-  	write_log -f ${POSTLOG_LOG} "[${from}]" "input data is invalid: [${content}] ===> [${postdata}]"
+  	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"ERROR: invalid input data: [${content}] -> [${postdata}]. EXIT"
   	exit 1
 else
 	postdata=$( echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%" )
-	write_log -f ${POSTLOG_LOG} "[${from}]" "encode input data done."
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"INFO: form-encode input data finished."
 fi
 
-write_log -f ${POSTLOG_LOG} "[${from}]" "posting data: [${content}] ===> [${postdata}]"
+write_log -f ${POSTLOG_LOG} "[${from}]"\
+	"INFO: posting data: [${content}] -> [${postdata}]"
 
 # curl -s: silient
 result=$( /usr/bin/curl -s --connect-timeout ${post_time_out} -d "${postdata}" "http://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
-[ "$?" == "0" ] && result="SUCCESS: ${result}" || {
-	[ -z "${result}" ] && result="FAIL: maybe timeout" || result="FAIL: ${result}"
-}
+if [ "$?" == "0" ]; then
+	result="SUCCESS: ${result}"
+else
+	if [ -z "${result}" ]; then
+		result="FAIL: return nothing, maybe timeout on connect [$post_server:$post_server_port]"
+	else
+		result="FAIL: ${result}"
+	fi
+fi
 
-write_log -f ${POSTLOG_LOG} "[${from}]" "end to postLog. result "${result}""
+write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: end to postLog. result "${result}""
 write_log -f ${POSTLOG_LOG} ""
 write_log -f ${POSTLOG_LOG} ""
