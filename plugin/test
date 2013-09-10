@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+# plugin_config_value=$(read_eminfo_config plugin_name config_name)
+
+# check function here
+check(){
+	echo "your check code here.";
+	echo "Note: remember assignment LEVEL / TYPE / CONTENT and EXIT_STATUS before finished.";
+}
+
+check
+
+# output result(single-line) and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS} 
