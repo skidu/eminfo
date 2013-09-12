@@ -3,9 +3,9 @@
 #
 # This Script Responsible for Posting Data to HTTPSQS Server.
 #
-# Usage:     ./postlog -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" 
+# Usage:     ./postlog -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"
 #
-# Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"
+# Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"  -h "auth hanlder result here"
 #
 
 
@@ -52,13 +52,14 @@ post_time_out="10"
 
 # def help
 show_usage(){
-  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  "
-  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\""
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" "
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auth hanlder result here\" "
   exit 1
 }
 
+[ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" ] && show_usage
 # read args
-while getopts f:s:i:  opt
+while getopts f:s:i:h: opt
 do
         case ${opt} in
         "f")
@@ -66,15 +67,18 @@ do
         "s")
                 jobid="${OPTARG}"         ;;
 	"i")
-		# LANG=C
+		LANG=C
 		content="${OPTARG}"	  ;;
+	"h")
+		hd_content="${OPTARG}"	  ;;
         esac
 done
 
 # set default
-[ -z "${plugin_name}" ] && plugin_name="FNULL"
-[ -z "${jobid}" ] && jobid="00000000"
+[ -z "${plugin_name}" ] && plugin_name="FNULL"    #### plugin_name ~ ( {plugin_name} , NULL  )
+[ -z "${jobid}" ] && jobid="00000000"		### jobid ~ ( NNNNNNNN , ovld , tmout )
 [ -z "${content}" ] && show_usage
+[ -z "${hd_content}" ] && hd_content="Nothing to do"
 from="${plugin_name}.${jobid}"
 
 
@@ -114,17 +118,10 @@ write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
 write_log -f ${POSTLOG_LOG} "[${from}]"\
 	"INFO: set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[${auth_pass}]"
 
-postdata=$(conv_output2postdata "${content}")
-s_n=$(echo "${postdata}" | awk -v RS="${SPLIT}" 'END{print --NR}')
-if [ "$s_n" != "3" ]; then
-  	write_log -f ${POSTLOG_LOG} "[${from}]"\
-		"ERROR: invalid input data: [${content}] -> [${postdata}]. EXIT"
-  	exit 1
-else
-	postdata=$( echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%" )
-	write_log -f ${POSTLOG_LOG} "[${from}]"\
-		"INFO: form-encode input data finished."
-fi
+postdata=$(conv_output2postdata "${content}" "${hd_content}")
+postdata=$(echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%")
+write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"INFO: url-encode input data finished."
 
 write_log -f ${POSTLOG_LOG} "[${from}]"\
 	"INFO: posting data: [${content}] -> [${postdata}]"

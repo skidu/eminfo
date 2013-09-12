@@ -1118,14 +1118,62 @@ conv_output2mailbody() {
 # Example:	conv_output2postdata  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
 #
 conv_output2postdata() {
-  local strings=$*  name= level= type= body= other=
-  name=$(get_global_name)
-  level=$(read_output 1 "${strings}" | tr '[a-z]' '[A-Z]')
-  type=$(read_output 2 "${strings}")
-  body=$(read_output 3 "${strings}")
-  [ "${type}" == "str" ] && body=$(echo -e "${body}" | sed -e 's/<[^<^>]*>//g; s/&nbsp;//g;')  ### trim html tag if type=str
-  other="others";
-  echo "${name}${SPLIT}${level}${SPLIT}${body}${SPLIT}${other}"
+  local content=$1  hd_content=$2
+  local name= level= type= body= other=
+  gname=$(get_global_name)
+  level=$(read_output 1 "${content}" | tr '[a-z]' '[A-Z]')
+  type=$(read_output 2 "${content}")
+  body=$(read_output 3 "${content}")
+
+## XML replace  < > & ' " 
+## &amp; &
+## &lt;  <
+## &gt;  >
+## &quot; "
+## &apos; '
+
+  other="other information";
+
+  cat << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- eminfo postdata start -->
+<eminfo_postdata>
+  <eminfo_id>ABCDE12345abcde</eminfo_id>
+  <eminfo_gname>${gname}</eminfo_gname>
+  <eminfo_jobid>${jobid}</eminfo_jobid>
+  <eminfo_jobts>${jobts}</eminfo_jobts>
+  <eminfo_plugin_config>
+    <basic>
+      <name>${plugin}</name>
+      <enable></enable>
+      <comment></comment>
+      <frequency></frequency>
+      <exec_tmout></exec_tmout>
+      <maxerr_times></maxerr_times>
+      <take_snapshot_type></take_snapshot_type>
+      <mail_notify_type></mail_notify_type>
+      <post_notify_type></post_notify_type>
+      <mail_receviers></mail_receviers>
+      <attach_snap_mail></attach_snap_mail>
+      <auto_handle_type></auto_handle_type>
+      <auto_handler></auto_handler>
+      <debug></debug>
+    </basic>
+    <userdef>
+      ${user_def_config}
+    </userdef>
+  </eminfo_plugin_config>
+  <eminfo_plugin_result>
+    <level>${level}</level>
+    <type>${type}</type>
+    <body>${body}</body>
+  </eminfo_plugin_result>
+  <eminfo_autohandle_result>
+    <hd_result>${hd_content}</hd_result>
+  </eminfo_autohandle_result>
+</eminfo_postdata>
+<!-- eminfo postdata end -->
+EOF
 }
 
 # Get timestamp of plugin last-run.
@@ -2362,7 +2410,8 @@ process_plugin() {
 	write_log ${jid} ${plugin_name} "post notify disabled. SKIP";
   else
 	write_log ${jid} ${plugin_name} "post notify enabled. CONTINUE";
-	${POSTLOG_SH} -f "${plugin_name}" -s "${jid}" -i "${output}" # eval  will return syntax error. why ?
+	# eval  will return syntax error. why ?
+	${POSTLOG_SH} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}"
 	write_log ${jid} ${plugin_name} "post notify finished."\
 		"details in ${POSTLOG_LOG##*/}. CONTINUE";
   fi
@@ -2373,6 +2422,7 @@ process_plugin() {
 	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
   else
 	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
+	# eval  will return syntax error. why ?
 	${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}"
 	write_log ${jid} ${plugin_name} "mail notify finished."\
 		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
@@ -2585,7 +2635,7 @@ process_sysoverload() {
 # get_mail_receviers notify_syslogin
 
 
-# conv_output2postdata "{level}:{str}:{title | summary | details: item1. ### item2. ### item3. ### }"
+conv_output2postdata "{level}:{str}:{title | summary | details: item1. ### item2. ### item3. ### }"
 # conv_output2mailbody "{crit}:{str}:{System Load Check CRITICAL | Load Average: [0.18] >= UpLimit: [0] }"
 # conv_output2mailbody "{warn}:{str}:{Notify System Login Check CRITICAL | Notify New System Login Record | <strong><font color=green>New Record:</font></strong> ### ### Jun 15 02:53:19 mylab sshd[18388]: Accepted password for root from 192.168.131.1 port 2596 ssh2 ### Jun 15 02:53:19 mylab sshd[18429]: Accepted password for root from 192.168.131.1 port 2599 ssh2 ### Jun 15 02:53:20 mylab sshd[18470]: Accepted password for root from 192.168.131.1 port 2602 ssh2 ### }"
 
