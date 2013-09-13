@@ -307,58 +307,111 @@ get_children_pids_by_pid() {
   unset array_result
 }
 
-# Check the file is plugin config file or not
+# Check the file is plugin config file or not, retun plugin-name if valid file.
 # Conditions: 
 #   1. filename like {plugin-name}.ini
 #   2. headline of file like  [plugin-name]
+#   3. filesize must less than 1048576 bytes.(1M)
+#   4. filetype must be like Text
+# Output:  plugin-name | no  (blank space will be trimed)
+# Example:  is_plugin_conifgfile "/dev/mcelog"
+# Example:  is_plugin_configfile "/etc/abc.ini"
 #
 is_plugin_configfile(){
-  local filepath=$1
-  local filename="${filepath##*/}"
-  local pname=$(echo "${filename}" | perl -ne 'if (m/\A(.+)\.ini\Z/i){print "$1"};' 2>&-)
-  local hname=$(head -n1 "${filepath}" | perl -ne 'if(m/\A\s*\[\s*(.+)\s*\]\s*/){print "$1"};' 2>&-)
-}
-
-# List all section name.
-# Note: 	blank space will be trimed
-#
-list_all_section() {
-  # Do NOT pass non-english such as chinese input to command sed, which will lead to hangup in some circumstances.
-  cat ${CONFIG_FILE} | grep -E -v "^[ \t]*;" | tr -d ' \t' |\
-  	sed -e '/^\[.*\]$/!d;/^\[[ \t]*\]$/d;s/^\[//;s/\]$//;' |\
-  	tr '\r\n' ' ';
+  local filepath=$1  result=
+  local ftype=$(echo "${filepath}" | perl -ne 'chomp;print -T "$_"?"text":"nontext";' 2>&-)
+  if [ "${ftype}" != "text" ]; then
+	result="no"
+  else
+	local fsize=$(echo "${filepath}" | perl -ne 'chomp;$size=-s;print "$size"' 2>&-)
+  	if [ -z "${fsize//[ ]}" -o ! -z "${fsize//[0-9]}" ]; then
+		result="no"
+  	elif [ ${fsize} -ge 1048576 ]; then
+		result="no"
+	else
+  		local pname=$(echo "${filepath##*/}" | perl -ne 'if(m/\A(\S+)\.ini\Z/i){print "$1"};' 2>&-)
+  		local hname=$(head -n1 "${filepath}" | perl -ne 'if(m/\A\s*\[\s*(.+)\s*\]\s*/){print "$1"};' 2>&-)
+  		if [ -z "${pname//[ ]}" -o -z "${hname//[ ]}" ]; then
+			result="no"
+  		elif [ "${pname}" != "${hname}" ]; then
+			result="no"
+  		else
+			result="${pname}"
+		fi
+	fi
+  fi
+  echo "${result}"
 }
 
 # List all registered plugins exclude inners.  		
 # Note: 	blank space will be trimed
 #
 list_plugin_section() {
-  # Do NOT pass non-english such as chinese input to command sed, which will lead to hangup in some circumstances.
-  cat ${CONFIG_FILE} | grep -E -v "^[ \t]*;" | tr -d ' \t' |\
-	sed -e '/^\[.*\]$/!d; /^\[eminfo_.*\]$/d; /^\[[ \t]*\]$/d; s/^\[//; s/\]$//;' |\
-	tail -n +3 | tr '\r\n' ' ';
+  local config_files_arr=  result=
+  config_files_arr=( $(ls "${CONF_DIR}/"*.ini 2>&-) )
+  for((i=0;i<=${#config_files_arr[*]};i++));
+  do
+	filepath="${config_files_arr[$i]}"
+	[ "${filepath##*/}" == "" ] && continue
+	[ "${filepath##*/}" == "eminfo.ini" ] && continue
+	[ "${filepath##*/}" == "sendmail.ini" ] && continue
+	[ "${filepath##*/}" == "postlog.ini" ] && continue
+	[ "${filepath##*/}" == "takesnap.ini" ] && continue
+	pluginname="$(is_plugin_configfile "${filepath}")"
+	if [ "${pluginname}" != "no" ]; then
+		result="${result} ${pluginname}"
+	fi
+  done
+  echo "${result}"
 }
 
 # List all inner plugins.		
 # Note: 	blank space will be trimed
 #
 list_inner_plugin_section() {
-  # Do NOT pass non-english such as chinese input to command sed, which will lead to hangup in some circumstances.
-  cat ${CONFIG_FILE} | grep -E -v "^[ \t]*;" | tr -d ' \t' |\
-	sed -e '/^\[eminfo_.*\]$/!d; s/^\[//; s/\]$//;' |\
-	tr '\r\n' ' ';
+  local result=
+  # Do NOT pass widechars such as chinese input to sed, which will lead to hangup in some circumstances.
+  result=$( cat ${CONFIG_FILE} | grep -E -v "^[ \t]*;" | tr -d ' \t' |\
+		sed -e '/^\[eminfo_.*\]$/!d; s/^\[//; s/\]$//;' |\
+		tr '\r\n' ' ')
+  echo "${result}"
+}
+
+# List all section name.
+# Note: 	blank space will be trimed
+#
+list_all_section() {
+  local result=
+  # Do NOT pass widechars such as chinese input to sed, which will lead to hangup in some circumstances.
+  result=$( cat ${CONFIG_FILE} | grep -E -v "^[ \t]*;" | tr -d ' \t' |\
+  		sed -e '/^\[.*\]$/!d;/^\[[ \t]*\]$/d;s/^\[//;s/\]$//;' |\
+  		tr '\r\n' ' ')
+  result="${result} $(list_plugin_section)"
+  echo "${result}"
 }
 
 # List single section's key name
 #
 list_section_keys(){
-  local section=$1  result=
+  local section=$1  result=  config_file=
   [ -z "${section}" ] && {
         write_log -f "${EMINFO_LOG}" "E0000000 list_section_keys error:"\
 		"missing section name";
         return 1
   }
-  result=$(cat ${CONFIG_FILE} | tr '\t' ' ' |\
+  if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then
+	config_file="${CONFIG_FILE}"
+  elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
+	config_file="${CONFIG_FILE}"
+  else
+	config_file="${CONF_DIR}/${section}.ini"
+  fi
+  [ -f "${config_file}" -a -s "${config_file}" ] || {
+	write_log -f "${EMINFO_LOG}" "E0000000 list_section_keys error:"\
+		"section=[${section}] config file [${config_file}] not exists or empty.";
+	return 1
+  }
+  result=$(cat ${config_file} | tr '\t' ' ' |\
 		awk -F "=" '\
 			($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next} \
 			( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit} \
@@ -369,21 +422,29 @@ list_section_keys(){
 
 # According to input plugin-name, output matched plugin-name in config file.
 # Example:	read_eminfo_section  check_sysload
-# Return:	0 1 2 3 :  OK | Missing arguments | ${CONFIG_FILE} empty / not exist | Null
+# Return:	0 1 2 3 :  OK | Missing arguments | ${config_file} empty / not exist | Null
 #
 read_eminfo_section(){
-  local section=$1  value=
+  local section=$1  value= config_file=
   if [ -z "${section}" ]; then 
 	write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_section error:"\
 		"missing arguments, section=[${section}]";
 	return 1
   else
-	if [ ! -f "${CONFIG_FILE}" -o ! -s "${CONFIG_FILE}" ]; then
+	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
+        	config_file="${CONFIG_FILE}"
+  	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
+        	config_file="${CONFIG_FILE}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ ! -f "${config_file}" -o ! -s "${config_file}" ]; then
 		write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_section error:"\
-			"config file not exists or empty.";
+			"config file [${config_file}] not exists or empty.";
 		return 2
 	else
-		value=$(cat ${CONFIG_FILE} |\
+		value=$(cat ${config_file} |\
 			grep -E -v "^[ \t]*;" | tr -d ' \t' |\
 			sed -e '/^\['${section}'\]$/!d; s/^\[//; s/\]$//;')
 		if [ -n "${value}" ]; then
@@ -400,18 +461,26 @@ read_eminfo_section(){
 # According to input plugin-name config-name, output matched config-value in config file.
 # Usage:  	read_eminfo_config {plugin-name} {config-name}
 # Example:  	read_eminfo_config check_sysload  enable
-# Return:	0 1 2 3 :  OK | Missging arguments | ${CONFIG_FILE} empty / not exist | Null
+# Return:	0 1 2 3 :  OK | Missging arguments | ${config_file} empty / not exist | Null
 #
 read_eminfo_config(){
-  local section=$1  key=$2  value=
+  local section=$1  key=$2  value=  config_file=
   if [ -z "${section}" -o -z "${key}" ]; then
 	write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_config error:"\
 		"missing arguments, section=[${section}] key=[${key}]";
 	return 1
   else
-	if [ -f "${CONFIG_FILE}" -a -s "${CONFIG_FILE}" ]; then
+	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
+        	config_file="${CONFIG_FILE}"
+  	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
+        	config_file="${CONFIG_FILE}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
 		###  Notice:  \s NOT match : []space
-  		value=$( cat ${CONFIG_FILE} | tr '\t' ' ' |\
+  		value=$( cat ${config_file} | tr '\t' ' ' |\
 			awk -F "=" '\
 				($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
 				( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
@@ -426,7 +495,7 @@ read_eminfo_config(){
 		fi
 	else
 		write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_config error:"\
-			"config file not exists or empty.";
+			"config file [${config_file}] not exists or empty.";
 		return 2
 	fi
   fi
@@ -440,20 +509,28 @@ read_eminfo_config(){
 # 1 : Update ERROR
 # 2 : No Need, Nothing to do (nower value equals what you want to set)
 # 3 : Missging arguments
-# 4 : ${CONFIG_FILE} empty / not exist 
+# 4 : ${config_file} empty / not exist 
 # 5 : [section].key not exist
 # LogFlag:      CHNG0000
 # 
 update_eminfo_config() {
   local section=$1 key=$2 ; shift 2 ; local value=$*
-  local errinfo=
+  local errinfo=  config_file=
   if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then
         write_log -f "${EMINFO_LOG}" "E0000000 update_eminfo_config error:"\
 		"missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
   else
-	if [ -f "${CONFIG_FILE}" -a -s "${CONFIG_FILE}" ]; then
-  		local linenum=$( cat ${CONFIG_FILE} | tr '\t' ' ' |\
+	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
+        	config_file="${CONFIG_FILE}"
+  	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
+        	config_file="${CONFIG_FILE}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+  		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
 				 awk -F"=" '\
 					($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
 					( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
@@ -480,7 +557,7 @@ update_eminfo_config() {
                         ### '${value}' is wrong.
 			### sed command c to replace the whole line.
 			errinfo=$(\
-			    sed -i ''${linenum}'c'${key}' = '"${value}"'' "${CONFIG_FILE}" 2>&1 1>/dev/null)
+			    sed -i ''${linenum}'c'${key}' = '"${value}"'' "${config_file}" 2>&1 1>/dev/null)
 			if [ "$?" == "0" ]; then
 				write_log -f "${EMINFO_LOG}" "CHNG0000 update_eminfo_config change"\
 					"section=[${section}] key=[${key}] value=[${value}] line-number=[${linenum}]"\
@@ -495,7 +572,7 @@ update_eminfo_config() {
   		fi
 	else
 		write_log -f "${EMINFO_LOG}" "E0000000 update_eminfo_config error:"\
-			"config file not exists or empty.";
+			"config file [${config_file}] not exists or empty.";
 		return 4
 	fi
   fi
@@ -509,20 +586,28 @@ update_eminfo_config() {
 # 1 : ADD ERROR
 # 2 : No Need, Nothing to do (key already exist)
 # 3 : Missging arguments
-# 4 : ${CONFIG_FILE} empty / not exist 
+# 4 : ${config_file} empty / not exist 
 # 5 : [section] not exist
 # LogFlag:      ADDC0000
 # 
 add_eminfo_config() {
   local section=$1 key=$2 ; shift 2 ; local value=$*
-  local errinfo=
+  local errinfo=  config_file=
   if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then 
         write_log -f "${EMINFO_LOG}" "E0000000 add_eminfo_config error:"\
                 "missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
   else 
-	if [ -f "${CONFIG_FILE}" -a -s "${CONFIG_FILE}" ]; then
-		local section_linenum=$( cat ${CONFIG_FILE} | tr '\t' ' ' |\
+	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
+        	config_file="${CONFIG_FILE}"
+  	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
+        	config_file="${CONFIG_FILE}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+		local section_linenum=$( cat ${config_file} | tr '\t' ' ' |\
 					awk '($0~/^ *\[ *'${section}' *\] *$/){print NR;exit;}' )
 		if [ -z "${section_linenum//[ ]}" ]; then
 			write_log -f "${EMINFO_LOG}" "ADDC0000 add_eminfo_config notice:"\
@@ -553,7 +638,7 @@ add_eminfo_config() {
 			### '${value}' is wrong.
 			### sed command a to add newline under specified line.
 			errinfo=$(\
-				sed -i ''${section_linenum}'a'${key}' = '"${value}"'' "${CONFIG_FILE}" 2>&1 1>/dev/null)
+				sed -i ''${section_linenum}'a'${key}' = '"${value}"'' "${config_file}" 2>&1 1>/dev/null)
                         if [ "$?" == "0" ]; then 
                                 write_log -f "${EMINFO_LOG}" "ADDC0000 add_eminfo_config add"\
                                         "config [${key} = ${value}] for section [${section}] under [${section_linenum}]"\
@@ -566,7 +651,7 @@ add_eminfo_config() {
 		fi
 	else
                 write_log -f "${EMINFO_LOG}" "E0000000 add_eminfo_config error:"\
-                        "config file not exists or empty.";
+                        "config file [${config_file}] not exists or empty.";
                 return 4
 	fi
   fi
@@ -580,20 +665,28 @@ add_eminfo_config() {
 # 1 : DEL ERROR
 # 2 : No Need, Nothing to do (key already not exist)
 # 3 : Missging arguments
-# 4 : ${CONFIG_FILE} empty / not exist 
+# 4 : ${config_file} empty / not exist 
 # 5 : [section] not exist
 # LogFlag:	DELC0000
 #
 del_eminfo_config() {
-  local section=$1 key=$2
+  local section=$1 key=$2 config_file=
   local errinfo=
   if [ -z "${section}" -o -z "${key}" ]; then
         write_log -f "${EMINFO_LOG}" "DELC0000 del_eminfo_config error:"\
 		"missing arguments, section=[${section}] key=[${key}]";
         return 3
   else
-	if [ -f "${CONFIG_FILE}" -a -s "${CONFIG_FILE}" ]; then
-  		local linenum=$( cat ${CONFIG_FILE} | tr '\t' ' ' |\
+	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
+        	config_file="${config_file}"
+  	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
+        	config_file="${config_file}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+  		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
 				 awk -F"=" '\
 					($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
 					( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
@@ -626,7 +719,7 @@ del_eminfo_config() {
 			fi
 			### sed command d to delete the whole line.
 			errinfo=$(\
-			    sed -i ''${linenum}'d' "${CONFIG_FILE}" 2>&1 1>/dev/null)
+			    sed -i ''${linenum}'d' "${config_file}" 2>&1 1>/dev/null)
 			if [ "$?" == "0" ]; then
 				write_log -f "${EMINFO_LOG}" "DELC0000 del_eminfo_config delete"\
 					"section=[${section}] key=[${key}] line-number=[${linenum}]"\
@@ -641,7 +734,7 @@ del_eminfo_config() {
   		fi
 	else
 		write_log -f "${EMINFO_LOG}" "DELC0000 del_eminfo_config error:"\
-			"config file not exists or empty.";
+			"config file [${config_file}] not exists or empty.";
 		return 4
 	fi
   fi
@@ -2505,7 +2598,7 @@ process_sysoverload() {
 # echo $?
 # add_eminfo_config hello hey "renchaoqi@eyou.net file:opt/receviers 1278098"
 # echo $?
-# update_eminfo_config hello hey "fjkda&(*() fjddf dj lalal"
+# update_eminfo_config hello hey "a&(*() $%%^&&**"
 # echo $?
 # add_eminfo_config check_sysload enable no
 # echo $?

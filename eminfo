@@ -346,7 +346,7 @@ reload_core_cron(){
 ### List all plugin status
 ##
 list_core_cron() {
-  clear_dead_lock_pid
+  # clear_dead_lock_pid   # function list_plugin_section() two slow
   list_plugin_status all
 }
 
@@ -486,36 +486,36 @@ case "$#" in
                 fi
 			;;
 	"init"|"i")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
-                        init_plugin  "$2"
-		elif [ "$2" == "all" -o "$2" == "a" ]; then
+		if [ "$2" == "all" -o "$2" == "a" ]; then
 			init_plugin
+		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
+                        init_plugin  "$2"
 		else
                         echo plugin  $(echo_yellow "[$2]") : not registered in config file.
 			exit 9;
                 fi
 			;;
 	"view"|"v")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
-                        view_base_config "$2"
-			view_extra_config "$2"
-		elif [ "$2" == "all" -o "$2" == "a" ]; then
+		if [ "$2" == "all" -o "$2" == "a" ]; then
 			for p in `list_plugin_section`
 			do
 				view_base_config  "${p}"
 				view_extra_config "${p}"
 				echo;echo;
 			done
+		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
+                        view_base_config "$2"
+			view_extra_config "$2"
 		else
                         echo plugin $(echo_yellow "[$2]") : not registered in config file.
 			exit 9;
 		fi
 			;;
 	"report"|"R")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
-			. ${REPORT_SH} "$2"
-		elif [ "$2" == "all" -o "$2" == "a" ]; then
+		if [ "$2" == "all" -o "$2" == "a" ]; then
 			. ${REPORT_SH} "all"
+		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
+			. ${REPORT_SH} "$2"
 		else
 			echo plugin $(echo_yellow "[$2]") : not registered in config file.
 			exit 9;
