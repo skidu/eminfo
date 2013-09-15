@@ -2249,7 +2249,7 @@ process_plugin() {
 	return 3
   else
 	write_log ${jid} ${plugin_name} "plugin file:"\
-		"[${PLUGIN_DIR}/${plugin_name}] exist ==> exec. CONTINUE";
+		"[${PLUGIN_DIR}/${plugin_name}] exist -> exec. CONTINUE";
   fi
 
   # Step 6: exec plugin / obtain returned code / obtain returned stuff
@@ -2400,7 +2400,7 @@ process_inner_plugin() {
         return 3
   else
         write_log -f ${INNER_LOG} ${jid} ${plugin_name} "plugin file:"\
-		"[${INNER_DIR}/${plugin_name}] exist ==> exec. CONTINUE";
+		"[${INNER_DIR}/${plugin_name}] exist -> exec. CONTINUE";
   fi
 
   # Step 3: execute plugin / get return stuff
@@ -2549,9 +2549,9 @@ process_sysoverload() {
 # process_plugin_timeout   check_sysload
 # check_repeat_errcount  check_sysload
 # check_repeat_errcount  hello
-add_repeat_errcount  check_sysload
-add_repeat_errcount  hello
-add_repeat_errcount  "hello2 fdjfk  ()"
+# add_repeat_errcount  check_sysload
+# add_repeat_errcount  hello
+# add_repeat_errcount  "hello2 fdjfk  ()"
 # zero_repeat_errcount  check_sysload
 # gen_tmpfile check_sysload
 # list_enabled_plugin_section
