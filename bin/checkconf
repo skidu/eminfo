@@ -407,7 +407,10 @@ do
 done
 
 # 2. check section name is blank or not ?
-blankline=$( cat ${CONFIG_FILE} | awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' | tr -d ' \t' | sed -e '/\[\]/!d;' | tr -d '[]' | tr '\n' ' ' )
+blankline=$( cat ${CONFIG_FILE} |\
+		awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' |\
+		tr -d ' \t' | sed -e '/\[\]/!d;' |\
+		tr -d '[]' | tr '\n' ' ' )
 if [ -z "${blankline//[ ]}" ]; then
 	((oknum++))
 	((totalnum++))
@@ -418,21 +421,26 @@ else
 	echo -e "$(echo_red [CRIT]) : [${CONFIG_FILE##*/}] contains blank section in [${blankline}]"
 fi
 
-# 3. check section name contain blank or not ?
-blankname=$( cat ${CONFIG_FILE} | awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' | tr -d '[]' | awk '(NF>2){print $0}' )
-if [ -z "${blankname//[ ]}" ]; then
-	((oknum++))
-	((totalnum++))
-	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${CONFIG_FILE##*/}] each section NOT contains blank chars"
-else
-	((critnum++))
-	((totalnum++))
-	blankname=$(echo -e "${blankname}" | tr '\n' ';' )
-	echo -e "$(echo_red [CRIT]) : line [ ${blankname} ], section contains blank chars"
-fi
+## 3. check section name contain blank or not ?
+#blankname=$( cat ${CONFIG_FILE} |\
+#		awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' |\
+#		tr -d '[]' | awk '(NF>2){print $0}' )
+#if [ -z "${blankname//[ ]}" ]; then
+#	((oknum++))
+#	((totalnum++))
+#	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${CONFIG_FILE##*/}] each section NOT contains blank chars"
+#else
+#	((critnum++))
+#	((totalnum++))
+#	blankname=$(echo -e "${blankname}" | tr '\n' ';' )
+#	echo -e "$(echo_red [CRIT]) : line [ ${blankname} ], section contains blank chars"
+#fi
 
 # 4. check config file contains duplicated section name or not ?
-duplsection=$( cat ${CONFIG_FILE} | tr -d ' \t' | awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}'  | awk '{a[$2]++;} END{for(i in a){if(a[i]>1){print a[i],i}}}'  )
+duplsection=$( cat ${CONFIG_FILE} |\
+		tr -d ' \t' |\
+		awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' |\
+		awk '{a[$2]++;} END{for(i in a){if(a[i]>1){print a[i],i}}}' )
 if [ -z "${duplsection//[ ]}" ]; then
 	((oknum++))
 	((totalnum++))

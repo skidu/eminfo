@@ -30,10 +30,8 @@ EMINFO_VERSION="1.0.0-beta2"
 # DIR DEF
 BIN_DIR="${BASE_DIR}/bin"
 CONF_DIR="${BASE_DIR}/conf"
-DOC_DIR="${BASE_DIR}/doc"
 HANDLER_DIR="${BASE_DIR}/handler"
 OPT_DIR="${BASE_DIR}/opt"
-TOOL_DIR="${BASE_DIR}/tool"
 PLUGIN_DIR="${BASE_DIR}/plugin"
 INNER_DIR="${PLUGIN_DIR}/.inner"
 TMP_DIR="${BASE_DIR}/tmp"
@@ -557,7 +555,7 @@ update_eminfo_config() {
                         ### '${value}' is wrong.
 			### sed command c to replace the whole line.
 			errinfo=$(\
-			    sed -i ''${linenum}'c'${key}' = '"${value}"'' "${config_file}" 2>&1 1>/dev/null)
+			    sed -i ''${linenum}'c'"${key}"' = '"${value}"'' "${config_file}" 2>&1 1>/dev/null)
 			if [ "$?" == "0" ]; then
 				write_log -f "${EMINFO_LOG}" "CHNG0000 update_eminfo_config change"\
 					"section=[${section}] key=[${key}] value=[${value}] line-number=[${linenum}]"\
@@ -638,7 +636,7 @@ add_eminfo_config() {
 			### '${value}' is wrong.
 			### sed command a to add newline under specified line.
 			errinfo=$(\
-				sed -i ''${section_linenum}'a'${key}' = '"${value}"'' "${config_file}" 2>&1 1>/dev/null)
+				sed -i ''${section_linenum}'a'"${key}"' = '"${value}"'' "${config_file}" 2>&1 1>/dev/null)
                         if [ "$?" == "0" ]; then 
                                 write_log -f "${EMINFO_LOG}" "ADDC0000 add_eminfo_config add"\
                                         "config [${key} = ${value}] for section [${section}] under [${section_linenum}]"\
@@ -1199,7 +1197,8 @@ update_lastrun_and_nextrun() {
   local l_time=$(awk '/^'${plugin_name}'\>/' ${TMP_LASTRUN} 2>&-)
   if [ -z "${l_time}" ]; then
 	### only collect stderr output
-	errinfo=$( sed -i '$s/$/\n'${plugin_name}' '${now}'/' ${TMP_LASTRUN} 2>&1 1>/dev/null )
+	### '"${plugin_name}"' is important, sed won't complain if plugin_name contains multi part or special chars.
+	errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${now}"'/' ${TMP_LASTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
 		write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on plugin:"\
@@ -1212,7 +1211,8 @@ update_lastrun_and_nextrun() {
 	fi
   else
 	### only collect stderr output
-	errinfo=$( sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${now}'/' ${TMP_LASTRUN} 2>&1 1>/dev/null )
+	### sed command c to replace the whole line.
+	errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' '"${now}"'' ${TMP_LASTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
                 write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on plugin:"\
@@ -1234,7 +1234,8 @@ update_lastrun_and_nextrun() {
   local n_time=$( awk '/^'${plugin_name}'\>/' ${TMP_NEXTRUN} 2>&-)
   if [ -z "${n_time}" ]; then
 	### only collect stderr output
-        errinfo=$( sed -i '$s/$/\n'${plugin_name}' '${nextrun}'/' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
+	### '"${plugin_name}"' is important, sed won't complain if plugin_name contains multi part or special chars.
+        errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${nextrun}"'/' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
                 write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on plugin:"\
@@ -1247,7 +1248,8 @@ update_lastrun_and_nextrun() {
 	fi
   else
 	### only collect stderr output
-        errinfo=$( sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${nextrun}'/' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
+	### sed command c to replace the whole line.
+        errinfo=$( sed -i '/^'${plugin_name}'\>/c'"${plugin_name}"' '"${nextrun}"'' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
                 write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on plugin:"\
@@ -1259,7 +1261,7 @@ update_lastrun_and_nextrun() {
 			"success";
         fi
   fi
-
+  return ${rc}
 }
 
 
@@ -1301,7 +1303,7 @@ update_status() {
   else
 	### following sed command can NOT deal with special chars. (if ${content} contains /)
 	# sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${now}' '${content}'/' ${TMP_STATUS}
-	errinfo=$( sed -i '/^'${plugin_name}'\>/d' ${TMP_STATUS} 2>&1 1>/dev/null )
+	errinfo=$( sed -i '/^'"${plugin_name}"'\>/d' ${TMP_STATUS} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
 	       write_log -f "${logfile}" "E0000000 update_status on plugin:"\
@@ -1320,8 +1322,7 @@ update_status() {
 	       fi
 	fi
   fi
-
-  return "${rc}"
+  return ${rc}
 }
 
 
@@ -1378,7 +1379,7 @@ add_repeat_errcount() {
   local repeat_errcount=$(awk '/^'${plugin_name}'\>/ {print $2;exit}' ${TMP_REPEAT} 2>&-)
   if [ -z "${repeat_errcount}" ]; then		## null => update to 1 (add to last line)
         ### only collect stderr output
-	errinfo=$( sed -i '$s/$/\n'${plugin_name}' 1/' ${TMP_REPEAT} 2>&1 1>/dev/null )
+	errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' 1/' ${TMP_REPEAT} 2>&1 1>/dev/null )
    	rc=$?
 	if [ "${rc}" != "0" ]; then
 		write_log -f "${EMINFO_LOG}" "E0000000 add_repeat_errcount on plugin:"\
@@ -1392,7 +1393,7 @@ add_repeat_errcount() {
   else
 	if [ ! -z "${repeat_errcount//[0-9]}" ]; then    ## not null but invalid => update to 1
 		### only collect stderr output
-		errinfo=$( sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' 1/' ${TMP_REPEAT} 2>&1 1>/dev/null )
+		errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' 1' ${TMP_REPEAT} 2>&1 1>/dev/null )
 		rc=$?
 		if [ "${rc}" != "0" ]; then
 			write_log -f "${EMINFO_LOG}" "E0000000 add_repeat_errcount on plugin:"\
@@ -1406,7 +1407,7 @@ add_repeat_errcount() {
 	else
   		local num=$(( ${repeat_errcount} + 1 ))  ## not null and numberic => update to +1
 		### only collect stderr output
-		errinfo=$( sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${num}'/' ${TMP_REPEAT} 2>&1 1>/dev/null )
+		errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' '"${num}"'' ${TMP_REPEAT} 2>&1 1>/dev/null )
 		rc=$?
 		if [ "${rc}" != "0" ]; then
 			write_log -f "${EMINFO_LOG}" "E0000000 add_repeat_errcount on plugin:"\
@@ -1419,6 +1420,7 @@ add_repeat_errcount() {
 		fi
 	fi
   fi
+  return ${rc}
 }
 
 # Reset accumulated return-err number to 0
@@ -1438,7 +1440,7 @@ zero_repeat_errcount() {
   [ ! -s ${TMP_REPEAT} ] && echo -e "${headline}" > ${TMP_REPEAT}
 
   # only collect stderr  output
-  errinfo=$( sed -i '/^'${plugin_name}'\>/d' ${TMP_REPEAT} 2>&1 1>/dev/null)
+  errinfo=$( sed -i '/^'"${plugin_name}"'\>/d' ${TMP_REPEAT} 2>&1 1>/dev/null)
   rc=$?
   if [ "${rc}" == "0" ]; then
 	write_log -f "${EMINFO_LOG}" "00000000 zero_repeat_errcount on plugin:"\
@@ -2102,9 +2104,9 @@ init_plugin() {
   	: > ${TMP_REPEAT}  >/dev/null 2>&1
   else
 	write_log -f "${EMINFO_LOG}" "INIT0000 resetting plugin: [${plugin_name}] ..."
- 	sed -i '/^'${plugin_name}'\>/d' ${TMP_LASTRUN} > /dev/null 2>&1
- 	sed -i '/^'${plugin_name}'\>/d' ${TMP_NEXTRUN} > /dev/null 2>&1
- 	sed -i '/^'${plugin_name}'\>/d' ${TMP_REPEAT}  > /dev/null 2>&1
+ 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_LASTRUN} > /dev/null 2>&1
+ 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_NEXTRUN} > /dev/null 2>&1
+ 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_REPEAT}  > /dev/null 2>&1
   fi
   return $?
 }
@@ -2541,15 +2543,15 @@ process_sysoverload() {
 # stopps_by_pidfile /var/run/sshd.pid
 # list_plugin_section
 # list_inner_plugin_section
-# update_lastrun_and_nextrun  check_sysload
+# update_lastrun_and_nextrun  "check_sysload **&*())_   ^^%"
 # list_plugin_status  1 2 
 # check_ps_by_pid_file /tmp/1.pid
 # process_plugin_timeout   check_sysload
 # check_repeat_errcount  check_sysload
 # check_repeat_errcount  hello
-# add_repeat_errcount  check_sysload
-# add_repeat_errcount  hello
-# add_repeat_errcount  hello2
+add_repeat_errcount  check_sysload
+add_repeat_errcount  hello
+add_repeat_errcount  "hello2 fdjfk  ()"
 # zero_repeat_errcount  check_sysload
 # gen_tmpfile check_sysload
 # list_enabled_plugin_section

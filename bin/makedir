@@ -16,10 +16,8 @@
 array_directories=( 
 	${BIN_DIR} 
 	${CONF_DIR} 
-	${DOC_DIR} 
 	${HANDLER_DIR} 
 	${OPT_DIR} 
-	${TOOL_DIR} 
 	${PLUGIN_DIR} 
 	${INNER_DIR} 
 	${TMP_DIR} 
