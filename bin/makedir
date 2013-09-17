@@ -4,6 +4,9 @@
 #  This Script Create Basic Directories of EMINFO
 # ================================================
 #
+# option: -c to check directories
+#
+#
 
 ### BASE_DIR DEF
 [ -z ${BASE_DIR} ]  && {
@@ -27,13 +30,26 @@ array_directories=(
 	${SNAPSHOT_DIR} 
 )
 
+MODE=0
+[ "$1" == "-c" ] && MODE=1
+
 ### Create Directory
-rc=0
+mkrc=0
+ckrc=0
 for ((i=0;i<${#array_directories[@]};i++)) 
 do
-	mkdir -v -p -m 755 "${array_directories[i]}"
-	if [ "$?" != "0" ]; then
-		((rc++))
+	if [ "${MODE}" == "1" ]; then
+		[ -d "${array_directories[i]}" -a -w "${array_directories[i]}" ] && {
+			echo -e "[$(echo_green "OK")]   : [${array_directories[i]}] prepared."
+		} || {
+			echo -e "[$(echo_red "WARN")] : [${array_directories[i]}] not prepared."
+			((ckrc++))
+		}
+	else
+		mkdir -v -p -m 755 "${array_directories[i]}"
+		if [ "$?" != "0" ]; then
+			((mkrc++))
+		fi
 	fi
 done
-exit ${rc}
+[ "${MODE}" == "1" ] && exit ${ckrc} || exit ${mkrc}

@@ -357,7 +357,7 @@ list_plugin_section() {
 	[ "${filepath##*/}" == "takesnap.ini" ] && continue
 	pluginname="$(is_plugin_configfile "${filepath}")"
 	if [ "${pluginname}" != "no" ]; then
-		result="${result} ${pluginname}"
+		[ ! -z "${result}" ] && result="${result} ${pluginname}" || result="${pluginname}"
 	fi
   done
   echo "${result}"
@@ -676,22 +676,19 @@ del_eminfo_config() {
         return 3
   else
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
-        	config_file="${config_file}"
+        	config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
-        	config_file="${config_file}"
+        	config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
 
 	if [ -f "${config_file}" -a -s "${config_file}" ]; then
-  		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
-				 awk -F"=" '\
-					($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
-					( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
-					( k==1 && x==1 && $1~/^'${key}'\>/ ){print NR;exit;}' )
-  		if [ -z "${linenum//[ ]}" ]; then
+		local section_linenum=$( cat ${config_file} | tr '\t' ' ' |\
+					awk '($0~/^ *\[ *'${section}' *\] *$/){print NR;exit;}' )
+		if [ -z "${section_linenum//[ ]}" ]; then 
 			write_log -f "${EMINFO_LOG}" "DELC0000 del_eminfo_config notice:"\
-				"section=[${section}] key=[${key}] not found in config file."
+				"section=[${section}] not found in config file."
 			return 5
   		else
 			local nowvalue=$(read_eminfo_config "${section}" "${key}")
@@ -709,6 +706,11 @@ del_eminfo_config() {
 					"section=[${section}] key=[${key}] found in config file,"\
 					 "line-number=[${linenum}], nower value=[${nowvalue}],"\
 					 "trying to delete config [${key}]"
+  				local linenum=$( cat ${config_file} | tr '\t' ' ' |\
+				 	awk -F"=" '\
+						($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+						( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+						( k==1 && x==1 && $1~/^'${key}'\>/ ){print NR;exit;}' )
 			else
 				write_log -f "${EMINFO_LOG}" "DELC0000 del_eminfo_config notice:"\
 					"section=[${section}] key=[${key}] not found in config file,"\

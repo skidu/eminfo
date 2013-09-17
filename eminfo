@@ -50,6 +50,14 @@ result=$( eval ${PRECHECK_SH} 2>&1 )
   exit 1
 }
 
+result=$( eval "${MAKEDIR_SH} -c" 2>&1 )
+[ "$?" != "0" ] && {
+  echo -e "\nDirCheck Result: Sorry, Directories not prepared \n"
+  echo -e "${result}\n"
+  echo -e "Try to Run: ${MAKEDIR_SH}\n"
+  exit 1
+}
+
 #
 #
 
@@ -71,20 +79,25 @@ show_help() {
 cat << EOF
 
   $(echo_green "Options:")
-	help				stuff you are reading
-  	version				print version
-	start   			start eminfo
-	stop    			stop eminfo
-	status				show eminfo status
-	precheck			check previous start
-	checkconf    [-v]		check config file
-	reload				reload include file (not config file) on fly
-	list         [plugin]		list schedule stat (list all on default)
-	init	     [plugin]		reset schedul stat, [all] for every plugin
-	view         [plugin]		print config=>value, [all] for every plugin
-	report       [plugin]		report last status, [all] for every plugin
-	enable       [plugin]		enable plugin (change plugin config enable=yes)
-	disable      [plugin]		disable plugin (change plugin config enable=no)
+	help					stuff you are reading
+  	version					print version
+	basedir					print basedir
+	start   				start eminfo
+	stop    				stop eminfo
+	status					show eminfo status
+	precheck				check previous start
+	checkconf    	[-v]			check config file
+	reload					reload include file (not config file) on fly
+	makedir					create basic directories
+	list         	[plugin]		list schedule stat (list all on default)
+	init	     	[plugin]		reset schedul stat, [all] for every plugin
+	report       	[plugin]		report last status, [all] for every plugin
+	enable       	[plugin]		enable plugin (change plugin config enable=yes)
+	disable      	[plugin]		disable plugin (change plugin config enable=no)
+	config-view  	[plugin]		print config=>value, [all] for every plugin
+  	config-add   	[plugin] [key] [value]  add config=>value for plugin
+	config-del   	[plugin] [key]		delete config for plugin
+	config-update 	[plugin] [key] [value]  update conifg=>value for plugin
 EOF
 }
 
@@ -94,18 +107,23 @@ show_example() {
 cat << EOF
 
   $(echo_green "Example:")
-	./eminfo  help
-	./eminfo  version
-	./eminfo  precheck
-	./eminfo  checkconf
-	./eminfo  reload
-	./eminfo  start | stop | status | list
-        ./eminfo  list     check_pop_svr
-	./eminfo  init     check_sysload | all
-	./eminfo  view     check_v5_mysqlping | all
-	./eminfo  report   check_port | all
-	./eminfo  enable   check_sysload
-	./eminfo  disable  check_sysload
+	eminfo  help
+	eminfo  version
+	eminfo  basedir
+	eminfo  precheck
+	eminfo  checkconf
+	eminfo	makedir
+	eminfo  reload
+	eminfo  start | stop | status | list
+        eminfo  list     	check_pop_svr
+	eminfo  init     	check_sysload | all
+	eminfo  report   	check_port | all
+	eminfo  enable   	check_sysload
+	eminfo  disable  	check_sysload
+	eminfo  config-view     check_pop_svr | all
+	eminfo  config-add	check_pop_svr time_out 5
+	eminfo  config-del	check_pop_svr time_out 
+	eminfo  config-update	check_pop_svr pop_svr 10
 EOF
 }
 
@@ -117,28 +135,31 @@ cat << EOF
   $(echo_green "ShortTips:")
 	precheck        => p 
 	checkconf	=> c
+	makedir		=> m
 	status          => s 
 	reload          => r 
 	list            => l            ( ln le lr li )
 	init            => i 
-	view            => v 
 	report		=> R		( Re Rr Ri )
 	enable		=> e
 	disable		=> d
+	config-view 	=> v 
 
   $(echo_green "ShortTips Example:")
-        ./eminfo  h
-        ./eminfo  v
-        ./eminfo  p 
-        ./eminfo  c 
-        ./eminfo  s 
-        ./eminfo  r 
-        ./eminfo  l  [ln|le|lr|li]
-        ./eminfo  i  check_pop_svr | all | a
-        ./eminfo  v  check_pop_svr | all | a
-        ./eminfo  R  check_pop_svr | all | a 
-        ./eminfo  e  check_pop_svr
-        ./eminfo  d  check_pop_svr
+        eminfo  h
+        eminfo  v
+	eminfo  b
+        eminfo  p 
+        eminfo  c 
+	eminfo	m
+        eminfo  s 
+        eminfo  r 
+        eminfo  l  [ln|le|lr|li]
+        eminfo  i  check_pop_svr | all | a
+        eminfo  v  check_pop_svr | all | a
+        eminfo  R  check_pop_svr | all | a  [Re|Rr|Ri]
+        eminfo  e  check_pop_svr
+        eminfo  d  check_pop_svr
 EOF
 }
 
@@ -365,6 +386,8 @@ case "$#" in
 		show_example			;;
 	"version"|"v")
 		echo "${EMINFO_VERSION}"	;;
+	"basedir"|"b")
+		echo "${BASE_DIR}"		;;
 	"start")
 		start_core_cron			;;
 	"stop")
@@ -408,6 +431,8 @@ case "$#" in
 		. ${PRECHECK_SH}		;;
 	"checkconf"|"c")
 		. ${CHECKCONF_SH}		;;
+	"makedir"|"m")
+		. ${MAKEDIR_SH}			;;
 	"reload"|"r")
 		reload_core_cron		;;
 	"?"|"/?")
@@ -495,7 +520,7 @@ case "$#" in
 			exit 9;
                 fi
 			;;
-	"view"|"v")
+	"config-view"|"v")
 		if [ "$2" == "all" -o "$2" == "a" ]; then
 			for p in `list_plugin_section`
 			do
@@ -531,7 +556,78 @@ case "$#" in
 		show_example		;;
 	esac
 	;;
+"3")
+	[ -z "${2//[ ]}" -o -z "${3//[ ]}"  ] && {
+		echo_yellow "second argument [${2}] or third argument [${3}] is null.";echo
+		exit 1
+        }
 
+	case "$1" in 
+	"config-del")
+		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+			del_eminfo_config "$2" "$3"
+			rc=$?
+			case "$rc" in
+			"0") echo "delete [$2]-[$3] success [$(echo_green OK)]" 				;;
+			"2") echo "delete [$2]-[$3] skip [$(echo_yellow NoNeed: config [$3] already not exists)]"	;;
+			*)   echo "delete [$2]-[$3] failed [$(echo_red FAIL)], details in ${EMINFO_LOG}"    	;;
+			esac
+			exit ${rc}
+		else
+			echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			exit 9;
+		fi
+		;;
+	*)
+		show_help
+		show_example
+		;;
+	esac
+	;;
+"4")
+	[ -z "${2//[ ]}" -o -z "${3//[ ]}" -o -z "${4//[ ]}" ] && {
+		echo_yellow "second argument [${2}] or third argument [${3}] or fourth argument [${4}] is null.";echo
+		exit 1
+	}
+
+	case "$1" in
+	"config-add")
+		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+			add_eminfo_config "$2" "$3" "$4"
+			rc=$?
+			case "$rc" in
+			"0") echo "add [$2]-[$3]:[$4] success [$(echo_green OK)]"  		;;
+			"2") echo "add [$2]-[$3]:[$4] skip [$(echo_yellow NoNeed: config [$3] already exists)]"		;;
+			*)   echo "add [$2]-[$3]:[$4] failed [$(echo_red FAIL)], details in ${EMINFO_LOG}"        ;;
+			esac
+			exit ${rc}
+		else
+			echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			exit 9;
+		fi
+		;;
+	"config-update")
+		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+			update_eminfo_config "$2" "$3" "$4"
+			rc=$?
+			case "$rc" in
+			"0") echo "update [$2]-[$3]:[$4] success [$(echo_green OK)]"					;;
+			"2") echo "update [$2]-[$3]:[$4] skip [$(echo_yellow NoNeed: config [$3] is already what you want)]" ;;
+			"5") echo "update [$2]-[$3]:[$4] warn [$(echo_yellow NoConf: config [$3] not found)]"	;;
+			*)   echo "update [$2]-[$3]:[$4] failed $(echo_red FAIL)], details in ${EMINFO_LOG}"		;;
+			esac
+			exit ${rc}
+		else
+			echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			exit 9;
+		fi
+		;;
+	*)
+		show_help
+		show_example
+		;;
+	esac
+	;;
 *)
 	show_help
 	show_example
