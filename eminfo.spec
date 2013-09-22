@@ -50,5 +50,6 @@ ln -sv /usr/local/eminfo/eminfo /usr/bin/eminfo
 %changelog
 * Sun May 11 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
 - init buildrpm for eminfo-1.0.0-beta1.rpm
-* Thu Aug 15 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
+* Mon Sep 23 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
 - redesgin by perl/shell for eminfo-1.0.0-beta2.rpm
+- seperated into three packets: main/plugin/tool
