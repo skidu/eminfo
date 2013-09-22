@@ -28,8 +28,8 @@ if($action eq 'format_pstr_output_toterm'){
 	exit(1) if !defined $content;
 	exit(1) if $content =~ m/\A\s*\Z/;
 	$content =~ s/((<\s*font\s+color=(\w+)\s*>)\s*(.+?)\s*(<\s*\/font\s*>))/\n$3 ::: $4\n/ig;
-	#print "\nfirst===\n$content";  # for debug
-	#print "\nlast===\n";
+	# print "\nfirst===\n$content";  # for debug
+	# print "\nlast===\n";
 	open my $fh, "<", \$content;
 	  while(<$fh>){
 		if (/\A(\w+)\s+:::\s+(.+)\Z/){
@@ -49,7 +49,7 @@ if($action eq 'format_pstr_output_toterm'){
 			s/<br>/\n/g;
 			s/\<[^\<\>]*\>//g;
 			s/\s*###\s*/\n/g;
-			print if !(/\A\s+\Z/);
+			print; #  if !(/\A\s+\Z/);
 		}
 	  }
 	close $fh;
