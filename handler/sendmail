@@ -61,7 +61,7 @@ do
         "s")
                 jobid="${OPTARG}"         ;;
         "i")
-                # LANG=C
+                LANG=C
                 content="${OPTARG}"       ;;
         esac
 done

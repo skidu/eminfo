@@ -5,9 +5,11 @@
 # 
 # Usage:     ./report {plugin_name}
 # 	     ./report all
+#	     ./report -f {plugin_name} -i {plugin_output_stuff}
 #
 # Example:   ./report check_sysload
 # Example:   ./report all
+# Example:   ./report -f check_sysload -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"
 #
 
 
@@ -17,10 +19,16 @@
         source ${BASE_DIR}/bin/include 2>&-
 }
 
+
+
+### Function Def
+
 show_usage(){
   echo "Usage:   ./${0##*/} {plugin_name}"
+  echo "Usage:   ./${0##*/} -f {plugin_name} -i \"{plugin_output_stuff}\""
   echo "Example: ./${0##*/} check_sysload"
   echo "Example: ./${0##*/} all"
+  echo "Example: ./${0##*/} -f check_sysload -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\""
   exit 1
 }
 
@@ -28,82 +36,118 @@ print_record(){
   local pname=${1//[ ]} ts= result= line= level= type= title= summary= body= content=
   local aline="=========="
   local output=
-  if [ -f "${TMP_STATUS}" -a -s "${TMP_STATUS}" ]; then
-	line=$(awk '(/^'${pname}'\> /){print;exit;}' "${TMP_STATUS}" 2>&-)
-	if [ -z "${line//[ ]}" ]; then
-		ts="-"
-		result="No Status Record, Maybe Never been Running or No Such Plugin"
-		output="\nPlugin   : ${pname}"\
+
+  if [ "${MODE}" == "0" ]; then   ## read from stat file.
+  	if [ -f "${TMP_STATUS}" -a -s "${TMP_STATUS}" ]; then
+		line=$(awk '(/^'${pname}'\> /){print;exit;}' "${TMP_STATUS}" 2>&-)
+  	else
+		echo_yellow "Status File NOT Exist or Empty" ; echo
+		return 1
+  	fi
+  elif [ "${MODE}" == "1" ]; then  ## read from command args.
+	line="$*"		
+  fi
+
+  if [ -z "${line//[ ]}" ]; then
+	ts="-"
+	result="No Status Record, Maybe Never been Running or No Such Plugin"
+	output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   : ${result}"\
 "\n"
-	else
+  	[ "${MODE}" == "0" ] && echo -e "\n${output}\n${aline}\n"
+	return 0
+  else
+	if [ "${MODE}" == "0" ]; then
 		ts=$(echo -e "${line}" | awk '{print $2}')
 		ts=$(date -d "1970-01-01 UTC ${ts} seconds" +%F_%T 2>&-)
 		result=$(echo -e "${line}" | awk '{$1=$2="";print;exit;}')
-		if [ "$(echo -n "${result}" | awk -v RS="{[^{]*}" 'END{print NR}')" == "3" ]; then
-			level=$(read_output 1 "${result}"); level=$(echo -e "${level}" | tr '[a-z]' '[A-Z]')
-			type=$(read_output 2 "${result}")
-			case "${type}" in 
-			"str")
-				title=$(read_output 4 "${result}")
-				[ -z "${title//[ ]}" ] && title= || title="Title    : ${title}"
-				summary=$(read_output 5 "${result}")
-				[ -z "${summary//[ ]}" ] && summary= || summary="Summary  : ${summary}"
-				body=$(read_output 6 "${result}")
-				body=$( ${PLUTIL} format_pstr_output_toterm "${body}")
-				[ -z "${body//[ ]}" ] && body= || body="Details  : ${body}"
-				content="${title}\n${summary}\n${body}\n"
-				output="\nPlugin   : ${pname}"\
+	else
+		ts=$(date +%F_%T)
+		result="${line}"
+	fi
+	if [ "$(echo -n "${result}" | awk -v RS="{[^{]*}" 'END{print NR}')" == "3" ]; then
+		level=$(read_output 1 "${result}"); level=$(echo -e "${level}" | tr '[a-z]' '[A-Z]')
+		type=$(read_output 2 "${result}")
+		case "${type}" in 
+		"str")
+			title=$(read_output 4 "${result}")
+			[ -z "${title//[ ]}" ] && title= || title="Title    : ${title}"
+			summary=$(read_output 5 "${result}"|sed -e 's/^[ \t]//')
+			[ -z "${summary//[ ]}" ] && summary= || summary="Summary  : ${summary}"
+			body=$(read_output 6 "${result}"|sed -e 's/^[ \t]//')
+			body=$( ${PLUTIL} format_pstr_output_toterm "${body}")
+			[ -z "${body//[ ]}" ] && body= || body="Details  :\n${body}"
+			content="${title}\n${summary}\n${body}\n"
+			output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
 "\nLevel    : ${level}"\
 "\nType     : Strings"\
 "\n${content}\n"
-				;;
-			"file")
-				files=$(read_output 3 "${result}")
-				output="\nPlugin   : ${pname}"\
+			;;
+		"file")
+			files=$(read_output 3 "${result}")
+			output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
 "\nLevel    : ${level}"\
 "\nType     : Files"\
 "\nFiles    : ${files}"\
 "\n"
-				;;
-			*)
-				local part3=$(read_output 3 "${result}")
-				output="\nPlugin   : ${pname}"\
+			;;
+		*)
+			local part3=$(read_output 3 "${result}")
+			output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
 "\nOutput Type Invalid, type=[${part3}]"\
 "\n"
-				;;
-			esac
-		else
-			output="\nPlugin   : ${pname}"\
+			;;
+		esac
+	else
+		output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   : ${result}"\
 "\n"
-		fi
 	fi
-  	echo -e "\n${output}\n${aline}\n"
-	return 0
-  else
-	echo_yellow "Status File NOT Exist or Empty" ; echo
-	return 1
   fi
+
+  echo -e "\n${output}\n${aline}\n"
+  return 0
 }
 
 
 
-plugin_name=${1//[ ]}
-[ -z "${plugin_name}" ] && show_usage
-if [ "${plugin_name}" == "all" ]; then
-	for p in `list_plugin_section`  `list_inner_plugin_section`
-  	do
-		print_record "${p}"
-  	done
-else
-  	print_record "${plugin_name}"
+### Main Body Begin ...
+
+MODE=0
+while getopts f:i: opt
+do
+        case ${opt} in
+        "f")
+                plugin_name="${OPTARG}"   ;;  
+        "i")
+                content="${OPTARG}"       ;;  
+	*)
+		show_usage		  ;;
+        esac
+done
+[ ! -z "${plugin_name//[ ]}" -a ! -z "${content//[ ]}" ] && MODE=1
+
+if [ "${MODE}" == "0" ]; then
+	plugin_name="${1//[ ]}"
+	[ -z "${plugin_name}" ] && show_usage
+	if [ "${plugin_name}" == "all" ]; then
+		for p in `list_plugin_section`  `list_inner_plugin_section`
+  		do
+			print_record "${p}"
+  		done
+	else
+  		print_record "${plugin_name}"
+	fi
+fi
+
+if [ "${MODE}" == "1" ]; then 
+	print_record "${plugin_name}" "${content}"
 fi

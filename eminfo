@@ -94,6 +94,7 @@ cat << EOF
 	report       	[plugin]		report last status, [all] for every plugin
 	enable       	[plugin]		enable plugin (change plugin config enable=yes)
 	disable      	[plugin]		disable plugin (change plugin config enable=no)
+	run		[plugin]		run plugin once and format output on console
 	view		[plugin]		print config->value, [all] for every plugin
 	config					help stuff about eminfo config-*
 	?					help stuff about short tips 
@@ -130,6 +131,7 @@ cat << EOF
 	eminfo  report   	port | all
 	eminfo  enable   	sysload
 	eminfo  disable  	sysload
+	eminfo  run		sysload
 	eminfo  view		sysload
 	eminfo  config
 
@@ -158,10 +160,10 @@ cat << EOF
 	checkconf	=> c
 	makedir		=> m
 	status          => s 
-	reload          => r 
 	list            => l	( ln le lr li )
 	init            => i 
 	report		=> R	( Re Rr Ri )
+	run		=> r
 	enable		=> e
 	disable		=> d
 	config-view 	=> v 
@@ -174,11 +176,11 @@ cat << EOF
         eminfo  c 
 	eminfo	m
         eminfo  s 
-        eminfo  r 
         eminfo  l  [ln|le|lr|li]
         eminfo  i  pop_svr | all | a
         eminfo  v  pop_svr | all | a
         eminfo  R  pop_svr | all | a  [Re|Rr|Ri]
+        eminfo  r  pop_svr
         eminfo  e  pop_svr
         eminfo  d  pop_svr
 EOF
@@ -454,7 +456,7 @@ case "$#" in
 		. ${CHECKCONF_SH}		;;
 	"makedir"|"m")
 		. ${MAKEDIR_SH}			;;
-	"reload"|"r")
+	"reload")
 		reload_core_cron		;;
 	"config")
 		show_confhelp
@@ -563,6 +565,19 @@ case "$#" in
 			. ${REPORT_SH} "all"
 		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
 			. ${REPORT_SH} "$2"
+		else
+			echo plugin $(echo_yellow "[$2]") : not registered in config file.
+			exit 9;
+		fi
+			;;
+	"run"|"r")
+		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+			if [ -z "$( echo "${2}" | grep -E -o "^eminfo_" )" ]; then
+				output=$( eval "${PLUGIN_DIR}/${2}" 2>&1 )
+			else
+				output=$( eval "${INNER_DIR}/${2}" 2>&1 )
+			fi
+			. ${REPORT_SH} -f "$2" -i "${output}"
 		else
 			echo plugin $(echo_yellow "[$2]") : not registered in config file.
 			exit 9;

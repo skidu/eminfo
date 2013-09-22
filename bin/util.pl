@@ -20,32 +20,39 @@ if ($action eq 'format_pstr_output_toplain'){
 }
 
 # Convert HTML-Color to TERM-Color in plugin output (last filed)
-# remove html-tag and &nbsp; 
-# convert ###/<br> into newline
+# remove <>/&nbsp; convert ###/<br> into newline
 # output maybe multi-line.
 # usage: format_pstr_output_toterm {content-last-filed}
 if($action eq 'format_pstr_output_toterm'){
 	my $content = shift;
 	exit(1) if !defined $content;
 	exit(1) if $content =~ m/\A\s*\Z/;
-	$content =~ m/((<\s*font\s+color=(\w+)\s*>)\s*(.+?)\s*(<\s*\/font\s*>))/i;
-	# print "\n\nwhole = $1;\n\$2 = $2;\n\$3 = $3;\n\$4 = $4;\n\$5 = $5;\n";   ## for debug
-	if ($1 && $3 && $4) {
-		my ($color,$body) = ($3,$4);
-		if ($color eq 'green'){
-			$body = "\033[1;32m$body\033[0m";
-		} elsif ($color eq 'red'){
-			$body = "\033[1;31m$body\033[0m";
-		} elsif ($color eq 'yellow'){
-			$body = "\033[1;33m$body\033[0m";
+	$content =~ s/((<\s*font\s+color=(\w+)\s*>)\s*(.+?)\s*(<\s*\/font\s*>))/\n$3 ::: $4\n/ig;
+	#print "\nfirst===\n$content";  # for debug
+	#print "\nlast===\n";
+	open my $fh, "<", \$content;
+	  while(<$fh>){
+		if (/\A(\w+)\s+:::\s+(.+)\Z/){
+			my ($color,$body) = ($1,$2);
+			if ($color eq 'green'){
+				$body = "\033[1;32m$body\033[0m";
+			} elsif ($color eq 'red'){
+				$body = "\033[1;31m$body\033[0m";
+			} elsif ($color eq 'yellow'){
+				$body = "\033[1;33m$body\033[0m";
+			}
+			$body =~ s/&nbsp;/ /g;
+			print $body;
+		} else {
+			s/[\r\n]//g;
+			s/&nbsp;/ /g;
+			s/<br>/\n/g;
+			s/\<[^\<\>]*\>//g;
+			s/\s*###\s*/\n/g;
+			print if !(/\A\s+\Z/);
 		}
-		$content =~ s/$1/$body/g;
-	}
-	$content =~ s/\<[^\<\>]*\>//g;
-	$content =~ s/&nbsp;//g;
-	$content =~ s/###/\n/g;
-	$content =~ s/<br>/\n/g;
-	print $content;
+	  }
+	close $fh;
 }
 
 # Read each part of plugin output 
