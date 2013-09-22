@@ -29,7 +29,7 @@ if($action eq 'format_pstr_output_toterm'){
 	exit(1) if !defined $content;
 	exit(1) if $content =~ m/\A\s*\Z/;
 	$content =~ m/((<\s*font\s+color=(\w+)\s*>)\s*(.+?)\s*(<\s*\/font\s*>))/i;
-	print "\n\nwhole = $1;\n\$2 = $2;\n\$3 = $3;\n\$4 = $4;\n\$5 = $5;\n";   ## for debug
+	# print "\n\nwhole = $1;\n\$2 = $2;\n\$3 = $3;\n\$4 = $4;\n\$5 = $5;\n";   ## for debug
 	if ($1 && $3 && $4) {
 		my ($color,$body) = ($3,$4);
 		if ($color eq 'green'){

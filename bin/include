@@ -317,18 +317,18 @@ get_children_pids_by_pid() {
 #
 is_plugin_configfile(){
   local filepath=$1  result=
-  local ftype=$(echo "${filepath}" | perl -ne 'chomp;print -T "$_"?"text":"nontext";' 2>&-)
+  local ftype=$(echo "${filepath}" | LANG=C perl -ne 'chomp;print -T "$_"?"text":"nontext";' 2>&-)
   if [ "${ftype}" != "text" ]; then
 	result="no"
   else
-	local fsize=$(echo "${filepath}" | perl -ne 'chomp;$size=-s;print "$size"' 2>&-)
+	local fsize=$(echo "${filepath}" | LANG=C perl -ne 'chomp;$size=-s;print "$size"' 2>&-)
   	if [ -z "${fsize//[ ]}" -o ! -z "${fsize//[0-9]}" ]; then
 		result="no"
   	elif [ ${fsize} -ge 1048576 ]; then
 		result="no"
 	else
-  		local pname=$(echo "${filepath##*/}" | perl -ne 'if(m/\A(\S+)\.ini\Z/i){print "$1"};' 2>&-)
-  		local hname=$(head -n1 "${filepath}" | perl -ne 'if(m/\A\s*\[\s*(.+)\s*\]\s*/){print "$1"};' 2>&-)
+  		local pname=$(echo "${filepath##*/}" |LANG=C perl -ne 'if(m/\A(\S+)\.ini\Z/i){print "$1"};' 2>&-)
+  		local hname=$(head -n1 "${filepath}" |LANG=C perl -ne 'if(m/\A\s*\[\s*(.+)\s*\]\s*/){print "$1"};' 2>&-)
   		if [ -z "${pname//[ ]}" -o -z "${hname//[ ]}" ]; then
 			result="no"
   		elif [ "${pname}" != "${hname}" ]; then

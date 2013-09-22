@@ -29,7 +29,7 @@ BASE_DIR="/usr/local/eminfo"
 
 # === Turn Off Job Control
 #
-set +m
+# set +m
 
 # === LOAD INCLUDE FILE
 #
@@ -94,6 +94,16 @@ cat << EOF
 	report       	[plugin]		report last status, [all] for every plugin
 	enable       	[plugin]		enable plugin (change plugin config enable=yes)
 	disable      	[plugin]		disable plugin (change plugin config enable=no)
+	view		[plugin]		print config->value, [all] for every plugin
+	config					help stuff about eminfo config-*
+	?					help stuff about short tips 
+EOF
+}
+
+show_confhelp() {
+cat << EOF
+
+  $(echo_green "Options:")
 	config-view  	[plugin]		print config=>value, [all] for every plugin
   	config-add   	[plugin] [key] [value]  add config=>value for plugin
 	config-del   	[plugin] [key]		delete config for plugin
@@ -115,15 +125,26 @@ cat << EOF
 	eminfo	makedir
 	eminfo  reload
 	eminfo  start | stop | status | list
-        eminfo  list     	check_pop_svr
-	eminfo  init     	check_sysload | all
-	eminfo  report   	check_port | all
-	eminfo  enable   	check_sysload
-	eminfo  disable  	check_sysload
-	eminfo  config-view     check_pop_svr | all
-	eminfo  config-add	check_pop_svr time_out 5
-	eminfo  config-del	check_pop_svr time_out 
-	eminfo  config-update	check_pop_svr pop_svr 10
+        eminfo  list     	pop_svr
+	eminfo  init     	sysload | all
+	eminfo  report   	port | all
+	eminfo  enable   	sysload
+	eminfo  disable  	sysload
+	eminfo  view		sysload
+	eminfo  config
+
+EOF
+}
+
+show_confexample() {
+cat << EOF
+
+  $(echo_green "Example:")
+	eminfo  config-view     pop_svr | all
+	eminfo  config-add	pop_svr time_out 5
+	eminfo  config-del	pop_svr time_out 
+	eminfo  config-update	pop_svr pop_svr 10
+
 EOF
 }
 
@@ -138,9 +159,9 @@ cat << EOF
 	makedir		=> m
 	status          => s 
 	reload          => r 
-	list            => l            ( ln le lr li )
+	list            => l	( ln le lr li )
 	init            => i 
-	report		=> R		( Re Rr Ri )
+	report		=> R	( Re Rr Ri )
 	enable		=> e
 	disable		=> d
 	config-view 	=> v 
@@ -155,11 +176,11 @@ cat << EOF
         eminfo  s 
         eminfo  r 
         eminfo  l  [ln|le|lr|li]
-        eminfo  i  check_pop_svr | all | a
-        eminfo  v  check_pop_svr | all | a
-        eminfo  R  check_pop_svr | all | a  [Re|Rr|Ri]
-        eminfo  e  check_pop_svr
-        eminfo  d  check_pop_svr
+        eminfo  i  pop_svr | all | a
+        eminfo  v  pop_svr | all | a
+        eminfo  R  pop_svr | all | a  [Re|Rr|Ri]
+        eminfo  e  pop_svr
+        eminfo  d  pop_svr
 EOF
 }
 
@@ -435,9 +456,10 @@ case "$#" in
 		. ${MAKEDIR_SH}			;;
 	"reload"|"r")
 		reload_core_cron		;;
+	"config")
+		show_confhelp
+		show_confexample		;;
 	"?"|"/?")
-		show_help
-		show_example
 		show_shorttips			;;
 	*)
 		show_help
@@ -520,7 +542,7 @@ case "$#" in
 			exit 9;
                 fi
 			;;
-	"config-view"|"v")
+	"view"|"config-view"|"v")
 		if [ "$2" == "all" -o "$2" == "a" ]; then
 			for p in `list_plugin_section`
 			do

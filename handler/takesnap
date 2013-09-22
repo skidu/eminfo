@@ -52,18 +52,22 @@ write_log -f ${TAKESNAP_LOG} "[${from}]" begin to take snapshot.
 
 # check {SNAPSHOT_DIR} is invalid or not 
 if [ "$(sub_str "${SNAPSHOT_DIR}" "eminfo/log/snapshot")" == "no" ]; then
-  	write_log -f ${TAKESNAP_LOG} "[${from}]" Error: "{SNAPSHOT_DIR} is invalid: [${SNAPSHOT_DIR}]"
+  	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"Error: {SNAPSHOT_DIR} is invalid: [${SNAPSHOT_DIR}]"
   	exit 1
 else
-	write_log -f ${TAKESNAP_LOG} "[${from}]" OK: "{SNAPSHOT_DIR} check valid: [${SNAPSHOT_DIR}]"
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"OK: {SNAPSHOT_DIR} check valid: [${SNAPSHOT_DIR}]"
 fi
 
 # check SNAPSHOT_DIR is accessable or not
 if [ ! -d "${SNAPSHOT_DIR}" -o ! -w "${SNAPSHOT_DIR}" ]; then
-  	write_log -f ${TAKESNAP_LOG} "[${from}]" Error: "[${SNAPSHOT_DIR}] not prepared: [not directory or writable]"
+  	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"Error: [${SNAPSHOT_DIR}] not prepared: [not directory or writable]"
   	exit 1
 else
-  	write_log -f ${TAKESNAP_LOG} "[${from}]" OK: "[${SNAPSHOT_DIR}] prepared"
+  	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"OK: [${SNAPSHOT_DIR}] prepared"
 fi
 
 
@@ -72,17 +76,20 @@ snap_day="$(date +%F)"
 snap_time="$(date +%H-%M-%S).${from}"
 snap_workdir="${SNAPSHOT_DIR}/${snap_day}/${snap_time}"
 snap_tarfile="${snap_workdir}.tgz"
-write_log -f ${TAKESNAP_LOG} "[${from}]" "set snap_workdir=[${snap_workdir}], snap_tarfile=[${snap_tarfile}]"
+write_log -f ${TAKESNAP_LOG} "[${from}]"\
+	"set snap_workdir=[${snap_workdir}], snap_tarfile=[${snap_tarfile}]"
 
 
 ### create snap_workdir dircoty 
 # only collect stderr output
 errstr=$( mkdir -p "${snap_workdir}" 2>&1  1>/dev/null )   
 if [ "$?" != 0 ]; then
-  	write_log -f ${TAKESNAP_LOG} "[${from}]" create snap workdir "[${snap_workdir}]" Error: ["${errstr}"]
+  	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"create snap workdir [${snap_workdir}] Error: [${errstr}]"
   	exit 1
 else
-	write_log -f ${TAKESNAP_LOG} "[${from}]" create snap workdir "[${snap_workdir}]" success.
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"create snap workdir [${snap_workdir}] success."
 fi
 
 ### change to snap_workdir
@@ -92,10 +99,12 @@ fi
 cd "${snap_workdir}" 2>/tmp/.ftmpxxx_eminfo.takesnap 1>/dev/null
 if [ "$?" != "0" ]; then
    	errstr=$(cat /tmp/.ftmpxxx_eminfo.takesnap 2>&-)
-	write_log -f ${TAKESNAP_LOG} "[${from}]" change directory to snap workdir "[${snap_workdir}]" Error: "[${errstr}]"
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"change directory to snap workdir [${snap_workdir}] Error: [${errstr}]"
 	exit 1
 else
-	write_log -f ${TAKESNAP_LOG} "[${from}]" change directory to snap workdir "[${snap_workdir}]" success.
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"change directory to snap workdir [${snap_workdir}] success."
 fi
 
 
@@ -117,7 +126,7 @@ take_snap() {
 	/usr/bin/ipcs -u > ipcs-u
 	/usr/bin/ipcs -l > ipcs-l
 }
-[ -x /usr/bin/crontab ] && /usr/bin/crontab -l > crontab-l
+[ -x /usr/bin/crontab ] && /usr/bin/crontab -l > crontab-l 2>&1
 [ -x /usr/bin/atq ] && /usr/bin/atq > atq
 
 # about performance
@@ -154,13 +163,24 @@ if type -all set >/dev/null 2>&1 ; then set > set ; fi
 	/bin/netstat -anp > netstat-anp
 	/bin/netstat -tlnp > netstat-tlnp
 }
+service network status > network-status 2>&1
+ifdev=$(service network status 2>&- | awk '(/Configured devices:/){x=1;next} (x==1){print;exit}')
+for d in `echo "${ifdev}"`
+do
+        [ -x /sbin/ethtool ] && {
+                /sbin/ethtool "${d}"  > ethtool-"${d}" 2>&1
+                /sbin/ethtool -i "${d}" > ethtool-i-"${d}" 2>&1
+        }   
+	[ -x /sbin/mii-tool ] && {
+		/sbin/mii-tool "${d}" > mii-tool-"${d}" 2>&1
+	}
+done
 
 # about dmesg
 [ -x /bin/dmesg ] && /bin/dmesg > dmesg
 
 # about library
 [ -x /sbin/lsmod ] && /sbin/lsmod > lsmod
-[ -x /sbin/mii-tool ] && /sbin/mii-tool > mii-tool
 [ -x /sbin/ldconfig ] && /sbin/ldconfig -p > ldconfig-p
 
 # about release and dmidecode
@@ -233,9 +253,9 @@ ls -d /proc/[0-9]*  > proc-psdir
 }
 
 ### 1. take snapshot.
-write_log -f ${TAKESNAP_LOG} "[${from}]" taking snapshot ...
+write_log -f ${TAKESNAP_LOG} "[${from}]" "taking snapshot ..."
 take_snap 1>&- 2>&-
-write_log -f ${TAKESNAP_LOG} "[${from}]" take snapshot done.
+write_log -f ${TAKESNAP_LOG} "[${from}]" "take snapshot done."
 
 ### 2. make tarball and remove snapshot directory.
 cd "${SNAPSHOT_DIR}/${snap_day}/" 2>&-
@@ -243,21 +263,31 @@ cd "${SNAPSHOT_DIR}/${snap_day}/" 2>&-
 # only collect stderr output
 errstr=$( /bin/tar -czf "${snap_tarfile}" --remove-files "${snap_time}" 2>&1 1>/dev/null )
 if [ "$?" != "0" ]; then
-        write_log -f ${TAKESNAP_LOG} "[${from}]" make tarball on directory "[${snap_time}]" Error: "[${errstr}]"
+        write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"make tarball on directory [${snap_time}] Error: [${errstr}]"
 else
-        write_log -f ${TAKESNAP_LOG} "[${from}]" make tarball on directory "[${snap_time}]" success.
+        write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"make tarball on directory [${snap_time}] success."
 fi
 
 # only collect stderr output
-errstr=$( rmdir "${snap_time}" 2>&1 1>/dev/null )
-if [ "$?" != "0" ]; then
-        write_log -f ${TAKESNAP_LOG} "[${from}]" remove directory "[${snap_time}]" Error: "[${errstr}]"
-else
-        write_log -f ${TAKESNAP_LOG} "[${from}]" remove directory "[${snap_time}]" success.
+if [ -d "${snap_time}" ]; then
+	errstr=$( rmdir "${snap_time}" 2>&1 1>/dev/null )
+	if [ "$?" != "0" ]; then
+        	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+			"remove directory [${snap_time}] Error: [${errstr}]"
+	else
+        	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+			"remove directory [${snap_time}] success."
+	fi
+else	# tar 1.23 on centos-6 will auto remove directories.
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"no need to remove directory [${snap_time}], maybe tar version >= 1.15.1"
 fi
 
 
-write_log -f ${TAKESNAP_LOG} "[${from}]" done. snapshot at "[${snap_tarfile}]"
+write_log -f ${TAKESNAP_LOG} "[${from}]"\
+	"done. snapshot at [${snap_tarfile}]"
 write_log -f ${TAKESNAP_LOG} ""
 write_log -f ${TAKESNAP_LOG} ""
 

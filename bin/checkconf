@@ -53,11 +53,13 @@ exit 0
 # 	time
 #
 ARRAY_CONFIG_RULES=(
+	# global
 	"global=>name" 				"str:Linux Server"
 	"global=>scan_interval"  		"int:5:999"
 	"global=>attach_ini_mail"		"set:[yes|no]"
 	"global=>sysload_uplimit"		"int:0:999"
 
+	# plugin_default
 	"plugin_default=>enable"		"set:[yes|no]"
 	"plugin_default=>comment"		"str:Eminfo Plugin"
 	"plugin_default=>frequency"		"time"
@@ -72,33 +74,13 @@ ARRAY_CONFIG_RULES=(
 	"plugin_default=>auto_handler"		"file:handler"
 	"plugin_default=>debug"			"set:[yes|no]"
 
+	# inner plugins
+	"eminfo_clear_overdue=>frequency"	      "time"
 	"eminfo_clear_overdue=>tmpfile_reserve_time"  "int:1:999"
 	"eminfo_clear_overdue=>logfile_reserve_time"  "int:1:999"
 	"eminfo_clear_overdue=>snapfile_reserve_time" "int:1:999"
-
+	"eminfo_log_rotate=>frequency"		      "time"
 	"eminfo_log_rotate=>force_size_uplimit"	      "int:1:2047"
-
-	#"check_sysload=>uplimit"		"int:0:999"
-
-	#"check_cpu_usage=>uplimit"		"int:0:100"
-
-	#"check_iowait=>uplimit"			"int:0:100"
-
-	#"check_disk_freespace=>disk_spare_space_uplimit"	"int:0:99999999"
-	#"check_disk_freespace=>disk_spare_percent_uplimit"	"int:0:100"
-	#"check_disk_freespace=>inode_spare_percent_uplimit"	"int:0:100"
-
-	#"check_process=>pslist_file"		"file"
-
-	#"check_pop_svr=>time_out"		"int:0:99"
-
-	#"check_smtp_svr=>time_out"		"int:0:99"
-
-	#"remote_mail_test=>sample_email_file"	"file"
-	#"remote_mail_test=>mail_body_file"	"file"
-	#"remote_mail_test=>helo_greeting_fqdn"	"str:eyou.net"
-	
-	#"notify_syslogin=>allow_iplist"		"file"
 )
 
 
@@ -466,6 +448,26 @@ do
 		duplkey=$(echo -e "${duplkey}" | awk '{printf "%s duplicated keys: %s, ",$1,$2}')
 		echo -e "$(echo_red [CRIT]) : [${section}] contains duplicated key [${duplkey}]"
 	fi
+done
+
+# 6. check if files under CONF_DIR is plugin configfile or not ?
+for configfile in `ls "${CONF_DIR}"`
+do
+	filepath="${CONF_DIR}/${configfile}"
+	[ "${filepath##*/}" == "eminfo.ini" ] && continue
+	[ "${filepath##*/}" == "sendmail.ini" ] && continue
+	[ "${filepath##*/}" == "postlog.ini" ] && continue
+	[ "${filepath##*/}" == "takesnap.ini" ] && continue
+	pluginname=$(is_plugin_configfile "${filepath}")
+	[ "${pluginname}" == "no" ] && {
+		((critnum++))
+		((totalnum++))
+		echo -e "$(echo_red [CRIT]) : [${configfile}] is not eminfo config file."
+	} || {
+		((oknum++))
+		((totalnum++))
+		[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${configfile}] is eminfo config file."
+	}
 done
 
 # print result
