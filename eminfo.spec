@@ -23,9 +23,9 @@ pluginable platform written by perl/shell for linux ops.
 
 %install 
 [ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/local/
+mkdir -p $RPM_BUILD_ROOT/usr/local/eminfo/
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d/
-cp -a *  $RPM_BUILD_ROOT/usr/local/
+cp -a *  $RPM_BUILD_ROOT/usr/local/eminfo/
 cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 
 %clean
@@ -48,8 +48,8 @@ ln -sv /usr/local/eminfo/eminfo /usr/bin/eminfo
 [ -d /usr/local/eminfo ] && mv /usr/local/eminfo /usr/local/eminfo_$(date +%s)
 
 %changelog
-* Sun May 11 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
-- init buildrpm for eminfo-1.0.0-beta1.rpm
 * Mon Sep 23 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
 - redesgin by perl/shell for eminfo-1.0.0-beta2.rpm
 - seperated into three packets: main/plugin/tool
+* Sun May 11 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
+- init buildrpm for eminfo-1.0.0-beta1.rpm
