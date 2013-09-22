@@ -3,6 +3,7 @@ Name: eminfo
 Version: 1.0.0
 Release: beta2
 License: GPLv3
+Group:  Extension
 Packager: Zhang Guangzheng <zhang.elinks@gmail.com>
 BuildRoot: /var/tmp/%{name}-%{version}-%{release}-root
 Source0: eminfo-1.0.0-beta2.tgz
