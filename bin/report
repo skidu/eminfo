@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 #
-# This Script Responsible for Report Plugin's Last Running Status.
+# This Script Responsible for Report Plugin's Running Status.
 # 
 # Usage:     ./report {plugin_name}
 # 	     ./report all
@@ -9,7 +9,7 @@
 #
 # Example:   ./report check_sysload
 # Example:   ./report all
-# Example:   ./report -f check_sysload -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"
+# Example:   ./report -f check_sysload -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10] | line1 ### line2 ### <font color=red> line3 </font> ### }"
 #
 
 
@@ -28,7 +28,7 @@ show_usage(){
   echo "Usage:   ./${0##*/} -f {plugin_name} -i \"{plugin_output_stuff}\""
   echo "Example: ./${0##*/} check_sysload"
   echo "Example: ./${0##*/} all"
-  echo "Example: ./${0##*/} -f check_sysload -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\""
+  echo "Example: ./${0##*/} -f check_sysload -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10] | line1 ### line2 ### <font color=red> line3 </font> ### } \""
   exit 1
 }
 
@@ -66,51 +66,45 @@ print_record(){
 		ts=$(date +%F_%T)
 		result="${line}"
 	fi
-	if [ "$(echo -n "${result}" | awk -v RS="{[^{]*}" 'END{print NR}')" == "3" ]; then
-		level=$(${PLUTIL} part_pstr_output 1 "${result}"); level=$(echo -e "${level}" | tr '[a-z]' '[A-Z]')
-		type=$(${PLUTIL} part_pstr_output 2 "${result}")
-		case "${type}" in 
-		"str")
-			title=$(${PLUTIL} part_pstr_output 4 "${result}")
-			[ -z "${title//[ ]}" ] && title= || title="Title    : ${title}"
-			summary=$(${PLUTIL} part_pstr_output 5 "${result}"|sed -e 's/^[ \t]//')
-			[ -z "${summary//[ ]}" ] && summary= || summary="Summary  : ${summary}"
-			body=$(${PLUTIL} part_pstr_output 6 "${result}"|sed -e 's/^[ \t]//')
-			body=$( ${PLUTIL} format_pstr_output_toterm "${body}")
-			[ -z "${body//[ ]}" ] && body= || body="Details  :\n${body}"
-			content="${title}\n${summary}\n${body}\n"
-			output="\nPlugin   : ${pname}"\
+
+	level=$(${PLUTIL} part_pstr_output 1 "${result}"); level=$(echo -e "${level}" | tr '[a-z]' '[A-Z]')
+	type=$(${PLUTIL} part_pstr_output 2 "${result}")
+	case "${type}" in 
+	"str")
+		title=$(${PLUTIL} part_pstr_output 4 "${result}")
+		[ -z "${title//[ ]}" ] && title= || title="Title    : ${title}"
+		summary=$(${PLUTIL} part_pstr_output 5 "${result}"|sed -e 's/^[ \t]//')
+		[ -z "${summary//[ ]}" ] && summary= || summary="Summary  : ${summary}"
+		body=$(${PLUTIL} part_pstr_output 6 "${result}"|sed -e 's/^[ \t]//')
+		body=$( ${PLUTIL} format_pstr_output_toterm "${body}")
+		[ -z "${body//[ ]}" ] && body= || body="Details  :\n${body}"
+		content="${title}\n${summary}\n${body}\n"
+		output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
 "\nLevel    : ${level}"\
 "\nType     : Strings"\
 "\n${content}\n"
-			;;
-		"file")
-			files=$(${PLUTIL} part_pstr_output 3 "${result}")
-			output="\nPlugin   : ${pname}"\
+		;;
+	"file")
+		files=$(${PLUTIL} part_pstr_output 3 "${result}")
+		output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
 "\nLevel    : ${level}"\
 "\nType     : Files"\
 "\nFiles    : ${files}"\
 "\n"
-			;;
-		*)
-			local part3=$(${PLUTIL} part_pstr_output 3 "${result}")
-			output="\nPlugin   : ${pname}"\
+		;;
+	*)
+		local part3=$(${PLUTIL} part_pstr_output 3 "${result}")
+		output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
 "\nOutput Type Invalid, type=[${part3}]"\
 "\n"
-			;;
-		esac
-	else
-		output="\nPlugin   : ${pname}"\
-"\nTime     : ${ts}"\
-"\nResult   : ${result}"\
-"\n"
-	fi
+		;;
+	esac
   fi
 
   echo -e "\n${output}\n${aline}\n"
