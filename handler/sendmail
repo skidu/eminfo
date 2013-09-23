@@ -62,10 +62,10 @@ conv_output2mailbody() {
   local content=$1  hd_content=$2
   local level= title= summary= details= mailbody=
 
-  level=$(read_output 1 "${content}" | tr '[a-z]' '[A-Z]')
-  title=$(read_output 4 "${content}")
-  summary=$(read_output 5 "${content}")
-  details=$(read_output 6 "${content}")
+  level=$(${PLUTIL} part_pstr_output 1 "${content}" | tr '[a-z]' '[A-Z]')
+  title=$(${PLUTIL} part_pstr_output 4 "${content}")
+  summary=$(${PLUTIL} part_pstr_output 5 "${content}")
+  details=$(${PLUTIL} part_pstr_output 6 "${content}")
 
   mailbody="$(gen_tmpfile mailbody)"
   {
@@ -110,24 +110,21 @@ do
                 content="${OPTARG}"       ;;
 	"h")
 		hd_content="${OPTARG}"	  ;;
+	*)	
+		show_usage		  ;;
         esac
 done
 
 # set default
-[ -z "${plugin_name}" ] && plugin_name="FNULL"    #### plugin_name ~ ( {plugin_name} , NULL  )
-[ -z "${jobid}" ] && jobid="00000000"		### jobid ~ ( NNNNNNNN , ovld , tmout )
+[ -z "${plugin_name}" ] && show_usage   ### plugin_name ~ ( {plugin_name} , NULL  )
+[ -z "${jobid}" ] && show_usage 	### jobid ~ ( NNNNNNNN , ovld , tmout )
 [ -z "${content}" ] && show_usage
 [ -z "${hd_content}" ] && hd_content="Nothing to do"
 from="${plugin_name}.${jobid}"
 
-
+# main begin 
 write_log -f "${SENDMAIL_LOG}" ""
 write_log -f "${SENDMAIL_LOG}" "[${from}]" "INFO: begin to sendmail..."
-[ "${plugin_name}" == "FNULL" -o "${jobid}" == "00000000" ] && {
-        write_log -f ${SENDMAIL_LOG} "[${from}]"\
-		"WARN: missing arguments [-f/-s], maybe script running from command line."
-}
-
 
 if [ "$(echo -ne "${content}" | awk -v RS="{[^{]*}" 'END{print NR}')" -lt "3" ]; then
 	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
@@ -138,7 +135,7 @@ if [ "$(echo -ne "${content}" | awk -v RS="{[^{]*}" 'END{print NR}')" -lt "3" ];
 fi
 
 # read global.name / read plugin comment / read plugin mail-receviers 
-NAME=$(get_global_name)
+gname=$(get_global_name)
 comment=$(get_comment "${plugin_name}")
 if [ "${jobid}" == "ovld" ]; then  
 	receviers=$(get_mail_receviers "plugin_default")  # Read Default mail_receviers directly while jobid="ovld"
@@ -146,7 +143,7 @@ else
 	receviers=$(get_mail_receviers "${plugin_name}")
 fi
 write_log -f "${SENDMAIL_LOG}" "[${from}]"\
-	"INFO: set name=[${NAME}], comment=[${comment}], receviers=[${receviers}]. CONTINUE"
+	"INFO: set name=[${gname}], comment=[${comment}], receviers=[${receviers}]. CONTINUE"
 
 
 ### attach_ini_mail 
@@ -190,14 +187,14 @@ else
 fi
 
 ### read mail_level and mail_type
-mail_level=$(read_output 1 "${content}" | tr '[a-z]' '[A-Z]')
-mail_type=$(read_output 2 "${content}" | tr '[A-Z]' '[a-z]')
+mail_level=$(${PLUTIL} part_pstr_output 1 "${content}" | tr '[a-z]' '[A-Z]')
+mail_type=$(${PLUTIL} part_pstr_output 2 "${content}" | tr '[A-Z]' '[a-z]')
 
 ### sendmail depend on different {mail_type}.
 case "${mail_type}" in
   "file")
 	### 1. process attach files list.
-	attach_file_list=$(read_output 3 "${content}")
+	attach_file_list=$(${PLUTIL} part_pstr_output 3 "${content}")
 	att_file_args=  t_num=0    t_size=0   
 	num_max=5   size_max=5120    ### set max files-number and max files-size.
 	for x in `echo "${attach_file_list}"`
@@ -258,7 +255,7 @@ case "${mail_type}" in
 			result=$( ${SENDEMAIL} -f "${auth_user}" -s "${mail_server}:${mail_server_port}" \
 			-xu "${auth_user}" -xp "${auth_pass}" \
 			-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
-			-t "${x}" -u "${NAME} / ${comment} / ${mail_level} Mail" -m "Refer to attachments for details." \
+			-t "${x}" -u "${gname} / ${comment} / ${mail_level} Mail" -m "Refer to attachments for details." \
 			-a ${att_file_args}  ${attach_snap_mail_args} ${attach_ini_mail_args} 2>&1 )
 			[ "$?" == "0" ] && ((t_s+=1)) || ((t_e+=1))
 			write_log -f "${SENDMAIL_LOG}" "[${from}]"\
@@ -287,7 +284,7 @@ case "${mail_type}" in
 	    	  result=$( ${SENDEMAIL} -f "${auth_user}" -s "${mail_server}:${mail_server_port}" \
 	    		-xu "${auth_user}" -xp "${auth_pass}" \
 	    		-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
-	    		-t "${x}" -u "${NAME} / ${comment} / ${mail_level} Mail" -o message-file="${mailbody_path}" \
+	    		-t "${x}" -u "${gname} / ${comment} / ${mail_level} Mail" -o message-file="${mailbody_path}" \
 	    		${attach_snap_mail_args} ${attach_ini_mail_args} 2>&1 )
 	    	  [ "$?" == "0" ] && ((t_s+=1)) || ((t_e+=1))
 	    	  write_log -f "${SENDMAIL_LOG}" "[${from}]"\

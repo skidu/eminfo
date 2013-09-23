@@ -71,25 +71,21 @@ do
 		content="${OPTARG}"	  ;;
 	"h")
 		hd_content="${OPTARG}"	  ;;
+	*)	
+		show_usage		  ;;
         esac
 done
 
 # set default
-[ -z "${plugin_name}" ] && plugin_name="FNULL"    #### plugin_name ~ ( {plugin_name} , NULL  )
-[ -z "${jobid}" ] && jobid="00000000"		### jobid ~ ( NNNNNNNN , ovld , tmout )
-[ -z "${content}" ] && show_usage
-[ -z "${hd_content}" ] && hd_content="Nothing to do"
+[ -z "${plugin_name//[ ]}" ] && show_usage 	### plugin_name ~ ( {plugin_name} , NULL  )
+[ -z "${jobid//[ ]}" ] && show_usage		### jobid ~ ( NNNNNNNN , ovld , tmout )
+[ -z "${content//[ ]}" ] && show_usage
+[ -z "${hd_content//[ ]}" ] && hd_content="Nothing to do"
 from="${plugin_name}.${jobid}"
-
 
 # main begin 
 write_log -f ${POSTLOG_LOG} ""
 write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
-
-[ "${plugin_name}" == "FNULL" -o "${jobid}" == "00000000" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}]"\
-		"WARN: missing arguments [-f/-s], maybe script running from command line."
-}
 
 [ -z "${charset//[ ]}" ] && {
 	write_log -f ${POSTLOG_LOG} "[${from}]"\

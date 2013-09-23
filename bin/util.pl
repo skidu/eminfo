@@ -7,9 +7,10 @@ exit(1) if !defined $action;
 exit(1) if $action =~ m/\A\s*\Z/;
 
 # Trim HTML-TAG in plugin output (last filed)
-# remove <>/&nbsp;
-# output must be one-line.
-# usage: format_pstr_output_toplain {output-last-filed}
+# Note:		remove <>/&nbsp;
+# Note:		output must be one-line.
+# Usage:	format_pstr_output_toplain {output-last-filed}
+#
 if ($action eq 'format_pstr_output_toplain'){
 	my $content = shift;
 	exit(1) if !defined $content;
@@ -20,9 +21,10 @@ if ($action eq 'format_pstr_output_toplain'){
 }
 
 # Convert HTML-Color to TERM-Color in plugin output (last filed)
-# remove <>/&nbsp; convert ###/<br> into newline
-# output maybe multi-line.
-# usage: format_pstr_output_toterm {content-last-filed}
+# Note:		remove <>/&nbsp; convert ###/<br> into newline
+# Note:		output maybe multi-line.
+# Usage:	format_pstr_output_toterm {content-last-filed}
+#
 if($action eq 'format_pstr_output_toterm'){
 	my $content = shift;
 	exit(1) if !defined $content;
@@ -55,10 +57,12 @@ if($action eq 'format_pstr_output_toterm'){
 	close $fh;
 }
 
-# Read each part of plugin output 
-# part_num ~ [1-6]
-# part_pstr_output part_num  {content}
-# usage: part_pstr_output {partnum} {output}
+# Read each part of plugin output  (same as bin/include:read_output)
+# Usage:        part_pstr_output part_num  "${content}"   
+# Note:         part_num ~ [1-6]
+# Example:      part_pstr_output 2  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
+# Example:      part_pstr_output 6  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
+# 
 if($action eq 'part_pstr_output'){
 	my $part = shift;
 	my $content = shift;
@@ -67,7 +71,7 @@ if($action eq 'part_pstr_output'){
 	exit(1) if !defined $content;
 	exit(1) if $content =~ m/\A\s*\Z/;
 	$content =~ m/{\s*(\w+)\s*}:{\s*(\w+)\s*}:{\s*(([^\|]+)(\|([^\|]+))?(\|([^\|]+))?)\s*}/i;
-	# print "$1,$2,$3,$4,$5,$6,$7,$8"; print "\n";
+	# print "$1,$2,$3,$4,$5,$6,$7,$8"; print "\n";   # for debug
 	if($1 && $part eq '1') { print $1; };
 	if($2 && $part eq '2') { print $2; };
 	if($3 && $part eq '3') { print $3; };

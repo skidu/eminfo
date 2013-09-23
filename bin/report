@@ -67,15 +67,15 @@ print_record(){
 		result="${line}"
 	fi
 	if [ "$(echo -n "${result}" | awk -v RS="{[^{]*}" 'END{print NR}')" == "3" ]; then
-		level=$(read_output 1 "${result}"); level=$(echo -e "${level}" | tr '[a-z]' '[A-Z]')
-		type=$(read_output 2 "${result}")
+		level=$(${PLUTIL} part_pstr_output 1 "${result}"); level=$(echo -e "${level}" | tr '[a-z]' '[A-Z]')
+		type=$(${PLUTIL} part_pstr_output 2 "${result}")
 		case "${type}" in 
 		"str")
-			title=$(read_output 4 "${result}")
+			title=$(${PLUTIL} part_pstr_output 4 "${result}")
 			[ -z "${title//[ ]}" ] && title= || title="Title    : ${title}"
-			summary=$(read_output 5 "${result}"|sed -e 's/^[ \t]//')
+			summary=$(${PLUTIL} part_pstr_output 5 "${result}"|sed -e 's/^[ \t]//')
 			[ -z "${summary//[ ]}" ] && summary= || summary="Summary  : ${summary}"
-			body=$(read_output 6 "${result}"|sed -e 's/^[ \t]//')
+			body=$(${PLUTIL} part_pstr_output 6 "${result}"|sed -e 's/^[ \t]//')
 			body=$( ${PLUTIL} format_pstr_output_toterm "${body}")
 			[ -z "${body//[ ]}" ] && body= || body="Details  :\n${body}"
 			content="${title}\n${summary}\n${body}\n"
@@ -87,7 +87,7 @@ print_record(){
 "\n${content}\n"
 			;;
 		"file")
-			files=$(read_output 3 "${result}")
+			files=$(${PLUTIL} part_pstr_output 3 "${result}")
 			output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
@@ -97,7 +97,7 @@ print_record(){
 "\n"
 			;;
 		*)
-			local part3=$(read_output 3 "${result}")
+			local part3=$(${PLUTIL} part_pstr_output 3 "${result}")
 			output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
