@@ -52,7 +52,51 @@ show_usage(){
   exit 1
 }
 
+# def conv_output2mailbody
+# Convert plugin output to html mailbody
+# Output:       path of html mailbody
+# Usage:        conv_output2mailbody  "${content}" "{hd_content}"
+# Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
+#
+conv_output2mailbody() {
+  local content=$1  hd_content=$2
+  local level= title= summary= details= mailbody=
+
+  level=$(read_output 1 "${content}" | tr '[a-z]' '[A-Z]')
+  title=$(read_output 4 "${content}")
+  summary=$(read_output 5 "${content}")
+  details=$(read_output 6 "${content}")
+
+  mailbody="$(gen_tmpfile mailbody)"
+  {
+  echo "$(html_green "Notify_Type:")  &nbsp;&nbsp;&nbsp;&nbsp; ${level} <br><br>"
+  echo "$(html_green "Title:")  &nbsp;&nbsp;&nbsp;&nbsp; ${title} <br><br>"
+  echo "$(html_green "Summary:") &nbsp;&nbsp;&nbsp;&nbsp; ${summary} <br><br>"
+  echo "$(html_green "Details:") <br><br>"
+  # echo "${details}" | awk -F"###" '{ for(i=1;i<=NF;i++) {printf "%s<br>\n",$i} }'
+  echo "${details}" | sed -e 's/###/<br>\n/g';
+  echo "<br>------------------<br>"
+  echo "$(html_green "Auto Handle:") <br><br>"
+  echo "${hd_content}"
+  } >> "${mailbody}"
+  rc=$?
+  if [ "${rc}" == "0" ]; then
+        write_log -f "${SENDMAIL_LOG}" "00000000 convert output to mailbody file success:"\
+                "[${mailbody}] [level=${level} title=${title} summary=${summary}]";
+  else
+        write_log -f "${SENDMAIL_LOG}" "E0000000 convert output to mailbody file error:"\
+                "[${mailbody}]";
+  fi
+
+  echo "${mailbody}"
+  return "${rc}"
+}
+
+
+### Main Body Begin...
+
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" ] && show_usage
+
 # read args
 while getopts f:s:i:h: opt
 do
@@ -262,3 +306,11 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 	"INFO: end to sendmail. sesult: [total=${t}  success=${t_s}  fail=${t_e}]"
 write_log -f "${SENDMAIL_LOG}" ""
 write_log -f "${SENDMAIL_LOG}" ""
+
+
+
+
+#################  Debug Area  #####################
+
+# conv_output2mailbody "{crit}:{str}:{System Load Check CRITICAL | Load Average: [0.18] >= UpLimit: [0] }"
+# conv_output2mailbody "{warn}:{str}:{Notify System Login Check CRITICAL | Notify New System Login Record | <strong><font color=green>New Record:</font></strong> ### ### Jun 15 02:53:19 mylab sshd[18388]: Accepted password for root from 192.168.131.1 port 2596 ssh2 ### Jun 15 02:53:19 mylab sshd[18429]: Accepted password for root from 192.168.131.1 port 2599 ssh2 ### Jun 15 02:53:20 mylab sshd[18470]: Accepted password for root from 192.168.131.1 port 2602 ssh2 ### }"
