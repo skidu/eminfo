@@ -2096,7 +2096,7 @@ view_extra_config() {
 #
 process_plugin() {
 
-  local plugin_name=$1  output=  plain_output=
+  local plugin_name=$1
 
   # Step 1: set jid / set debug flag / set logfile
   local jid=$(mktemp -u XXXXXXXX)      ### set random/unique jid
@@ -2181,6 +2181,7 @@ process_plugin() {
   [ ! -x "${PLUGIN_DIR}/${plugin_name}" ] && chmod a+x "${PLUGIN_DIR}/${plugin_name}"
   ### local is wrong: won't get return code, return code always be 0.
   #@# local output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )  
+  local output=  plain_output=
   output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )
   local rc=$?
   # trim html tag in plugin output. convert html output into plain.
@@ -2251,7 +2252,7 @@ process_plugin() {
 	
   # Step 9: check action: auto_handle
   local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type ${rc})
-  local hd_output=
+  local hd_output=  plain_hdoutput=
   if [ "${a_hand}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "auto handle disabled. SKIP";
 	hd_output="auto handle is disabled. Nothing to do"

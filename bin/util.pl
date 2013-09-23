@@ -7,6 +7,27 @@ exit(1) if !defined $action;
 exit(1) if $action =~ m/\A\s*\Z/;
 
 if ($action eq 'help'){
+	&help;
+}
+if ($action eq 'part_pstr_output') {
+	&part_pstr_output(@ARGV);
+}
+if ($action eq 'format_pstr_output_toplain') {
+	&format_pstr_output_toplain(@ARGV);
+}
+if ($action eq 'format_pstr_output_toterm') {
+	&format_pstr_output_toterm(@ARGV);
+}
+if ($action eq 'conv_phoutput_toxml') {
+	&conv_phoutput_toxml(@ARGV);
+}
+
+
+#### Sub Def
+
+# Help Stuff
+#
+sub help {
 
 }
 
@@ -15,7 +36,7 @@ if ($action eq 'help'){
 # Note:		output must be one-line.
 # Usage:	format_pstr_output_toplain {output-last-filed}
 #
-if ($action eq 'format_pstr_output_toplain') {
+sub format_pstr_output_toplain {
 	my $content = shift;
 	exit(1) if !defined $content;
 	exit(1) if $content =~ m/\A\s*\Z/;
@@ -29,7 +50,7 @@ if ($action eq 'format_pstr_output_toplain') {
 # Note:		output maybe multi-line.
 # Usage:	format_pstr_output_toterm {content-last-filed}
 #
-if ($action eq 'format_pstr_output_toterm') {
+sub format_pstr_output_toterm {
 	my $content = shift;
 	exit(1) if !defined $content;
 	exit(1) if $content =~ m/\A\s*\Z/;
@@ -67,7 +88,7 @@ if ($action eq 'format_pstr_output_toterm') {
 # Example:      part_pstr_output 2  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
 # Example:      part_pstr_output 6  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
 # 
-if ($action eq 'part_pstr_output') {
+sub part_pstr_output {
 	my $part = shift;
 	my $content = shift;
 	exit(1) if $part =~ /\D/;
@@ -93,12 +114,27 @@ if ($action eq 'part_pstr_output') {
 # 		&gt;  >
 # 		&quot; "
 # 		&apos; '
-# Example:      conv_phoutput_toxml  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"  "123"
+# Example:      conv_phoutput_toxml  "{level}:{type}:{title | summary | details: item1. ### <font color=red> item2. &nbsp; </font> ### item3. ### }"  "123"
 # Example:	conv_phoutput_toxml  "{crit}:{file}:{ /etc/passwd /etc/services /etc/shadow }"  "auto handler result here"
 #
-if ($action eq 'conv_phoutput_toxml') {
+sub conv_phoutput_toxml {
+	my $debug = 1;
 	my $poutput = shift;
 	my $houtput = shift;
 	exit(1) if !defined $poutput;
 	exit(1) if !defined $houtput;
+	print "poutput: $poutput\n" if $debug;
+	print "houtput: $houtput\n" if $debug;
+	my $level = &part_pstr_output(1,$poutput);
+	print "level=[$level]\n" if $debug;
+	my $type = &part_pstr_output(2,$poutput);
+	print "type=[$type]\n" if $debug;
+	my $title = &part_pstr_output(4,$poutput);
+	print "title=[$title]\n" if $debug;
+	my $summary = &part_pstr_output(5,$poutput);
+	print "summary=[$summary]\n" if $debug;
+	my $body = &part_pstr_output(6,$poutput);
+	print "body=[$body]\n" if $debug;
+	my @items = split /###/ , $body;
+	print "array item=[@items]\n" if $debug;
 }
