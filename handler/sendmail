@@ -47,13 +47,13 @@ charset="utf8"
 
 
 show_usage(){
-  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  "
-  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\""
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" "
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auth hanlder result here\" "
   exit 1
 }
 
 # read args
-while getopts f:s:i:  opt
+while getopts f:s:i:h: opt
 do
         case ${opt} in
         "f")
@@ -63,11 +63,14 @@ do
         "i")
                 LANG=C
                 content="${OPTARG}"       ;;
+	"h")
+		hd_content="${OPTARG}"	  ;;
         esac
 done
 [ -z "${plugin_name}" ] && plugin_name="FNULL"    #### plugin_name ~ ( {plugin_name} , NULL  )
 [ -z "${jobid}" ] && jobid="00000000"		### jobid ~ ( NNNNNNNN , ovld , tmout )
 [ -z "${content}" ] && show_usage
+[ -z "${hd_content}" ] && hd_content="Nothing to do"
 from="${plugin_name}.${jobid}"
 
 
@@ -104,6 +107,9 @@ attach_ini_mail_args=
 attach_ini_mail=$(read_eminfo_config global attach_ini_mail)
 if [ "${attach_ini_mail}" == "yes" ]; then
 	attach_ini_mail_args=" -a "${CONFIG_FILE}" "
+	[ -f "${CONF_DIR}/${plugin_name}.ini" ] && {
+		attach_ini_mail_args="${attach_ini_mail_args} -a "${CONF_DIR}/${plugin_name}.ini" "
+	}
 	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 		"INFO: add attachment Config-INI:[${CONFIG_FILE}]"
 else
@@ -217,7 +223,7 @@ case "${mail_type}" in
 
   "str")
 	### 1. convert plugin output to mailbody files.
-	mailbody_path=$( conv_output2mailbody "${content}" )
+	mailbody_path=$( conv_output2mailbody "${content}" "${hd_content}")
 
 	### 2. send emails.
 	n=0  t_s=0   t_e=0  result=

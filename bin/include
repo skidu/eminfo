@@ -1075,16 +1075,17 @@ read_output(){
 
 # Convert plugin output to html mailbody
 # Output: 	path of html mailbody
-# Usage:        conv_output2mailbody  "${content}"
+# Usage:        conv_output2mailbody  "${content}" "{hd_content}"
 # Example:	conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
 #
 conv_output2mailbody() {
-  local strings=$* level= title= summary= details= mailbody=
+  local content=$1  hd_content=$2
+  local level= title= summary= details= mailbody=
 
-  level=$(read_output 1 "${strings}" | tr '[a-z]' '[A-Z]')
-  title=$(read_output 4 "${strings}")
-  summary=$(read_output 5 "${strings}")
-  details=$(read_output 6 "${strings}")
+  level=$(read_output 1 "${content}" | tr '[a-z]' '[A-Z]')
+  title=$(read_output 4 "${content}")
+  summary=$(read_output 5 "${content}")
+  details=$(read_output 6 "${content}")
 
   mailbody="$(gen_tmpfile mailbody)"
   {
@@ -1094,6 +1095,9 @@ conv_output2mailbody() {
   echo "$(html_green "Details:") <br><br>"
   # echo "${details}" | awk -F"###" '{ for(i=1;i<=NF;i++) {printf "%s<br>\n",$i} }'
   echo "${details}" | sed -e 's/###/<br>\n/g';
+  echo "<br>------------------<br>"
+  echo "$(html_green "Auto Handle:") <br><br>"
+  echo "${hd_content}"
   } >> "${mailbody}"
   rc=$?
   if [ "${rc}" == "0" ]; then
@@ -2326,15 +2330,30 @@ process_plugin() {
 		"detailis in ${TAKESNAP_LOG##*/}. CONTINUE";
   fi
 	
-  # Step 9: check action: mail_notify_type
-  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify_type ${rc})
-  if [ "${m_alert}" != "yes" ]; then
-	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
+  # Step 9: check action: auto_handle
+  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type ${rc})
+  local hd_output=
+  if [ "${a_hand}" != "yes" ]; then
+	write_log ${jid} ${plugin_name} "auto handle disabled. SKIP";
+	hd_output="auto handle is disabled. Nothing to do"
   else
-	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
-	${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}"
-	write_log ${jid} ${plugin_name} "mail notify finished."\
-		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
+	write_log ${jid} ${plugin_name} "auto handle enabled. CONTINUE";
+	local handler=$(read_eminfo_config "${plugin_name}" auto_handler)
+	[ -z "${handler}" ] && handler=$(read_eminfo_config plugin_default auto_handler)
+	if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
+		write_log ${jid} ${plugin_name} "auto handler:"\
+			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
+ 		[ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
+		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
+		local hd_rc=$?
+		write_log ${jid} ${plugin_name} "auto handler execution completed."\
+			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
+		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
+  	else
+		write_log ${jid} ${plugin_name} "auto handler:"\
+			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
+		hd_output="auto handler file [${HANDLER_DIR}/${handler}] not exist or empty. Nothing to do"
+	fi
   fi
 
   # Step 10: check action: post_notify_type
@@ -2348,27 +2367,15 @@ process_plugin() {
 		"details in ${POSTLOG_LOG##*/}. CONTINUE";
   fi
 
-  # Step 11: check action: auto_handle
-  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type ${rc})
-  if [ "${a_hand}" != "yes" ]; then
-	write_log ${jid} ${plugin_name} "auto handle disabled. SKIP";
+  # Step 11: check action: mail_notify_type
+  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify_type ${rc})
+  if [ "${m_alert}" != "yes" ]; then
+	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
   else
-	write_log ${jid} ${plugin_name} "auto handle enabled. CONTINUE";
-	local handler=$(read_eminfo_config "${plugin_name}" auto_handler)
-	[ -z "${handler}" ] && handler=$(read_eminfo_config plugin_default auto_handler)
-	if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
-		write_log ${jid} ${plugin_name} "auto handler:"\
-			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
- 		[ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
-		local hd_output=
-		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
-		local hd_rc=$?
-		write_log ${jid} ${plugin_name} "auto handler execution completed."\
-			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
-  	else
-		write_log ${jid} ${plugin_name} "auto handler:"\
-			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
-	fi
+	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
+	${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}"
+	write_log ${jid} ${plugin_name} "mail notify finished."\
+		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
   fi
 
   # Step 12: plugin finished

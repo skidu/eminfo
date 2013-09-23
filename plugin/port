@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+
+
+BASE_DIR="$(/usr/local/eminfo/eminfo basedir)"
+[ -f "${BASE_DIR}/bin/include" -a -s "${BASE_DIR}/bin/include" ] && {
+        source ${BASE_DIR}/bin/include 2>&-
+}
+
+show_help(){
+cat <<EOF
+Arguments:   d | data
+
+Output:   
+{prot}://{addr}:{port}  {tmout} {result}
+
+Example:
+tcp://127.0.0.1:22 5 [Connection to 127.0.0.1 22 port [tcp/ssh] succeeded! ]
+udp://1.1.1.1:53 10 [Connection to 1.1.1.1 53 port [udp/domain] succeeded! ]
+EOF
+exit 0;
+}
+
+MODE=0
+[ "$1" == "data" -o "$1" == "d" ] && MODE=1
+[ "$1" == "help" -o "$1" == "h" ] && show_help;
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=    	### { ok | warn | crit | unknown }
+TYPE=    	### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+port_list=$( read_eminfo_config port port_list )
+
+# if null return STATE_UNKNOWN.
+
+# if null or invalid set default.
+# [ -z "${port_list//[ ]}" ] && port_list=" tcp:127.0.0.1:22:5 udp:1.1.1.1:53:10 tcp:mail.eyou.net:110:3  tcp:mail.eyou.net:443:10"
+[ -z "${port_list//[ ]}" ] && port_list=" tcp:127.0.0.1:22:5 "
+
+# check function here
+check(){
+
+### return code: 0|1|2
+#  0: OK
+#  1: CRIT
+#  2: UNKNOWN:(type or port or tmout invalid)
+check_single(){
+  local ptype=$1 ip=$2 port=$3 tmout=$4
+  local return_code=0
+  local output=
+
+  [ -z "${ptype//[ ]}" ] && ptype="tcp"   ### set default
+  [ -z "${tmout//[ ]}" -o "${tmout}" == "0" ] && tmout=5	    ### set default
+  if [ -z "${ip//[ ]}" -o -z "${port//[ ]}" ]; then    ### ip/port null, return UNKNOWN
+	((unknum++))
+	output="$(html_red "ip/port required: ip=[${ip}] port=[${port}]") ### ### "
+	return_code=2
+  else
+  	if [ "${ptype}" == "udp" -o "${ptype}" == "tcp" ]; then		### ptype ok, continue
+		if [ -z "${port}" -o ! -z "${port//[0-9]}" -o -z "${tmout}" -o ! -z "${tmout//[0-9]}" ]; then
+			((unknum++))
+			output="$(html_red "port/tmout must be numberic: port=[${port}] or tmout=[${tmout}]") ### ### "
+			return_code=2
+		else							### port/tmout ok, continue
+			if [ "${ptype}" == "udp" ]; then
+				local rstr=$( /usr/bin/nc -u -w "${tmout}" -vz "${ip}" "${port}" 2>&1 |tr '\n' ' ')
+			else
+				local rstr=$( /usr/bin/nc -w "${tmout}" -vz "${ip}" "${port}" 2>&1|tr '\n' ' ')
+			fi
+			# output data and exit if MODE=1 
+			[ "${MODE}" == "1" ] && {
+				echo "${ptype}://${ip}:${port} ${tmout} [${rstr}]"
+				return
+			}
+			if [ "$(sub_str "${rstr}" "succeeded")" == "yes" ]; then
+				output="$(html_green "Check ${ptype}://${ip}:${port} OK, return [${rstr}]" ) ### "
+				return_code=0
+			else
+				output="$(html_red "Check ${ptype}://${ip}:${port} WARN, return [${rstr}]" ) ### "
+				return_code=1
+			fi
+		fi
+  	else	### ptype invalid, return UNKNOWN
+		((unknum++))
+		output="$(html_red "port type invalid: [${ptype}], must be tcp/udp") ### ### "
+		return_code=2
+  	fi
+  fi
+
+  echo -e "${output}"
+  return ${return_code}
+}
+
+  local result=" ### Check List: [${port_list}] ### ### "
+  local oknum=0 errnum=0 unknum=0 total=0
+  [ -f "/usr/bin/nc" -a -x "/usr/bin/nc" ] || {
+	EXIT_STATUS=${STATE_UNKNOWN};
+        LEVEL="unknown";
+        TYPE="str";
+        CONTENT="utilite [/usr/bin/nc] not prepared."
+        return
+  }
+
+  # for port_num in `echo "${port_list}" | tr ',' ' '`
+  for pairs in `echo "${port_list}" | tr ',' ' '`
+  do
+	((total++))
+	sepnum=$(echo -e "${pairs}" | awk -F":" 'END{print --NF}')
+	case "${sepnum}" in
+	"1")
+		ptype=
+		ip=$(echo -e "${pairs}" | cut -d: -f1)
+		port=$(echo -e "${pairs}" | cut -d: -f2)
+		tmout=
+		;;
+	"2")
+		f1=$(echo -e "${pairs}" | cut -d: -f1)
+		if [ "${f1}" == "tcp" -o "${f1}" == "udp" ]; then
+			ptype=${f1} 
+			ip=$(echo -e "${pairs}" | cut -d: -f2)
+			port=$(echo -e "${pairs}" | cut -d: -f3)
+			tmout=
+		else
+			ptype=
+			ip=$(echo -e "${pairs}" | cut -d: -f1)
+			port=$(echo -e "${pairs}" | cut -d: -f2)
+			tmout=$(echo -e "${pairs}" | cut -d: -f3)
+		fi
+		;;
+	"3")
+		ptype=$(echo -e "${pairs}" | cut -d: -f1)
+		ip=$(echo -e "${pairs}" | cut -d: -f2)
+		port=$(echo -e "${pairs}" | cut -d: -f3)
+		tmout=$(echo -e "${pairs}" | cut -d: -f4)
+		;;
+	*)
+		((unknum++))
+		result="${result} ### $(html_red "Pairs: [${pairs}] is invalid") ### ### "
+		continue 1
+		;;
+	esac
+	result="${result} ### $(html_green "Check Pairs: [${pairs}]") ### "
+
+   	tmpstr=$(check_single "${ptype}" "${ip}" "${port}" "${tmout}")
+	rc=$?
+	case "${rc}" in
+	"0")
+		((oknum++))	;;
+	"1")
+		((errnum++))	;;
+	"2")
+		((unknum++))	;;
+	esac
+
+	# output data and exit if MODE=1 
+	[ "${MODE}" == "1" ] && {
+		echo "${tmpstr}"
+		continue
+	}
+
+	result="${result} "${tmpstr}" "
+  done
+
+  # exit if MODE=1 
+  [ "${MODE}" == "1" ] && exit
+
+  [ "${errnum}" != "0" ] && {
+	EXIT_STATUS=${STATE_CRITICAL};
+	LEVEL="crit";
+	TYPE="str";
+	CONTENT="Check Port CRITICAL | total: ${errnum}/${total} check failed. | "${result}" "
+  } || {
+	[ "${oknum}" == "${total}" ] && {
+		EXIT_STATUS=${STATE_OK};
+		LEVEL="ok";
+		TYPE="str";
+		CONTENT="Check Port OK | total: ${oknum}/${total} check success. | "${result}" "
+	} || {
+		[ "${unknum}" != "0" ] && {
+			EXIT_STATUS=${STATE_UNKNOWN};
+			LEVEL="unknown";
+			TYPE="str";
+			CONTENT="Check Port UNKNOWN | total: ${unknum}/${total} check unknown. | "${result}" "
+		}
+	}
+  } 
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}
