@@ -2508,8 +2508,6 @@ process_sysoverload() {
 # get_mail_receviers notify_syslogin
 
 
-# conv_output2postdata "{level}:{str}:{title | summary | details: item1. ### item2. ### item3. ### }"
-
 # sed -e 's/<[^<^>]*>//g; s/&nbsp;//g; s/###/\n/g;';
 # view_base_config report_sysinfo 
 # view_extra_config report_sysinfo 
@@ -2520,11 +2518,9 @@ process_sysoverload() {
 # get_frequency check_sysload
 
 # get_action_type check_sysload post_notify_type1
-# [ "$1" == "test" ] &&  ${SENDMAIL} -f "report_sysinfo" -s "ZuW30512" -i "{ok}:{file}:{ /var/log/secure_report.2013.4.10.csv /var/log/secure /etc/passwd /tmp/.hack.tgz }"
-#[ "$1" == "test" ] && echo "code after sendmail."
 # conv_time2sec 1800sec
 
-# update_status report_sysinfo "{ok}:{file}:{ /var/log/secure_report.2013.4.10.csv /var/log/secure /etc/passwd /tmp/.hack.tgz }"
+# update_status report_sysinfo "{ok}:{file}:{/var/log/secure_report.2013.4.10.csv /var/log/secure /etc/passwd /tmp/.hack.tgz}"
 
 # update_eminfo_config check_sysload enable yes
 # echo $?
@@ -2545,5 +2541,3 @@ process_sysoverload() {
 # echo $?
 # disable_plugin check_sysload
 # echo $?
-
-# [ "$1" == "test" ] && ${SENDMAIL} -f "mysql_dumpbak" -s "KNs893014" -i "{ok}:{str}:{Mysql Dump BackUp OK | 3/3 tables backup successfully. | mysql_host: [127.0.0.1] ### mysql_port: [3306] ### mysqluser: [dumper] ### mysqlpass: [] ### ### dump directory: [/maildb/mysqlbak//20130514010006] ### ### Dump Table: [eyou_mail.domain_key] return OK. size: 8K ### Dump Table: [eyou_mail.domain_basic] return OK. size: 8K ### Dump Table: [eyou_mail.user_mail_index] return OK. size: 5192664K ### }"
