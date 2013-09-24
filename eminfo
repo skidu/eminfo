@@ -95,7 +95,7 @@ cat << EOF
 	enable       	[plugin]		enable plugin (change plugin config enable=yes)
 	disable      	[plugin]		disable plugin (change plugin config enable=no)
 	run		[plugin]		run plugin once and format output on console
-	view		[plugin]		print config->value, [all] for every plugin
+	view		[plugin] [key]		print config->value, [all] for every plugin
 	config					help stuff about eminfo config-*
 	?					help stuff about short tips 
 EOF
@@ -105,7 +105,7 @@ show_confhelp() {
 cat << EOF
 
   $(echo_green "Options:")
-	config-view  	[plugin]		print config=>value, [all] for every plugin
+	config-view  	[plugin] [key]		print config=>value, [all] for every plugin
   	config-add   	[plugin] [key] [value]  add config=>value for plugin
 	config-del   	[plugin] [key]		delete config for plugin
 	config-update 	[plugin] [key] [value]  update conifg=>value for plugin
@@ -132,7 +132,8 @@ cat << EOF
 	eminfo  enable   	sysload
 	eminfo  disable  	sysload
 	eminfo  run		sysload
-	eminfo  view		sysload
+	eminfo  view		sysload | all
+	eminfo  view		sysload enable
 	eminfo  config
 
 EOF
@@ -143,6 +144,7 @@ cat << EOF
 
   $(echo_green "Example:")
 	eminfo  config-view     pop_svr | all
+	eminfo  config-view     pop_svr comment
 	eminfo  config-add	pop_svr time_out 5
 	eminfo  config-del	pop_svr time_out 
 	eminfo  config-update	pop_svr pop_svr 10
@@ -179,10 +181,12 @@ cat << EOF
         eminfo  l  [ln|le|lr|li]
         eminfo  i  pop_svr | all | a
         eminfo  v  pop_svr | all | a
+	eminfo  v  pop_svr enable
         eminfo  R  pop_svr | all | a  [Re|Rr|Ri]
         eminfo  r  pop_svr
         eminfo  e  pop_svr
         eminfo  d  pop_svr
+
 EOF
 }
 
@@ -600,6 +604,16 @@ case "$#" in
         }
 
 	case "$1" in 
+        "view"|"config-view"|"v")
+                if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+			read_eminfo_config "$2" "$3"
+			rc=$?
+			exit ${rc}
+                else
+                        echo plugin $(echo_yellow "[$2]") : not registered in config file.
+                        exit 9;
+                fi
+                        ;;
 	"config-del")
 		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
 			del_eminfo_config "$2" "$3"
