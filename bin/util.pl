@@ -3,24 +3,14 @@ use strict;
 use warnings;
 
 my $action = shift;
-exit(1) if !defined $action;
-exit(1) if $action =~ m/\A\s*\Z/;
+&help if !$action;
+&help if $action =~ m/\A\s*\Z/;
 
-if ($action eq 'help'){
-	&help;
-}
-if ($action eq 'part_pstr_output') {
-	&part_pstr_output(@ARGV);
-}
-if ($action eq 'format_pstr_output_toplain') {
-	&format_pstr_output_toplain(@ARGV);
-}
-if ($action eq 'format_pstr_output_toterm') {
-	&format_pstr_output_toterm(@ARGV);
-}
-if ($action eq 'conv_phoutput_toxml') {
-	&conv_phoutput_toxml(@ARGV);
-}
+&help if $action eq 'help';
+&part_pstr_output(@ARGV)           if $action eq 'part_pstr_output';
+&format_pstr_output_toplain(@ARGV) if $action eq 'format_pstr_output_toplain';
+&format_pstr_output_toterm(@ARGV)  if $action eq 'format_pstr_output_toterm';
+&conv_phoutput_toxml(@ARGV)        if $action eq 'conv_phoutput_toxml';
 
 
 #### Sub Def
@@ -28,7 +18,12 @@ if ($action eq 'conv_phoutput_toxml') {
 # Help Stuff
 #
 sub help {
+print <<EOF
+Example:
 
+EOF
+;
+exit(1);
 }
 
 # Trim HTML-TAG in plugin output (last filed)

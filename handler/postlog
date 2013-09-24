@@ -114,7 +114,8 @@ write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
 write_log -f ${POSTLOG_LOG} "[${from}]"\
 	"INFO: set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[${auth_pass}]"
 
-postdata=$(conv_output2postdata "${content}" "${hd_content}")
+# postdata=$(conv_output2postdata "${content}" "${hd_content}")
+postdata=$(genpost_asxml "${content}" "${hd_content}")
 postdata=$(echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%")
 write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"INFO: url-encode input data finished."
