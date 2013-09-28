@@ -880,6 +880,21 @@ get_mail_receviers() {
   echo -e "${result}"
 }
 
+# Get plugin auto handler	config-name auto_handler
+# called by process_plugin
+#
+get_auto_handler() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${EMINFO_LOG}" "E0000000 get_auto_handler error: missing plugin name";
+	return 1
+  }
+  result=$(read_eminfo_config ${plugin_name} auto_handler)
+  [ -z "${result}" ] && result=$(read_eminfo_config plugin_default auto_handler)
+  echo -e "${result}"
+}
+
+
 # Get plugin comment		config-name:  comment
 # Note: if returned config-value is empty. return "Eminfo Plugin"
 #
@@ -901,7 +916,7 @@ get_comment() {
 # Note: if returned config-value is empty. return "Linux Server"
 #
 get_global_name() {
-  local result=  default="Linux Server"
+  local result=  default="eminfo_ops.eyou.net"
   result=$( read_eminfo_config global name )
   result=${result//[!0-9a-zA-Z_. ]}
   [ -z "${result}" ] && result="${default}"
@@ -2069,19 +2084,23 @@ view_base_config() {
 # Usage:  view_extra_config      plugin_name
 # 
 view_extra_config() {
-  local plugin_name=$1
-  [ -z "${plugin_name}" ] && {
+  local plugin_name=$1  silient=$2
+  [ -z "${silient//[ ]}"  ] && silient=0 || silient=1
+  [ "${silient}" == "0" -a -z "${plugin_name//[ ]}" ] && {
 	echo_red "view_extra_config error: please specify plugin_name."; echo
  	return 1
   }
-  echo_green "[${plugin_name}]: extra configuration" ; echo
+  [ "${silient}" == "0" ] && { 
+	echo_green "[${plugin_name}]: extra configuration"
+	echo
+  }
   {
-	search_tag=0  headline="config_name(user-def) ==> value"
+	local search_tag=0  headline="config_name(user-def) ==> value"
   	for cname in `list_section_keys "${plugin_name}"`
   	do
 		[ "$(echo -e "${ARRAY_BASE_CONFIG[@]}"  | grep -E -o -w "${cname}")" == "" ] && {  ### 2. user-def config
 			cvalue=$(read_eminfo_config ${plugin_name} ${cname})
-			[ "${search_tag}" == "0" ] && echo -e "${headline}"
+			[ "${silient}" == "0" -a "${search_tag}" == "0" ] && echo -e "${headline}"
 			echo -e "${cname} ==> ${cvalue}"
 			search_tag=1
 		}
@@ -2258,8 +2277,7 @@ process_plugin() {
 	hd_output="auto handle is disabled. Nothing to do"
   else
 	write_log ${jid} ${plugin_name} "auto handle enabled. CONTINUE";
-	local handler=$(read_eminfo_config "${plugin_name}" auto_handler)
-	[ -z "${handler}" ] && handler=$(read_eminfo_config plugin_default auto_handler)
+	local handler=$(get_auto_handler "${plugin_name}")
 	if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
 		write_log ${jid} ${plugin_name} "auto handler:"\
 			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
@@ -2510,7 +2528,8 @@ process_sysoverload() {
 
 # sed -e 's/<[^<^>]*>//g; s/&nbsp;//g; s/###/\n/g;';
 # view_base_config report_sysinfo 
-# view_extra_config report_sysinfo 
+# view_extra_config port  1
+# view_extra_config port  
 
 # get_enable plugin_default 
 # get_maxerr_times check_default

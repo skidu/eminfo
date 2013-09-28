@@ -15,20 +15,16 @@
 #
 
 # httpsqs server address
-# post_server="127.0.0.1"
-post_server=""
+post_server="127.0.0.1"
 
 # httpsqs server port
-# post_server_port="1218"
-post_server_port=""
+post_server_port="1218"
 
 # httpsqs queue name
-# queue_name="content"
-queue_name=""
+queue_name="content"
 
 # auth password
-# auth_pass="1q2w3e"
-auth_pass=""
+auth_pass="1q2w3e"
 
 # content charset
 charset="utf-8"
@@ -56,6 +52,80 @@ show_usage(){
   echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auth hanlder result here\" "
   exit 1
 }
+
+# def genpost_asxml
+#
+#
+genpost_asxml(){
+  local plugin=$1 jobid=$2 content=$3 hd_content=$4
+  # local eminfo_id=$(get_eminfo_id)
+  local eminfo_id="1234567890"
+  local gname=$(get_global_name)
+  local jobts=$(date +%s)
+  local enable=$(get_enable "${plugin}")
+  local comment=$(get_comment "${plugin}")
+  local frequency=$(get_frequency "${plugin}")
+  local exec_tmout=$(get_exec_tmout "${plugin}")
+  local maxerr_times=$(get_maxerr_times "${plugin}")
+  local take_snapshot_type=$(get_action_type "${plugin}" take_snapshot_type)
+  local mail_notify_type=$(get_action_type "${plugin}" mail_notify_type)
+  local post_notify_type=$(get_action_type "${plugin}" post_notify_type)
+  local mail_receviers=$(get_mail_receviers "${plugin}" mail_receviers)
+  local attach_snap_mail=$(get_attach_snap_mail "${plugin}")
+  local auto_handle_type=$(get_action_type "${plugin}" auto_handle_type)
+  local auto_handler=$(get_auto_handler "${plugin}" auto_handler)
+  local debug=$(get_debug "${plugin}")
+  userdef2xml() {
+	view_extra_config "$1" 1 | while read line
+	do
+		cname=$(echo -e "${line}" | awk '{gsub(" ","",$1);print $1;exit;}')
+		cvalue=$(echo -e "${line}" | awk '{$1="";print}')
+		echo -en "<$cname>$cvalue</$cname>\n"
+	done
+  }
+  local userdef_asxml=$(userdef2xml "${plugin}")
+  local plugin_handler_xmloutput=$( ${PLUTIL} format_phoutput_toxml "${content}" "${hd_content}" )
+
+  cat <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- eminfo postdata start -->
+<eminfo_postdata>
+<eminfo_id>${eminfo_id}</eminfo_id>
+<eminfo_gname>${gname}</eminfo_gname>
+<eminfo_jobid>${jobid}</eminfo_jobid>
+<eminfo_jobts>${jobts}</eminfo_jobts>
+<eminfo_plugin_config>
+<basic>
+<name>${plugin}</name>
+<enable>${enable}</enable>
+<comment>${comment}</comment>
+<frequency>${frequency}</frequency>
+<exec_tmout>${exec_tmout}</exec_tmout>
+<maxerr_times>${maxerr_times}</maxerr_times>
+<take_snapshot_type>${take_snapshot_type}</take_snapshot_type>
+<mail_notify_type>${mail_notify_type}</mail_notify_type>
+<post_notify_type>${post_notify_type}</post_notify_type>
+<mail_receviers>${mail_receviers}</mail_receviers>
+<attach_snap_mail>${attach_snap_mail}</attach_snap_mail>
+<auto_handle_type>${auto_handle_type}</auto_handle_type>
+<auto_handler>${auto_handler}</auto_handler>
+<debug>${debug}</debug>
+</basic>
+<userdef>
+${userdef_asxml}
+</userdef>
+</eminfo_plugin_config>
+${plugin_handler_xmloutput}
+<additional>
+</additional>
+</eminfo_postdata>
+<!-- eminfo postdata end -->
+EOF
+}
+
+
+
+### Main Body Begin...
 
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" ] && show_usage
 # read args
@@ -114,9 +184,9 @@ write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
 write_log -f ${POSTLOG_LOG} "[${from}]"\
 	"INFO: set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[${auth_pass}]"
 
-# postdata=$(conv_output2postdata "${content}" "${hd_content}")
-postdata=$(genpost_asxml "${content}" "${hd_content}")
+postdata=$(genpost_asxml "${plugin_name}" "${jobid}" "${content}" "${hd_content}")
 postdata=$(echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%")
+echo "${postdata}"
 write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"INFO: url-encode input data finished."
 

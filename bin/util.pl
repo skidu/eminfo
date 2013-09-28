@@ -131,7 +131,7 @@ sub format_phoutput_toxml {
 	$xml_result = "<eminfo_plugin_result>\n";
 
 	my $level = &part_pstr_output(1,$poutput,'perl') || '';
-	$xml_result .= "<level>$level</level\n";
+	$xml_result .= "<level>$level</level>\n";
 	### level: $level
 
 	my $type = &part_pstr_output(2,$poutput,'perl') || '';

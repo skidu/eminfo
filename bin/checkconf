@@ -54,7 +54,7 @@ exit 0
 #
 ARRAY_CONFIG_RULES=(
 	# global
-	"global=>name" 				"str:Linux Server"
+	"global=>name" 				"str:eminfo_ops.eyou.net"
 	"global=>scan_interval"  		"int:5:999"
 	"global=>attach_ini_mail"		"set:[yes|no]"
 	"global=>sysload_uplimit"		"int:0:999"
