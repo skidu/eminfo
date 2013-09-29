@@ -51,6 +51,8 @@ eminfo_id=$(read_eminfo_config global id)
 # read eminfo global name
 eminfo_name=$(read_eminfo_config global name)
 
+# read default mail_receviers
+mail_receviers=$(read_eminfo_config plugin_default mail_receviers)
 
 
 ### Main Body Begin...
@@ -79,6 +81,8 @@ if [ -z "${eminfo_id//[ ]}" ]; then
 			;;
 		*)	echo_red "[FAIL]";echo					;;
 		esac
+	else
+		echo_red "eminfo_id is empty ! try argument rpminit";echo
 	fi
 else
 	echo -en "eminfo_id already set: [$(echo_green "${eminfo_id}")]";echo
@@ -86,8 +90,7 @@ fi
 
 
 if [ -z "${eminfo_name//[ ]}" ]; then
-	echo -en "eminfo_name empty, trying to set eminfo_name ...";echo
-  	echo -en "\nExample: mysql-master web mat ldap memcache\n\n"
+  	echo -en "\n\nExample: mysql-master web mta ldap memcache\n\n"
 	read -p "role name of this server: " input_role
 	if [ -z "${base_domain}" ]; then
 		read -p "base domain of this server: " input_domain
@@ -114,4 +117,50 @@ if [ -z "${eminfo_name//[ ]}" ]; then
 	esac
 else
 	echo -en "eminfo_name already set: [$(echo_green "${eminfo_name}")]";echo
+fi
+
+
+if [ -z "${mail_receviers//[ ]}" ]; then
+	echo -en "\n\nExample: abc@126.com  test@test.net \n\n"
+	valid=0
+	while [ "${valid}" == "0" ]
+	do
+		read -p "default mail receviers of this server: " input_mail_receviers
+		if [ -z "${input_mail_receviers//[ ]}" ]; then
+			valid=0
+			continue
+		fi
+		invalid_email=
+		for m in `echo "${input_mail_receviers}"`
+		do
+			if [ "$(echo -e "${m}"|grep -E -o "\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*")" == "" ]; then
+				invalid_email="${invalid_email} ${m}"
+			fi
+		done
+		if [ ! -z "${invalid_email//[ ]}" ]; then
+			echo -en "$(echo_red "[${invalid_email}]") : not valid email address.";echo
+		else
+			valid=1
+		fi
+	done
+	mail_receviers="${input_mail_receviers}"
+	echo -en "trying to set default mail_receviers as [$(echo_green "${mail_receviers}")] ... "
+	update_eminfo_config plugin_default mail_receviers "${mail_receviers}"
+        rc=$?
+        case "${rc}" in
+        "0")    echo_green "[OK]";echo                                  ;;
+        "2")    echo_yellow "[SKIP]";echo                               ;;
+        "5")    add_eminfo_config plugin_default mail_receviers "${mail_receviers}"
+                rc=$?
+                case "${rc}" in
+                "0") echo_green "[OK]"; echo                            ;;
+                "2") echo_yellow "[SKIP]";echo                          ;;
+                *)   echo_red "[FAIL]"; echo                            ;;
+                esac
+                ;;  
+        *)      echo_red "[FAIL]";echo                                  ;;
+        esac
+	
+else
+	echo -en "default mail_receviers already set: [$(echo_green "${mail_receviers}")]";echo
 fi

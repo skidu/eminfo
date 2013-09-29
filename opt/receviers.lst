@@ -1,7 +1,7 @@
 # default file which [plugin_default]->mail_receviers specified.
 
 ### test mailbox address.
-eyoutest@eyou.com
+# eyoutest@eyou.com
 # tom@eyou.com  marry@eyou.com
 
 ### leader mailbox address.
@@ -10,4 +10,4 @@ eyoutest@eyou.com
 ### author's mailbox address.
 # root_bbk@126.com
 # zhang.elinks@gmail.com
-zhangguangzheng@eyou.net
+# zhangguangzheng@eyou.net
