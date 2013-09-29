@@ -159,8 +159,10 @@ if type -all set >/dev/null 2>&1 ; then set > set ; fi
 [ -x /sbin/route ] && /sbin/route -n > route-n
 [ -x /sbin/arp ] && /sbin/arp -n > arp-n
 [ -x /usr/sbin/ss ] && /usr/sbin/ss -a > ss-a
+#[ -f /proc/net/tcp ] && cat /proc/net/tcp > proc-tcp
+#[ -f /proc/net/udp ] && cat /proc/net/udp > proc-udp
 [ -x /bin/netstat ] && {
-	/bin/netstat -anp > netstat-anp
+	/bin/netstat -an > netstat-an
 	/bin/netstat -tlnp > netstat-tlnp
 }
 service network status > network-status 2>&1
