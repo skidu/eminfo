@@ -15,16 +15,16 @@
 #
 
 # httpsqs server address
-post_server="127.0.0.1"
+post_server="ota.eyou.net"
 
 # httpsqs server port
 post_server_port="1218"
 
 # httpsqs queue name
-queue_name="content"
+queue_name="eminfo_postdata"
 
 # auth password
-auth_pass="1q2w3e"
+auth_pass="123qaz"
 
 # content charset
 charset="utf-8"
@@ -58,8 +58,7 @@ show_usage(){
 #
 genpost_asxml(){
   local plugin=$1 jobid=$2 content=$3 hd_content=$4
-  # local eminfo_id=$(get_eminfo_id)
-  local eminfo_id="1234567890"
+  local eminfo_id=$(get_eminfo_id)
   local gname=$(get_global_name)
   local jobts=$(date +%s)
   local enable=$(get_enable "${plugin}")
@@ -153,7 +152,6 @@ done
 [ -z "${hd_content//[ ]}" ] && hd_content="Nothing to do"
 from="${plugin_name}.${jobid}"
 
-# main begin 
 write_log -f ${POSTLOG_LOG} ""
 write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
 
@@ -185,21 +183,22 @@ write_log -f ${POSTLOG_LOG} "[${from}]"\
 	"INFO: set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[${auth_pass}]"
 
 postdata=$(genpost_asxml "${plugin_name}" "${jobid}" "${content}" "${hd_content}")
-postdata=$(echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%")
-echo "${postdata}"
+postdata=$(echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%" | tr -d '\r\n')
 write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"INFO: url-encode input data finished."
 
 write_log -f ${POSTLOG_LOG} "[${from}]"\
-	"INFO: posting data: [${content}] -> [${postdata}]"
+	"INFO: posting text-plain data: [${content}], [${hd_content}]"
+write_log -f ${POSTLOG_LOG} "[$from]"\
+	"INFO: posting url-encoded data: [${postdata}]"
 
 # curl -s: silient
-result=$( /usr/bin/curl -s --connect-timeout ${post_time_out} -d "${postdata}" "http://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
+result=$( /usr/bin/curl -k -s --connect-timeout ${post_time_out} -d "${postdata}" "https://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
 if [ "$?" == "0" ]; then
 	result="SUCCESS: ${result}"
 else
 	if [ -z "${result}" ]; then
-		result="FAIL: return nothing, maybe timeout on connect [$post_server:$post_server_port]"
+		result="FAIL: return nothing, maybe timeout on connect [https://$post_server:$post_server_port]"
 	else
 		result="FAIL: ${result}"
 	fi
