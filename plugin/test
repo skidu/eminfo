@@ -14,13 +14,14 @@ TYPE=           ### { str| file }
 CONTENT=        ### { strings | /path/to/result.file }
 
 # Read plugin config value here
-# plugin_config_value=$(read_eminfo_config plugin_name config_name)
+user_defconf=$(read_eminfo_config test user_defconf)
 
 # check function here
 check(){
   LEVEL="warn"
   TYPE="str"
-  CONTENT="check result here"  # CONTENT="summary | title | something details1 ### something details2 ### "
+  # CONTENT="check result here"  
+  CONTENT="summary | title | ### <font color=green> green line</font> ### <font color=red>red line</font> ### new&nbsp;line ###"
   EXIT_STATUS=${STATE_WARNING}
 }
 

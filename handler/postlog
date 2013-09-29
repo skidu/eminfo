@@ -3,50 +3,20 @@
 #
 # This Script Responsible for Posting Data to HTTPSQS Server.
 #
+#
 # Usage:     ./postlog -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"
 #
 # Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"  -h "auth hanlder result here"
 #
 
 
-
-#
-# Script Configs Begin
-#
-
-# httpsqs server address
-post_server="ota.eyou.net"
-
-# httpsqs server port
-post_server_port="1218"
-
-# httpsqs queue name
-queue_name="eminfo_postdata"
-
-# auth password
-auth_pass="123qaz"
-
-# content charset
-charset="utf-8"
-
-# timeout to connect httpsqs server
-post_time_out="10"
-
-
-#
-# Script Configs End
-#
-
-
-
-[ -z "${BASE_DIR}" ] && {
-        path=$(cd $(dirname $0) && pwd)
-        BASE_DIR=${path%/*}
+BASE_DIR="$(/usr/local/eminfo/eminfo basedir)"
+[ -f "${BASE_DIR}/bin/include" -a -s "${BASE_DIR}/bin/include" ] && {
         source ${BASE_DIR}/bin/include 2>&-
 }
 
-
 # def help
+#
 show_usage(){
   echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" "
   echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auth hanlder result here\" "
@@ -54,7 +24,10 @@ show_usage(){
 }
 
 # def genpost_asxml
-#
+# Convert plugin output and handler output to xmldata
+# Output:	xml data for post
+# Usage:	genpost_asxml {plugin} {jobid} {plugin_output} {handler_output}
+# Exmaple:	genpost_asxml port 12345678 "{crit}:{str}:{title | summary | details: item1. ### item2. ### item3. ### }" "autohand"
 #
 genpost_asxml(){
   local plugin=$1 jobid=$2 content=$3 hd_content=$4
@@ -123,10 +96,10 @@ EOF
 }
 
 
-
 ### Main Body Begin...
 
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" ] && show_usage
+
 # read args
 while getopts f:s:i:h: opt
 do
@@ -155,24 +128,10 @@ from="${plugin_name}.${jobid}"
 write_log -f ${POSTLOG_LOG} ""
 write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
 
-[ -z "${charset//[ ]}" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}]"\
-		"WARN: charset empty, set default charset=[utf-8]"
-	charset="utf-8"
-}
 
-[ -z "${post_time_out//[ ]}" -o ! -z "${post_time_out//[0-9]}" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}]"\
-		"WARN: invalid post timeout [$post_time_out], set post_time_out=[10]"
-	post_time_out="10"
-}
-
-[ -z "${post_server_port//[ ]}" -o ! -z "${post_server_port//[0-9]}" ] && {
-	write_log -f ${POSTLOG_LOG} "[${from}]"\
-		"WARN: invalid post_port [${post_server_port}], set post_server_port=[1218]"
-	post_server_port="1218"
-}
-
+post_server=$(read_eminfo_config postlog post_server)
+queue_name=$(read_eminfo_config postlog queue_name)
+auth_pass=$(read_eminfo_config postlog auth_pass)
 [ -z "${post_server//[ ]}" -o -z "${queue_name//[ ]}" -o -z "${auth_pass//[ ]}" ] && {
 	write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"ERROR: configurations not complete:"\
@@ -180,8 +139,30 @@ write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
   	exit 1
 }
 write_log -f ${POSTLOG_LOG} "[${from}]"\
-	"INFO: set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[${auth_pass}]"
+	"INFO: set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[XXXXXXXX]"
 
+charset=$(read_eminfo_config postlog charset)
+[ -z "${charset//[ ]}" ] && {
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"WARN: charset empty, set default charset=[utf-8]"
+	charset="utf-8"
+}
+
+post_time_out=$(read_eminfo_config postlog post_time_out)
+[ -z "${post_time_out//[ ]}" -o ! -z "${post_time_out//[0-9]}" ] && {
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"WARN: invalid post timeout [$post_time_out], set post_time_out=[10]"
+	post_time_out="10"
+}
+
+post_server_port=$(read_eminfo_config postlog post_server_port)
+[ -z "${post_server_port//[ ]}" -o ! -z "${post_server_port//[0-9]}" ] && {
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"WARN: invalid post_port [${post_server_port}], set post_server_port=[1218]"
+	post_server_port="1218"
+}
+
+# generate xml data, url-encoded data.
 postdata=$(genpost_asxml "${plugin_name}" "${jobid}" "${content}" "${hd_content}")
 postdata=$(echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%" | tr -d '\r\n')
 write_log -f ${POSTLOG_LOG} "[${from}]"\

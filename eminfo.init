@@ -5,7 +5,7 @@
 # chkconfig:   - 85 15 
 # description: pluginable platform written by perl/shell for linux ops.
 # processname: eminfo start
-# config:      /usr/local/eminfo/conf/eminfo.ini
+# config:      /usr/local/eminfo/conf/.eminfo.ini
 # pidfile:     /var/run/eminfo.pid
  
 # Source function library.

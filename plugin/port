@@ -82,7 +82,7 @@ check_single(){
 				return
 			}
 			if [ "$(sub_str "${rstr}" "succeeded")" == "yes" ]; then
-				output="$(html_green "Check ${ptype}://${ip}:${port} OK, return [${rstr}]" ) ### "
+				output="Check ${ptype}://${ip}:${port} OK, return [${rstr}] ###"
 				return_code=0
 			else
 				output="$(html_red "Check ${ptype}://${ip}:${port} WARN, return [${rstr}]" ) ### "
@@ -144,11 +144,11 @@ check_single(){
 		;;
 	*)
 		((unknum++))
-		result="${result} ### $(html_red "Pairs: [${pairs}] is invalid") ### ### "
+		result="${result} ### $(html_red "[${pairs}] is invalid") ### ### "
 		continue 1
 		;;
 	esac
-	result="${result} ### $(html_green "Check Pairs: [${pairs}]") ### "
+	result="${result} ### Check [${pairs}] ### "
 
    	tmpstr=$(check_single "${ptype}" "${ip}" "${port}" "${tmout}")
 	rc=$?

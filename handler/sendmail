@@ -11,41 +11,14 @@
 #
 
 
-#
-# Script Configs Begin
-#
-
-# smtp server address
-mail_server="mx2.eyou.com"
-
-# smtp auth port
-mail_server_port="25"
-
-# smtp auth user
-auth_user="eyoutest@eyou.com"
-
-# smtp auth password
-auth_pass="hello123..."
-
-# timeout to connect smtp server
-time_out="30"
-
-# mailbody charset: utf8 | gb2312
-charset="utf8"
-
-#
-# Script Configs End
-#
-
-
-
-[ -z "${BASE_DIR}" ] && {
-        path=$(cd $(dirname $0) && pwd)
-        BASE_DIR=${path%/*}
+BASE_DIR="$(/usr/local/eminfo/eminfo basedir)"
+[ -f "${BASE_DIR}/bin/include" -a -s "${BASE_DIR}/bin/include" ] && {
         source ${BASE_DIR}/bin/include 2>&-
 }
 
+
 # def help
+#
 show_usage(){
   echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" "
   echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auth hanlder result here\" "
@@ -116,23 +89,49 @@ do
 done
 
 # set default
-[ -z "${plugin_name}" ] && show_usage   ### plugin_name ~ ( {plugin_name} , NULL  )
-[ -z "${jobid}" ] && show_usage 	### jobid ~ ( NNNNNNNN , ovld , tmout )
-[ -z "${content}" ] && show_usage
-[ -z "${hd_content}" ] && hd_content="Nothing to do"
+[ -z "${plugin_name//[ ]}" ] && show_usage      ### plugin_name ~ ( {plugin_name} , NULL  )
+[ -z "${jobid//[ ]}" ] && show_usage 		### jobid ~ ( NNNNNNNN , ovld , tmout )
+[ -z "${content//[ ]}" ] && show_usage
+[ -z "${hd_content//[ ]}" ] && hd_content="Nothing to do"
 from="${plugin_name}.${jobid}"
 
-# main begin 
+
 write_log -f "${SENDMAIL_LOG}" ""
 write_log -f "${SENDMAIL_LOG}" "[${from}]" "INFO: begin to sendmail..."
 
-if [ "$(echo -ne "${content}" | awk -v RS="{[^{]*}" 'END{print NR}')" -lt "3" ]; then
+
+smtp_server=$(read_eminfo_config sendmail smtp_server)
+auth_user=$(read_eminfo_config sendmail auth_user)
+auth_pass=$(read_eminfo_config sendmail auth_pass)
+[ -z "${smtp_server//[ ]}" -o -z "${auth_user//[ ]}" -o -z "${auth_pass//[ ]}" ] && {
 	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
-		"ERROR: can't read out input data: [${content}], EXIT"
-	write_log -f "${SENDMAIL_LOG}" ""
-	write_log -f "${SENDMAIL_LOG}" ""
+		"ERROR: configurations not complete:"\
+		"[smtp_server,auth_user,auth_pass can't be empty]. EXIT"
 	exit 1
-fi
+}
+write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+	"INFO: set smtp_server=[${smtp_server}], auth_user=[${auth_user}], auth_pass=[XXXXXXXX]"
+
+charset=$(read_eminfo_config sendmail charset)
+[ -z "${charset//[ ]}" ] && {
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"WARN: charset empty, set default charset=[utf-8]"
+	charset="utf-8"
+}
+
+time_out=$(read_eminfo_config sendmail time_out)
+[ -z "${time_out//[ ]}" -o ! -z "${time_out//[0-9]}" ] && {
+        write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+                "WARN: invalid timeout [$time_out], set time_out=[10]"
+        time_out="10"
+}
+
+smtp_server_port=$(read_eminfo_config sendmail smtp_server_port)
+[ -z "${smtp_server_port//[ ]}" -o ! -z "${smtp_server_port//[0-9]}" ] && {
+        write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+                "WARN: invalid smtp_port [${smtp_server_port}], set smtp_server_port=[1218]"
+        smtp_server_port="25"
+}
 
 # read global.name / read plugin comment / read plugin mail-receviers 
 gname=$(get_global_name)
@@ -144,7 +143,6 @@ else
 fi
 write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 	"INFO: set name=[${gname}], comment=[${comment}], receviers=[${receviers}]. CONTINUE"
-
 
 ### attach_ini_mail 
 attach_ini_mail_args=
@@ -252,7 +250,7 @@ case "${mail_type}" in
 			((n+=1))
 			write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 				"INFO: [${n}/${t}], sending mail to [${x}] ..."
-			result=$( ${SENDEMAIL} -f "${auth_user}" -s "${mail_server}:${mail_server_port}" \
+			result=$( ${SENDEMAIL} -f "${auth_user}" -s "${smtp_server}:${smtp_server_port}" \
 			-xu "${auth_user}" -xp "${auth_pass}" \
 			-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 			-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -m "Refer to attachments for details." \
@@ -281,7 +279,7 @@ case "${mail_type}" in
 	    	  ((n+=1))
 	    	  write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 			"INFO: [${n}/${t}], sending mail to [${x}] ..."
-	    	  result=$( ${SENDEMAIL} -f "${auth_user}" -s "${mail_server}:${mail_server_port}" \
+	    	  result=$( ${SENDEMAIL} -f "${auth_user}" -s "${smtp_server}:${smtp_server_port}" \
 	    		-xu "${auth_user}" -xp "${auth_pass}" \
 	    		-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 	    		-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -o message-file="${mailbody_path}" \

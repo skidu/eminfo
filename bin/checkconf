@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 #
-# This Script Responsible for Check Config File: conf/eminfo.ini
+# This Script Responsible for Check Config File: conf/.eminfo.ini
 # 
 # Usage:     ./checkconf
 #
@@ -454,10 +454,10 @@ done
 for configfile in `ls "${CONF_DIR}"`
 do
 	filepath="${CONF_DIR}/${configfile}"
-	[ "${filepath##*/}" == "eminfo.ini" ] && continue
-	[ "${filepath##*/}" == "sendmail.ini" ] && continue
-	[ "${filepath##*/}" == "postlog.ini" ] && continue
-	[ "${filepath##*/}" == "takesnap.ini" ] && continue
+	[ "${filepath##*/}" == ".eminfo.ini" ] && continue
+	[ "${filepath##*/}" == ".sendmail.ini" ] && continue
+	[ "${filepath##*/}" == ".postlog.ini" ] && continue
+	[ "${filepath##*/}" == ".takesnap.ini" ] && continue
 	pluginname=$(is_plugin_configfile "${filepath}")
 	[ "${pluginname}" == "no" ] && {
 		((critnum++))

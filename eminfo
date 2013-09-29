@@ -2,7 +2,7 @@
 #
 #
 # Description	: pluginable platform written by perl/shell for linux ops.
-# Config	: conf/eminfo.ini
+# Config	: conf/.eminfo.ini
 # Pidfile	: /var/run/eminfo.pid
 #
 # Creation Date : 2012-01-15
