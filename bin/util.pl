@@ -122,13 +122,15 @@ sub format_pstr_output_toterm {
 sub format_phoutput_toxml {
 	my $poutput = shift;
 	my $houtput = shift;
-	my $xml_result;
-	#exit(1) if !defined $poutput;
-	#exit(1) if !defined $houtput;
 	### poutput: $poutput
 	### houtput: $houtput
-	
-	$xml_result = "<eminfo_plugin_result>\n";
+
+	my $post_length = 0;
+	(my $max_length = `/usr/local/eminfo/eminfo view postlog post_max_length 2>&-`) =~ s/[\r\n]//g;
+	$max_length = 128000 if (!$max_length || $max_length =~ /\D/);
+	### max_length: $max_length
+
+	my $xml_result = "<eminfo_plugin_result>\n";
 
 	my $level = &part_pstr_output(1,$poutput,'perl') || '';
 	$xml_result .= "<level>$level</level>\n";
@@ -139,7 +141,6 @@ sub format_phoutput_toxml {
 	### type: $type
 
 	$xml_result .= "<body>\n";
-
 	if ($type eq 'file'){
 		my $files = &part_pstr_output(3,$poutput,'perl') || '';
 		### files: $files
@@ -152,11 +153,26 @@ sub format_phoutput_toxml {
 	} elsif ($type eq 'str'){
 		my $title = &part_pstr_output(4,$poutput,'perl') || '';
 		### title: $title
-		$xml_result .= "<title>$title</title>\n";
+		$post_length += length($title);
+		### post_length: $post_length
+		if ($post_length >= $max_length){
+			$xml_result .= "<title>post length exceed $max_length</title>\n";
+			goto PLUGIN_END;
+		} else {
+			$xml_result .= "<title>$title</title>\n";
+		}
 
 		my $summary = &part_pstr_output(5,$poutput,'perl') || '';
 		### summary: $summary
-		$xml_result .= "<summary>$summary</summary>\n";
+		$post_length += length($summary);
+		### post_length: $post_length
+		if ($post_length >= $max_length){
+			$xml_result .= "<summary>post length exceed $max_length</summary>\n";
+			goto PLUGIN_END;
+		} else {
+			$xml_result .= "<summary>$summary</summary>\n";
+		}
+		
 
 		my $body = &part_pstr_output(6,$poutput,'perl') || '';
 		### body: $body
@@ -182,11 +198,21 @@ sub format_phoutput_toxml {
 			$content =~ s/>/&gt;/g;
 			$content =~ s/"/&quot;/g;
 			$content =~ s/'/&apos;/g;
+
+			$post_length += length($content);
+			### post_length: $post_length
+			if ($post_length >= $max_length){
+				$xml_result .= "<line>post length exceed $max_length</line>\n";
+				last;
+			}
+
 			$xml_result .= sprintf("<line size=%d%s>$content</line>\n",length($content),($color)?" color=$color":"");
 		}
 	}
-	$xml_result .= "</body>\n";
-	$xml_result .= "</eminfo_plugin_result>\n";
+	PLUGIN_END: {
+		$xml_result .= "</body>\n";
+		$xml_result .= "</eminfo_plugin_result>\n";
+	}
 	
 	$xml_result .= "<eminfo_autohandle_result>\n";
 	my @hlines = split /###/, $houtput;
@@ -201,9 +227,19 @@ sub format_phoutput_toxml {
 		s/>/&gt;/g;
 		s/"/&quot;/g;
 		s/'/&apos;/g;
+
+		$post_length += length;
+		### post_length: $post_length
+		if ($post_length >= $max_length){
+			$xml_result .= "<line>post length exceed $max_length</line>\n";
+			last;
+		}
+
 		$xml_result .= sprintf("<line size=%d>$_</line>\n",length);
 	}
+	HANDLER_END: {
+		$xml_result .= "</eminfo_autohandle_result>\n";
+	}
 
-	$xml_result .= "</eminfo_autohandle_result>\n";
 	print $xml_result;
 }
