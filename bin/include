@@ -396,10 +396,10 @@ list_section_keys(){
   }
   if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then
 	config_file="${CONFIG_FILE}"
+  elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+	config_file="${CONFIG_FILE}"
   elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
 	config_file="${CONFIG_FILE}"
-  elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
-	config_file="${CONFIG_FILE}"  
   else
 	config_file="${CONF_DIR}/${section}.ini"
   fi
@@ -430,10 +430,10 @@ read_eminfo_section(){
   else
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
         	config_file="${CONFIG_FILE}"
+	elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
-	elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then 
-		config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -471,10 +471,10 @@ read_eminfo_config(){
   else
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
         	config_file="${CONFIG_FILE}"
+	elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
-	elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
-		config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -524,10 +524,10 @@ update_eminfo_config() {
   else
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
         	config_file="${CONFIG_FILE}"
+        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
-        elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
-                config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -603,10 +603,10 @@ add_eminfo_config() {
   else 
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
         	config_file="${CONFIG_FILE}"
+        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
-        elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
-                config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -684,10 +684,10 @@ del_eminfo_config() {
   else
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
         	config_file="${CONFIG_FILE}"
+        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
-        elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
-                config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -2519,7 +2519,7 @@ process_sysoverload() {
 # check_repeat_errcount  hello
 # add_repeat_errcount  check_sysload
 # add_repeat_errcount  hello
-# add_repeat_errcount  "hello2 fdjfk  ()"
+# add_repeat_errcount  "hello2 123 ()"
 # zero_repeat_errcount  check_sysload
 # gen_tmpfile check_sysload
 # list_enabled_plugin_section
