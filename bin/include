@@ -914,10 +914,8 @@ get_comment() {
 	return 1
   }
   result=$(read_eminfo_config ${plugin_name} comment)
-  result=${result//[!0-9a-zA-Z_. ]}
-  [ -z "${result}" ] && result=$(read_eminfo_config plugin_default comment)
-  result=${result//[!0-9a-zA-Z_. ]}
-  [ -z "${result}" ] && result="${default}"
+  [ -z "${result//[ ]}" ] && result=$(read_eminfo_config plugin_default comment)
+  [ -z "${result//[ ]}" ] && result="${default}"
   echo "${result}"
 }
 
@@ -927,8 +925,7 @@ get_comment() {
 get_global_name() {
   local result=  default="eminfo_ops.eyou.net"
   result=$( read_eminfo_config global name )
-  result=${result//[!0-9a-zA-Z_.]}
-  [ -z "${result}" ] && result="${default}"
+  [ -z "${result//[ ]}" ] && result="${default}"
   echo "${result}"
 }
 
