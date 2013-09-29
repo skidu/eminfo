@@ -1,8 +1,0 @@
-<font color=green>Notify_Type:</font>   &nbsp;&nbsp;&nbsp;&nbsp; CRIT <br><br>
-<font color=green>Title:</font>   &nbsp;&nbsp;&nbsp;&nbsp; System Load Check CRITICAL  <br><br>
-<font color=green>Summary:</font>  &nbsp;&nbsp;&nbsp;&nbsp; Load [13.8] >= UpLimit: [10] <br><br>
-<font color=green>Details:</font>  <br><br>
-
-<br>------------------<br>
-<font color=green>Auto Handle:</font>  <br><br>
-auth hanlder result here
