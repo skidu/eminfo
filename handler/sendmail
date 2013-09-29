@@ -148,15 +148,14 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 attach_ini_mail_args=
 attach_ini_mail=$(read_eminfo_config global attach_ini_mail)
 if [ "${attach_ini_mail}" == "yes" ]; then
-	attach_ini_mail_args=" -a "${CONFIG_FILE}" "
 	[ -f "${CONF_DIR}/${plugin_name}.ini" ] && {
-		attach_ini_mail_args="${attach_ini_mail_args} -a "${CONF_DIR}/${plugin_name}.ini" "
+		attach_ini_mail_args=" -a "${CONF_DIR}/${plugin_name}.ini" "
 	}
 	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
-		"INFO: add attachment Config-INI:[${CONFIG_FILE}]"
+		"INFO: add attachment Plugin-Config-INI:[${CONF_DIR}/${plugin_name}.ini]"
 else
 	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
-		"INFO: no need to attach Config-INI"
+		"INFO: no need to attach Plugin-Config-INI"
 fi
 
 ### attch_snap_mail
@@ -301,11 +300,3 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 	"INFO: end to sendmail. sesult: [total=${t}  success=${t_s}  fail=${t_e}]"
 write_log -f "${SENDMAIL_LOG}" ""
 write_log -f "${SENDMAIL_LOG}" ""
-
-
-
-
-#################  Debug Area  #####################
-
-# conv_output2mailbody "{crit}:{str}:{System Load Check CRITICAL | Load Average: [0.18] >= UpLimit: [0] }"
-# conv_output2mailbody "{warn}:{str}:{Notify System Login Check | Notify New System Login Record | <strong><font color=green>New Record:</font></strong> ### ### Jun 15 02:53:19 mylab sshd[18388]: Accepted password for root from 192.168.131.1 port 2596 ssh2 ### Jun 15 02:53:19 mylab sshd[18429]: Accepted password for root from 192.168.131.1 port 2599 ssh2 ### Jun 15 02:53:20 mylab sshd[18470]: Accepted password for root from 192.168.131.1 port 2602 ssh2 ### }"

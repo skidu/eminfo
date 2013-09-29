@@ -563,6 +563,12 @@ case "$#" in
 			done
 		elif [ "$(read_eminfo_section "$2")" == "global" ]; then
 			view_extra_config "global"
+		elif [ "$(read_eminfo_section "$2")" == "sendmail" ]; then
+			view_extra_config "sendmail"
+		elif [ "$(read_eminfo_section "$2")" == "postlog" ]; then
+			view_extra_config "postlog"
+		elif [ "$(read_eminfo_section "$2")" == "takesnap" ]; then
+			view_extra_config "takesnap"
 		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
                         view_base_config "$2"
 			view_extra_config "$2"

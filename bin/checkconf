@@ -81,6 +81,14 @@ ARRAY_CONFIG_RULES=(
 	"eminfo_clear_overdue=>snapfile_reserve_time" "int:1:999"
 	"eminfo_log_rotate=>frequency"		      "time"
 	"eminfo_log_rotate=>force_size_uplimit"	      "int:1:2047"
+
+	# handler
+	"sendmail=>smtp_server_port"		"int:1:65535"
+	"sendmail=>time_out"			"int:1:300"
+	"sendmail=>charset"			"cbset:[utf8|gbk|gb2312|big5]"
+	"postlog=>post_server_port"		"int:1:65535"
+	"postlog=>post_time_out"		"int:1:300"
+	"postlog=>charset"			"cbset:[utf-8]"
 )
 
 
@@ -455,9 +463,6 @@ for configfile in `ls "${CONF_DIR}"`
 do
 	filepath="${CONF_DIR}/${configfile}"
 	[ "${filepath##*/}" == ".eminfo.ini" ] && continue
-	[ "${filepath##*/}" == ".sendmail.ini" ] && continue
-	[ "${filepath##*/}" == ".postlog.ini" ] && continue
-	[ "${filepath##*/}" == ".takesnap.ini" ] && continue
 	pluginname=$(is_plugin_configfile "${filepath}")
 	[ "${pluginname}" == "no" ] && {
 		((critnum++))

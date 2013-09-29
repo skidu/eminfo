@@ -352,9 +352,6 @@ list_plugin_section() {
 	filepath="${config_files_arr[$i]}"
 	[ "${filepath##*/}" == "" ] && continue
 	[ "${filepath##*/}" == ".eminfo.ini" ] && continue
-	[ "${filepath##*/}" == ".sendmail.ini" ] && continue
-	[ "${filepath##*/}" == ".postlog.ini" ] && continue
-	[ "${filepath##*/}" == ".takesnap.ini" ] && continue
 	pluginname="$(is_plugin_configfile "${filepath}")"
 	if [ "${pluginname}" != "no" ]; then
 		[ ! -z "${result}" ] && result="${result} ${pluginname}" || result="${pluginname}"
@@ -401,6 +398,8 @@ list_section_keys(){
 	config_file="${CONFIG_FILE}"
   elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
 	config_file="${CONFIG_FILE}"
+  elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
+	config_file="${CONFIG_FILE}"  
   else
 	config_file="${CONF_DIR}/${section}.ini"
   fi
@@ -433,6 +432,8 @@ read_eminfo_section(){
         	config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
+	elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then 
+		config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -473,7 +474,7 @@ read_eminfo_config(){
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
 	elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
-		config_file="${CONF_DIR}/.${section}.ini"
+		config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -525,6 +526,8 @@ update_eminfo_config() {
         	config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
+        elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
+                config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -602,6 +605,8 @@ add_eminfo_config() {
         	config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
+        elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
+                config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -681,6 +686,8 @@ del_eminfo_config() {
         	config_file="${CONFIG_FILE}"
   	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
         	config_file="${CONFIG_FILE}"
+        elif [ "$(echo "${section}" | grep -E -o "sendmail|postlog|takesnap")" != "" ]; then
+                config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
@@ -920,7 +927,18 @@ get_comment() {
 get_global_name() {
   local result=  default="eminfo_ops.eyou.net"
   result=$( read_eminfo_config global name )
-  result=${result//[!0-9a-zA-Z_. ]}
+  result=${result//[!0-9a-zA-Z_.]}
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+# Get eminfo id			config-name:  id
+# Note: if returned config-value is empty. return "0000000000"
+#
+get_eminfo_id() {
+  local result=  default="0000000000"
+  result=$( read_eminfo_config global id)
+  result=${}
   [ -z "${result}" ] && result="${default}"
   echo "${result}"
 }

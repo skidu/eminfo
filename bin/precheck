@@ -130,6 +130,7 @@ array_base_cmd=(
   /usr/bin/tr
   /usr/bin/curl
   /usr/bin/nc
+  /usr/bin/cksum
 )
 
 local num=0 lacklist=
