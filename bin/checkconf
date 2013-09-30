@@ -54,7 +54,8 @@ exit 0
 #
 ARRAY_CONFIG_RULES=(
 	# global
-	"global=>name" 				"str:eminfo_ops.eyou.net"
+	#"global=>id"				"int:1:9999999999"
+	#"global=>name" 				"str:eminfo_ops.eyou.net"
 	"global=>scan_interval"  		"int:5:999"
 	"global=>attach_ini_mail"		"set:[yes|no]"
 	"global=>sysload_uplimit"		"int:0:999"
@@ -68,7 +69,7 @@ ARRAY_CONFIG_RULES=(
 	"plugin_default=>take_snapshot_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
 	"plugin_default=>mail_notify_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
 	"plugin_default=>post_notify_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
-	"plugin_default=>mail_receviers"	"file or emls:root_bbk@126.com"
+	#"plugin_default=>mail_receviers"	"file or emls:root_bbk@126.com"
 	"plugin_default=>attach_snap_mail"	"set:[yes|no]"
 	"plugin_default=>auto_handle_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
 	"plugin_default=>auto_handler"		"file:handler"
@@ -115,7 +116,7 @@ check_type_str(){
 }
 
 # check type {emls}
-# Example:	check_type_emls emls "zhangguangzheng@eyou.net" "hello@@@1" "fjdkfjdkfj@kkk.1"; echo $?
+# Example:	check_type_emls emls "zhangguangzheng@eyou.net" "hello@@@1" "abcdej@kkk.1"; echo $?
 #
 check_type_emls(){
   local rule=$1; shift 1; local input="$*"
@@ -474,6 +475,39 @@ do
 		[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${configfile}] is eminfo config file."
 	}
 done
+
+# 7. check eminfo_id  eminfo_name  default_mail_receviers
+eminfo_id=$(get_eminfo_id)
+if [ "${eminfo_id}" == "0000000000" ]; then
+	((critnum++))
+	((totalnum++))
+	echo -e "$(echo_red [CRIT]) : [eminfo_id] is empty. try ${SETINIT_SH} rpminit"
+else
+	((oknum++))
+	((totalnum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [eminfo_id] = [${eminfo_id}]."
+fi
+eminfo_name=$(get_global_name)
+if [ "${eminfo_name}" == "eminfo_ops.eyou.net" ]; then
+	((critnum++))
+	((totalnum++))
+	echo -e "$(echo_red [CRIT]) : [eminfo_name] is empty. try ${SETINIT_SH}"
+else
+	((oknum++))
+	((totalnum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [eminfo_name] = [${eminfo_name}]."
+fi
+default_receviers=$(get_mail_receviers plugin_default)
+if [ "${default_receviers}" == "root_bbk@126.com" ]; then
+	((critnum++))
+	((totalnum++))
+	echo -e "$(echo_red [CRIT]) : [default_receviers] is empty. try ${SETINIT_SH}"
+else
+	((oknum++))
+	((totalnum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [default_receviers] = [${default_receviers}]."
+fi
+
 
 # print result
 echo "Result: [succ=${oknum}/${totalnum} warn=${warnnum}/${totalnum} crit=${critnum}/${totalnum}]"
