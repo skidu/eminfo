@@ -2481,8 +2481,7 @@ process_sysoverload() {
   # Step 1: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
 	"[${sysload_now} >= ${sysload_limit}] 1 => take snapshot";
-  local snapfile=
-  snapfile=$( ${TAKESNAP_SH} -f "${plugin_name}" -s "ovld" >/dev/null 2>&1 )
+  ${TAKESNAP_SH} -f "${plugin_name}" -s "ovld" >/dev/null 2>&1
 
   # Step 2: send alert mail whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
