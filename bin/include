@@ -2298,8 +2298,8 @@ process_plugin() {
 			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
  		[ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
 		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
- 		plain_hdoutput=$( ${PLUTIL} format_pstr_output_toplain "${hd_output}" )
 		local hd_rc=$?
+ 		plain_hdoutput=$( ${PLUTIL} format_pstr_output_toplain "${hd_output}" )
 		write_log ${jid} ${plugin_name} "auto handler execution completed."\
 			"return code:[${hd_rc}] return string: [${plain_hdoutput}] CONTINUE";
 		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
@@ -2411,15 +2411,30 @@ process_plugin_timeout() {
 		"detailis in ${TAKESNAP_LOG##*/}. CONTINUE";
   fi
 
-  # Step 3: send timeout notify mail
-  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify_type "tmout")
-  if [ "${m_alert}" != "yes" ]; then
-        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify disabled. SKIP";
+  # Step 3: auto handler while timeout
+  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type "tmout")
+  local hd_output=  plain_hdoutput=
+  if [ "${a_hand}" != "yes" ]; then
+ 	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle disabled. SKIP";
+	hd_output="auto handle is disabled. Nothing to do"
   else
-	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify enabled. CONTINUE";
-	${SENDMAIL} -f "${plugin_name}" -s "tmout" -i "${output}"
-	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} send timeout mail:"\
-		"finished. details in ${SENDMAIL_LOG##*/}. CONTINUE";
+	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle enabled. CONTINUE";
+	local handler=$(get_auto_handler "${plugin_name}")
+        if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
+                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\
+			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
+                [ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
+		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
+		local hd_rc=$?
+		plain_hdoutput=$( ${PLUTIL} format_pstr_output_toplain "${hd_output}" )
+                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle execution completed."\
+			"return code:[${hd_rc}] return string: [${plain_hdoutput}] CONTINUE";
+		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
+        else
+                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\
+			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
+		hd_output="auto handler file [${HANDLER_DIR}/${handler}] not exist or empty. Nothing to do"
+        fi
   fi
 
   # Step 4: post timeout information
@@ -2428,31 +2443,23 @@ process_plugin_timeout() {
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify disabled. SKIP";
   else
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify enabled. CONTINUE";
-        ${POSTLOG_SH} -f "${plugin_name}" -s "tmout" -i "${output}"  # eval will return syntax error. why?
+        ${POSTLOG_SH} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}" # eval will return syntax error. why?
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post alert finished."\
 		"details in ${POSTLOG_LOG##*/}. CONTINUE";
   fi
 
-  # Step 5: auto handler while timeout
-  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type "tmout")
-  if [ "${a_hand}" != "yes" ]; then
- 	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle disabled. SKIP";
+  # Step 5: send timeout notify mail
+  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify_type "tmout")
+  if [ "${m_alert}" != "yes" ]; then
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify disabled. SKIP";
   else
-	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle enabled. CONTINUE";
-	local handler=$(read_eminfo_config "${plugin_name}" auto_handler)
-        [ -z "${handler}" ] && handler=$(read_eminfo_config plugin_default auto_handler)
-        if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
-                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\
-			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
-                [ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
-                eval "${HANDLER_DIR}/${handler}"
-                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle:"\
-			"execution completed. CONTINUE";
-        else
-                write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\
-			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
-        fi
+	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify enabled. CONTINUE";
+	${SENDMAIL} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}"
+	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} send timeout mail:"\
+		"finished. details in ${SENDMAIL_LOG##*/}. CONTINUE";
   fi
+
+
 }
 
 # Process system overloaded
@@ -2466,6 +2473,7 @@ process_sysoverload() {
 	"| $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T)"\
 	"### Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]"\
 	"### Plugin: [${plugin_name}] has been cancled }";
+  local hd_output="Nothing to do"
 
   # Step 0: update status.
   update_status "${plugin_name}" "Cancle on System Overload"
@@ -2473,18 +2481,18 @@ process_sysoverload() {
   # Step 1: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
 	"[${sysload_now} >= ${sysload_limit}] 1 => take snapshot";
-  ${TAKESNAP_SH} -f "${plugin_name}" -s "ovld" >/dev/null 2>&1
+  local snapfile=
+  snapfile=$( ${TAKESNAP_SH} -f "${plugin_name}" -s "ovld" >/dev/null 2>&1 )
 
   # Step 2: send alert mail whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
 	"[${sysload_now} >= ${sysload_limit}] 2 => send alert mail";
-  ${SENDMAIL} -f "${plugin_name}" -s "ovld" -i "${output}"
+  ${SENDMAIL} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}"
 
   # Step 3: post alert information whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
 	"[${sysload_now} >= ${sysload_limit}] 3 => post alert data";
-  # <eval> will return syntax error. why?
-  ${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}"   
+  ${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}"
 }
 
 
