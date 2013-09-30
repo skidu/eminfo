@@ -1,18 +1,24 @@
-Summary: pluginable platform written by perl/shell for linux ops.
-Name: eminfo
-Version: 1.0.0
-Release: beta2
-License: GPLv3
-Group:  Extension
-Packager: Zhang Guangzheng <zhang.elinks@gmail.com>
-BuildRoot: /var/tmp/%{name}-%{version}-%{release}-root
-Source0: eminfo-1.0.0-beta2.tgz
-Source1: eminfo.init
-Requires: coreutils,bash,e2fsprogs,procps,psmisc,util-linux,SysVinit
-Requires: gawk,sed,python,perl,grep,tar,gzip,curl,bc,nc
-Requires(post): chkconfig
-Requires(preun): chkconfig, initscripts
-Requires(postun): coreutils
+Summary: 	pluginable platform written by perl/shell for linux ops.
+Name: 		eminfo
+Version: 	1.0.0
+Release: 	beta2
+License: 	GPLv3
+Group:  	Extension
+Packager: 	Zhang Guangzheng <zhang.elinks@gmail.com>
+BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
+Source0: 	eminfo-1.0.0-beta2.tgz
+Source1: 	eminfo.init
+Requires: 		coreutils >= 5.97, bash >= 3.2
+Requires:		e2fsprogs >= 1.39, procps >= 3.2.7
+Requires:		psmisc >= 22.2, util-linux >= 2.13
+Requires:		SysVinit >= 2.86, nc >= 1.84
+Requires: 		gawk >= 3.1.5, sed >= 4.1.5
+Requires:		perl >= 5.8.8, grep >= 2.5.1
+Requires:		tar >= 1.15.1, gzip >= 1.3.5
+Requires:		curl >= 7.15.5, bc >= 1.06
+Requires(post): 	chkconfig
+Requires(preun): 	chkconfig, initscripts
+Requires(postun): 	coreutils >= 5.97
 
 %description 
 pluginable platform written by perl/shell for linux ops.
