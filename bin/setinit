@@ -91,13 +91,33 @@ fi
 
 if [ -z "${eminfo_name//[ ]}" ]; then
   	echo -en "\n\nExample: mysql-master web mta ldap memcache\n\n"
-	read -p "role name of this server: " input_role
-	if [ -z "${base_domain}" ]; then
-		read -p "base domain of this server: " input_domain
-	else
-		read -p "base domain of this server [${base_domain}]: " input_domain
-		[ -z "${input_domain//[ ]}" ] && input_domain="${base_domain}" 
-	fi
+	valid=0
+	while [ "${valid}" == "0" ]
+	do
+		read -p "role name of this server: " input_role
+		if [ -z "${input_role//[ ]}" ]; then
+			valid=0
+			continue
+		else
+			valid=1
+		fi
+	done
+	valid=0
+	while [ "${valid}" == "0" ]
+	do
+		if [ -z "${base_domain}" ]; then
+			read -p "base domain of this server: " input_domain
+		else
+			read -p "base domain of this server [${base_domain}]: " input_domain
+			[ -z "${input_domain//[ ]}" ] && input_domain="${base_domain}" 
+		fi
+		if [ -z "${input_domain//[ ]}" ]; then
+			valid=0
+			continue
+		else
+			valid=1
+		fi
+	done
 	eminfo_name="${input_role}_${input_domain}"
 	echo -en "trying to set eminfo_name as [$(echo_green "${eminfo_name}")] ... "
 	update_eminfo_config global name "${eminfo_name}"
