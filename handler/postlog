@@ -164,7 +164,7 @@ post_server_port=$(read_eminfo_config postlog post_server_port)
 
 # generate xml data, url-encoded data.
 postdata=$(genpost_asxml "${plugin_name}" "${jobid}" "${content}" "${hd_content}")
-postdata=$(echo -n "${postdata}" | od -t x1 -A n -w1000 | tr " " "%" | tr -d '\r\n')
+postdata=$(echo -n "${postdata}" | /usr/bin/od -t x1 -A n -w1000 | tr " " "%" | tr -d '\r\n')
 write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"INFO: url-encode input data finished."
 
