@@ -29,7 +29,7 @@ BASE_DIR="/usr/local/eminfo"
 
 # === Turn Off Job Control
 #
-# set +m
+set +m
 
 # === LOAD INCLUDE FILE
 #
