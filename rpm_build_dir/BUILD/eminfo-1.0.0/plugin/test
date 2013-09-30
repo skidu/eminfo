@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+user_defconf=$(read_eminfo_config test user_defconf)
+
+# check function here
+check(){
+  LEVEL="warn"
+  TYPE="str"
+  # CONTENT="check result here"  
+  CONTENT="summary | title | ### <font color=green> green line</font> ### <font color=red>red line</font> ### new&nbsp;line ###"
+  EXIT_STATUS=${STATE_WARNING}
+}
+
+check
+
+# output result(single-line) and return exit status here.
+echo "{${LEVEL}}:{${TYPE}}:{${CONTENT}}"  | tr -d '\015\012'
+exit ${EXIT_STATUS} 

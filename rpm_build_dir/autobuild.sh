@@ -1,0 +1,34 @@
+#!/bin/bash
+
+path=$(cd $(dirname $0) && pwd)
+basedir=${path%/*}
+
+# first: clear old files
+rm -rf "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+mkdir -p "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+[ "$1" == "clean" ] && exit 0
+
+[ -f "/usr/bin/rpmbuild" -a -x "/usr/bin/rpmbuild" ] || {
+	echo "/usr/bin/rpmbuild not prepared"
+	exit 1
+}
+
+name=$(awk -F: '($1~/Name/){print $2}' "${basedir}"/eminfo.spec 2>&-|tr -d ' \t')
+version=$(awk -F: '($1~/Version/){print $2}' "${basedir}"/eminfo.spec 2>&-|tr -d ' \t')
+source0=$(awk -F: '($1~/Source0/){print $2}' "${basedir}"/eminfo.spec 2>&-|tr -d ' \t')
+source1=$(awk -F: '($1~/Source1/){print $2}' "${basedir}"/eminfo.spec 2>&-|tr -d ' \t')
+
+mkdir -p "${path}"/SOURCES/${name}-${version}
+cp -a "${basedir}"/{bin,conf,eminfo,handler,log,opt,plugin,tmp} "${path}"/SOURCES/${name}-${version}/
+cd "${path}"/SOURCES/
+tar -czf "${source0}" ${name}-${version}
+rm -rf "${path}"/SOURCES/${name}-${version}
+cp -a "${basedir}"/${source1}   "${path}"/SOURCES/${source1}
+cp -a "${basedir}"/eminfo.spec  "${path}"/SPECS/
+
+cat > ~/.rpmmacros <<EOF
+%_topdir ${path}/
+EOF
+
+/usr/bin/rpmbuild -bb "${path}"/SPECS/eminfo.spec >/dev/null 2>&1
+find "${path}"/RPMS/ -type f -iname "*.rpm"

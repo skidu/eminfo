@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+#
+# Inner Plugin:  periodic post heartbeat.
+#
+
+if [ -z "${BASE_DIR}" ]; then
+        path=$(cd $(dirname $0) && pwd)  
+        BASE_DIR=${path%/*}
+        BASE_DIR=${BASE_DIR%/*}
+        source ${BASE_DIR}/bin/include 2>&-
+fi
+
+
+
+# Read plugin config value here
+post_server=$(read_eminfo_config postlog post_server)
+queue_name=$(read_eminfo_config postlog heartbeat_queue_name)
+auth_pass=$(read_eminfo_config postlog auth_pass)
+charset=$(read_eminfo_config postlog charset)
+post_time_out=$(read_eminfo_config postlog post_time_out)
+post_server_port=$(read_eminfo_config postlog post_server_port)
+
+# if null or invalid set default.
+[ -z "${charset//[ ]}" ] && {
+        charset="utf-8"
+}
+
+[ -z "${post_time_out//[ ]}" -o ! -z "${post_time_out//[0-9]}" ] && {
+        post_time_out="10"
+}
+
+[ -z "${post_server_port//[ ]}" -o ! -z "${post_server_port//[0-9]}" ] && {
+        post_server_port="1218"
+}
+
+
+
+# check function here
+check() {
+  local result=
+  [ -z "${post_server//[ ]}" -o -z "${queue_name//[ ]}" -o -z "${auth_pass//[ ]}" ] && {
+	result="Critical Error: configurations not complete, [post_server,queue_name,auth_pass can't be empty]. EXIT"
+        return
+  }
+  local eminfo_id=$(get_eminfo_id) timestamp=$(date +%s)
+  local heartbeat="eminfo_id=${eminfo_id}  timestamp=${timestamp}  heartbeat=iamalive"
+  local postdata=$(echo -n "${heartbeat}" | /usr/bin/od -t x1 -A n -w1000 | tr " " "%" | tr -d '\r\n')
+  # curl -s: silient
+  result=$( /usr/bin/curl -k -s --connect-timeout ${post_time_out} -d "${postdata}" "https://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
+  if [ "$?" == "0" ]; then
+	result="SUCCESS: post heartbeat=[${heartbeat}] result=[${result}]"
+  else
+	result="FAIL: post heartbeat=[${heartbeat}] result=[${result}]"
+  fi
+  echo -e "${result}"
+}
+
+check
