@@ -41,7 +41,7 @@ check() {
   local result=
   [ -z "${post_server//[ ]}" -o -z "${queue_name//[ ]}" -o -z "${auth_pass//[ ]}" ] && {
 	result="Critical Error: configurations not complete, [post_server,queue_name,auth_pass can't be empty]. EXIT"
-        exit 1
+        return
   }
   local eminfo_id=$(get_eminfo_id) timestamp=$(date +%s)
   local heartbeat="eminfo_id=${eminfo_id}  timestamp=${timestamp}  heartbeat=iamalive"
