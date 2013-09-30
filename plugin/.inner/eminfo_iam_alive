@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #
-# Inner Plugin:  periodic rollback logfiles.
+# Inner Plugin:  periodic post heartbeat.
 #
 
 if [ -z "${BASE_DIR}" ]; then
@@ -49,7 +49,7 @@ check() {
   # curl -s: silient
   result=$( /usr/bin/curl -k -s --connect-timeout ${post_time_out} -d "${postdata}" "https://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
   if [ "$?" == "0" ]; then
-	result="SUCCESS: post heartbeat=[${heartbeat}]  result=[${result}]"
+	result="SUCCESS: post heartbeat=[${heartbeat}] result=[${result}]"
   else
 	result="FAIL: post heartbeat=[${heartbeat}] result=[${result}]"
   fi
