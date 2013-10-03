@@ -76,6 +76,7 @@ mail_receviers=$(read_eminfo_config plugin_default mail_receviers)
 
 ### Main Body Begin...
 
+# set eminfo_id
 if [ -z "${eminfo_id//[ ]}" ]; then
 	if [ ! -z "${disk_uuid//[ ]}" ]; then
 		setby="disk_uuid: ${disk_uuid}"
@@ -114,6 +115,7 @@ else
 fi
 
 
+# set eminfo_name
 if [ -z "${eminfo_name//[ ]}" -o "${eminfo_name//[ ]}" == "eminfo_ops.eyou.net" ]; then
   	echo -en "\n\nExample: mysql-master web mta ldap memcache\n\n"
 	valid=0
@@ -165,7 +167,7 @@ else
 	echo -en "eminfo_name already set: [$(echo_green "${eminfo_name}")]";echo
 fi
 
-
+# set mail_receviers
 if [ -z "${mail_receviers//[ ]}" -o "${mail_receviers//[ ]}" == "root_bbk@126.com" ]; then
 	echo -en "\n\nExample: abc@126.com  test@test.net \n\n"
 	valid=0
@@ -211,3 +213,5 @@ if [ -z "${mail_receviers//[ ]}" -o "${mail_receviers//[ ]}" == "root_bbk@126.co
 else
 	echo -en "default mail_receviers already set: [$(echo_green "${mail_receviers}")]";echo
 fi
+
+# END
