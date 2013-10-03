@@ -4,8 +4,11 @@ path=$(cd $(dirname $0) && pwd)
 basedir=${path%/*}
 
 # first: clear old files
-rm -rf "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
-mkdir -p "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+clean(){
+  rm -rf "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+  mkdir -p "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+}
+clean
 [ "$1" == "clean" ] && exit 0
 
 [ -f "/usr/bin/rpmbuild" -a -x "/usr/bin/rpmbuild" ] || {
@@ -30,5 +33,5 @@ cat > ~/.rpmmacros <<EOF
 %_topdir ${path}/
 EOF
 
-/usr/bin/rpmbuild -bb "${path}"/SPECS/eminfo.spec >/dev/null 2>&1
-find "${path}"/RPMS/ -type f -iname "*.rpm"
+/usr/bin/rpmbuild -bb "${path}"/SPECS/eminfo.spec 2>&1
+find "${path}"/RPMS/ -type f -iname "*.rpm" -print
