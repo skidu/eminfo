@@ -2473,7 +2473,7 @@ process_sysoverload() {
 	"| $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T)"\
 	"### Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]"\
 	"### Plugin: [${plugin_name}] has been cancled }";
-  local hd_output="Nothing to do"
+  local hd_output="System OverLoaded, Nothing to do"
 
   # Step 0: update status.
   update_status "${plugin_name}" "Cancle on System Overload"
