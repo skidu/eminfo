@@ -28,21 +28,32 @@ mode="$1"
 ### Data Preparation...
 
 # try to search basic_domain
-v4_config="/var/eyou/etc/eyou_smtpd_config"
 v5_config="/usr/local/eyou/mail/etc/eyou_mail.ini"
+v4_config="/var/eyou/etc/eyou_smtpd_config"
+gw_config="/var/emdg/etc/domain.conf"
 if [ -f "${v5_config}" -a -s "${v5_config}" ]; then
 	base_domain=$(awk -F"=" '($1~/server_me\>/) {$1="";print;exit;}' "${v5_config}" 2>&- | tr -d '[" \t]')
 elif [ -f "${v4_config}" -a -s "${v4_config}" ]; then
 	base_domain=$(awk '($1~/o_value\>/) {$1="";print;exit;}' "${v4_config}" 2>&- | tr -d '[ \t]')
+elif [ -f "${gw_config}" -a -s "${gw_config}" ]; then
+	base_domain=$(awk '{print $1;exit}' "${gw_config}" 2>&- | tr -d '[ \t]')
 fi  
 base_domain="${base_domain//[ ]}"
 
 # try to search disk uuid
-disk_uuid=$(ls /dev/disk/by-uuid/ 2>&-)
+disk_uuid=$(/sbin/blkid -s UUID -o value 2>&-|tr -d '\r\n')
+[ -z "${disk_uuid//[ ]}" ] && {
+	disk_uuid=$(/sbin/blkid -s UUID  2>&-|awk -F"=" '{print $2}'|tr -d '"'|tr -d '\r\n')
+}
 disk_uuid="${disk_uuid//[ ]}"
 
-# try to search kernel uuid
-kern_uuid=$(cat /proc/sys/kernel/random/uuid 2>&-)
+# try to search imac uuid
+imac_uuid=$(/usr/bin/uuidgen -t 2>&-|tr -d '\r\n')
+imac_uuid="${imac_uuid##*-}"
+imac_uuid="${imac_uuid//[ ]}"
+
+# try to search kernel uuid  (random, not recommanded)
+kern_uuid=$(cat /proc/sys/kernel/random/uuid 2>&-|tr -d '\r\n')
 kern_uuid="${kern_uuid//[ ]}"
 
 # read eminfo global id
@@ -59,13 +70,19 @@ mail_receviers=$(read_eminfo_config plugin_default mail_receviers)
 
 if [ -z "${eminfo_id//[ ]}" ]; then
 	if [ ! -z "${disk_uuid//[ ]}" ]; then
+		setby="disk_uuid: ${disk_uuid}"
 		eminfo_id=$(echo -n "${disk_uuid}"|/usr/bin/cksum|awk '{print $1}'|tr -d '\r\n')
+	elif [ ! -z "${imac_uuid//[ ]}" ]; then
+		setby="imac_uuid: ${imac_uuid}"
+		eminfo_id=$(echo -n "${imac_uuid}"|/usr/bin/cksum|awk '{print $1}'|tr -d '\r\n')
 	elif [ ! -z "${kern_uuid//[ ]}" ]; then
+		setby="kern_uuid: ${kern_uuid}"
 		eminfo_id=$(echo -n "${kern_uuid}"|/usr/bin/cksum|awk '{print $1}'|tr -d '\r\n')
 	fi
 	if [ "${mode}" == "rpminit" ]; then
-		echo -en "initializing after rpm installation ..."; echo
-		echo -en "trying to set eminfo_id as [$(echo_green "${eminfo_id}")] ... "
+		echo -en "initializing ..."; echo
+		echo -en "set eminfo_id as [$(echo_green "${eminfo_id}")] ... "
+		write_log -f "${EMINFO_LOG}" "SETINITX eminfo_id=[${eminfo_id}] setby=[${setby}]"
 		update_eminfo_config global id "${eminfo_id}"
 		rc=$?
 		case "${rc}" in
@@ -82,7 +99,7 @@ if [ -z "${eminfo_id//[ ]}" ]; then
 		*)	echo_red "[FAIL]";echo					;;
 		esac
 	else
-		echo_red "eminfo_id is empty ! try argument rpminit";echo
+		echo_red "eminfo_id empty ! try argument rpminit";echo
 	fi
 else
 	echo -en "eminfo_id already set: [$(echo_green "${eminfo_id}")]";echo
@@ -119,7 +136,8 @@ if [ -z "${eminfo_name//[ ]}" -o "${eminfo_name//[ ]}" == "eminfo_ops.eyou.net" 
 		fi
 	done
 	eminfo_name="${input_role}_${input_domain}"
-	echo -en "trying to set eminfo_name as [$(echo_green "${eminfo_name}")] ... "
+	echo -en "set eminfo_name as [$(echo_green "${eminfo_name}")] ... "
+	write_log -f "${EMINFO_LOG}" "SETINITX eminfo_name=[${eminfo_name}]"
 	update_eminfo_config global name "${eminfo_name}"
 	rc=$?
 	case "${rc}" in
@@ -164,7 +182,8 @@ if [ -z "${mail_receviers//[ ]}" -o "${mail_receviers//[ ]}" == "root_bbk@126.co
 		fi
 	done
 	mail_receviers="${input_mail_receviers}"
-	echo -en "trying to set default mail_receviers as [$(echo_green "${mail_receviers}")] ... "
+	echo -en "set default mail_receviers as [$(echo_green "${mail_receviers}")] ... "
+	write_log -f "${EMINFO_LOG}" "SETINITX default_mail_receviers=[${mail_receviers}]"
 	update_eminfo_config plugin_default mail_receviers "${mail_receviers}"
         rc=$?
         case "${rc}" in

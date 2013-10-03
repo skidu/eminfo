@@ -130,6 +130,8 @@ array_base_cmd=(
   /usr/bin/tr
   /usr/bin/curl
   /usr/bin/nc
+  /sbin/blkid
+  /usr/bin/uuidgen
   /usr/bin/cksum
 )
 
