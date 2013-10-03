@@ -19,6 +19,14 @@
 	echo "/usr/bin/cksum not prepared"
 	exit 1
 }
+[ -f "/sbin/blkid" -a -x "/sbin/blkid" ] || {
+	echo "/sbin/blkid not prepared" 
+	exit 1
+}
+[ -f "/usr/bin/uuidgen" -a -x "/usr/bin/uuidgen" ] || {
+	echo "/usr/bin/uuidgen not prepared"
+	exit 1
+}
 
 # mode = rpminit
 mode="$1"
