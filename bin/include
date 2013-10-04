@@ -2350,7 +2350,7 @@ process_plugin() {
 # Usage:	process_inner_plugin    plugin_name 
 #
 process_inner_plugin() {
-  local plugin_name=$1  output=
+  local plugin_name=$1  mode=$2 output=
 
   # Step 1: set random/unique jid
   local jid=$(mktemp -u XXXXXXXX)    
@@ -2361,7 +2361,7 @@ process_inner_plugin() {
         write_log -f ${INNER_LOG} ${jid} ${plugin_name} "plugin file:"\
 		"[${INNER_DIR}/${plugin_name}] not exist. EXIT";
         del_fpid "${plugin_name}"
-        un_lock "${plugin_name}"
+        [ "${mode}" == "startrun" ] || un_lock "${plugin_name}"
         return 3
   else
         write_log -f ${INNER_LOG} ${jid} ${plugin_name} "plugin file:"\
@@ -2378,7 +2378,7 @@ process_inner_plugin() {
  update_status "${plugin_name}" "${output}"
  update_lastrun_and_nextrun "${plugin_name}"
  del_fpid "${plugin_name}"
- un_lock "${plugin_name}"
+ [ "${mode}" == "startrun" ] || un_lock "${plugin_name}"
  write_log -f ${INNER_LOG} ${jid} ${plugin_name} "execution DONE."
 
 }
@@ -2508,7 +2508,6 @@ process_sysoverload() {
 
 # plugin_name="check_pop_svr"
 
-# clear_dead_lock_pid
 # get_children_pids_by_pid  1
 # stopps_by_pidfile  /tmp/1.pid
 # stopps_by_pidfile /bak/workdir/eminfo/tmp/run/check_sysload.pid
@@ -2528,6 +2527,9 @@ process_sysoverload() {
 # gen_tmpfile check_sysload
 # list_enabled_plugin_section
 # gen_lock check_disk_freespace
+# gen_lock eminfo_log_rotate
+# clear_dead_lock_pid check_disk_freespace
+# clear_dead_lock_pid eminfo_log_rotate
 # list_running_plugin_section
 # check_lock   check_sysload
 # sub_str "${TMP_DIR}" "eminfo/tmp"

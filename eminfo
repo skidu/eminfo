@@ -277,7 +277,7 @@ else
 	for plugin_name in `list_inner_plugin_section`
 	do
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO executing inner plugins [${plugin_name}] ..."
-		process_inner_plugin "${plugin_name}"
+		process_inner_plugin "${plugin_name}" "startrun"   # startrun: no need to un_lock
 	done
 	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO inner plugins execution done. details in ${INNER_LOG##*/}."
 	
@@ -373,15 +373,15 @@ stop_core_cron() {
   echo_green trying to stop eminfo...
   status=$( show_status 2>&1 )
   if [ "$?" == "0" ]; then   ### is running    status: fake? is dangerous ==> SKIP
-  	write_log -f "${EMINFO_LOG}" S0000000 EMINFO stopping...
+  	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO stopping..."
 
 		# 1. first stop core cron
-		write_log -f "${EMINFO_LOG}" S0000000 1 "=>" stop eminfo core cron.
+		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO 1 => stop eminfo core cron"
 		stopps_by_pidfile ${PID_FILE}
 
 		# 2. then stop all running plugins
 		rps="$(list_running_plugin_section | tr '\n' ' ')"
-		write_log -f "${EMINFO_LOG}" S0000000 2 "=>" stop all of running plugins: "[${rps}]"
+		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO 2 => stop all of running plugins: [${rps}]"
 		for p in `echo "${rps}"`
   		do
 			stop_single_plugin "${p}"
@@ -389,7 +389,7 @@ stop_core_cron() {
   		done
 
 	echo_green "  [OK]"; echo
-	write_log -f "${EMINFO_LOG}" S0000000 3 "=>" stop eminfo done.
+	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO 3 => stop eminfo done"
   else
 	echo_red "  [SKIP]" ; echo
 	echo "${status}"
@@ -405,8 +405,8 @@ reload_core_cron(){
   status=$( show_status 2>&1 )
   if [ "$?" == "0" ]; then   ### eminfo is running      status: fake? is DANGEROUS ! ==> SKIP
   	read pid < "${PID_FILE}"
-	write_log -f "${EMINFO_LOG}" R0000000 EMINFO Deamon is Running, PID: [${pid}].
-	write_log -f "${EMINFO_LOG}" R0000000 EMINFO Reloading Include File, Sending Signal 1 to EMINFO Daemon: [${pid}].
+	write_log -f "${EMINFO_LOG}" "R0000000 EMINFO Deamon is Running, PID: [${pid}]"
+	write_log -f "${EMINFO_LOG}" "R0000000 EMINFO Reloading Include File, Sending Signal 1 to EMINFO Daemon: [${pid}]"
 	kill -1 "${pid}" 2>&-   ### send signal 1 to eminfo daemon.
 	echo_green "  [OK]"; echo
 	return 0
