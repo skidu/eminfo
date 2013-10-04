@@ -33,7 +33,7 @@ show_usage(){
 #
 conv_output2mailbody() {
   local content=$1  hd_content=$2
-  local level= title= summary= details= mailbody=
+  local level= title= summary= details= mailbody= rc=
 
   level=$(${PLUTIL} part_pstr_output 1 "${content}" | tr '[a-z]' '[A-Z]')
   title=$(${PLUTIL} part_pstr_output 4 "${content}")
@@ -51,14 +51,15 @@ conv_output2mailbody() {
   echo "<br>------------------<br>"
   echo "$(html_green "Auto Handle:") <br><br>"
   echo "${hd_content}"
-  } >> "${mailbody}"
+  } >> "${mailbody}" 2>&1
   rc=$?
   if [ "${rc}" == "0" ]; then
-        write_log -f "${SENDMAIL_LOG}" "00000000 convert output to mailbody file success:"\
-                "[${mailbody}] [level=${level} title=${title} summary=${summary}]";
+        write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"INFO: convert output to mailbody file success: [${mailbody}] "\
+                "[level=${level} title=${title} summary=${summary}]";
   else
-        write_log -f "${SENDMAIL_LOG}" "E0000000 convert output to mailbody file error:"\
-                "[${mailbody}]";
+        write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"WARN: convert output to mailbody file error: [${mailbody}]";
   fi
 
   echo "${mailbody}"
