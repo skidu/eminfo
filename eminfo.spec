@@ -54,6 +54,7 @@ if [ -L "/usr/bin/eminfo" ]; then
 else
 	/bin/ln -sv /usr/local/eminfo/eminfo /usr/bin/eminfo
 fi
+/bin/bash /usr/local/eminfo/bin/setinit rpminit
 
 %preun
 /sbin/service %{name} stop >/dev/null 2>&1

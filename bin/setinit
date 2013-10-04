@@ -76,6 +76,7 @@ mail_receviers=$(read_eminfo_config plugin_default mail_receviers)
 
 ### Main Body Begin...
 
+if [ "${mode}" == "rpminit" ]; then
 # set eminfo_id
 if [ -z "${eminfo_id//[ ]}" ]; then
 	if [ ! -z "${disk_uuid//[ ]}" ]; then
@@ -88,33 +89,29 @@ if [ -z "${eminfo_id//[ ]}" ]; then
 		setby="kern_uuid: ${kern_uuid}"
 		eminfo_id=$(echo -n "${kern_uuid}"|/usr/bin/cksum|awk '{print $1}'|tr -d '\r\n')
 	fi
-	if [ "${mode}" == "rpminit" ]; then
-		echo -en "initializing ..."; echo
-		echo -en "set eminfo_id as [$(echo_green "${eminfo_id}")] ... "
-		write_log -f "${EMINFO_LOG}" "SETINITX eminfo_id=[${eminfo_id}] setby=[${setby}]"
-		update_eminfo_config global id "${eminfo_id}"
+	echo -en "initializing eminfo id ..."; echo
+	echo -en "set eminfo_id as [$(echo_green "${eminfo_id}")] ... "
+	write_log -f "${EMINFO_LOG}" "SETINITX eminfo_id=[${eminfo_id}] setby=[${setby}]"
+	update_eminfo_config global id "${eminfo_id}"
+	rc=$?
+	case "${rc}" in
+	"0")	echo_green "[OK]";echo					;;
+	"2")	echo_yellow "[SKIP]";echo				;;
+	"5")	add_eminfo_config global id "${eminfo_id}"
 		rc=$?
 		case "${rc}" in
-		"0")	echo_green "[OK]";echo					;;
-		"2")	echo_yellow "[SKIP]";echo				;;
-		"5")	add_eminfo_config global id "${eminfo_id}"
-			rc=$?
-			case "${rc}" in
-			"0") echo_green "[OK]"; echo				;;
-			"2") echo_yellow "[SKIP]";echo				;;
-			*)   echo_red "[FAIL]"; echo				;;
-			esac
-			;;
-		*)	echo_red "[FAIL]";echo					;;
+		"0") echo_green "[OK]"; echo				;;
+		"2") echo_yellow "[SKIP]";echo				;;
+		*)   echo_red "[FAIL]"; echo				;;
 		esac
-	else
-		echo_red "eminfo_id empty ! try argument rpminit";echo
-	fi
+		;;
+	*)	echo_red "[FAIL]";echo					;;
+	esac
 else
 	echo -en "eminfo_id already set: [$(echo_green "${eminfo_id}")]";echo
 fi
 
-
+else
 # set eminfo_name
 if [ -z "${eminfo_name//[ ]}" -o "${eminfo_name//[ ]}" == "eminfo_ops.eyou.net" ]; then
   	echo -en "\n\nExample: mysql-master web mta ldap memcache\n\n"
@@ -214,4 +211,5 @@ else
 	echo -en "default mail_receviers already set: [$(echo_green "${mail_receviers}")]";echo
 fi
 
+fi
 # END
