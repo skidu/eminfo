@@ -41,19 +41,30 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 %files
 %defattr(-,root,root,-)
 %attr(0755, root, root) %{_initrddir}/%{name}
-%attr(0755, root, root) /usr/local/%{name}
+/usr/local/%{name}
 
 %post
 /sbin/chkconfig --add %{name}
-/bin/ln -sv /usr/local/eminfo/eminfo /usr/bin/eminfo
-# /bin/bash /usr/local/eminfo/bin/setinit rpminit
+if [ -L "/usr/bin/eminfo" ]; then
+	if [ "$(/bin/readlink /usr/bin/eminfo)" == "/usr/local/eminfo/eminfo" ]; then
+		:
+	else
+		echo "symbolic link /usr/bin/eminfo did't link to /usr/local/eminfo/eminfo"
+	fi
+else
+	/bin/ln -sv /usr/local/eminfo/eminfo /usr/bin/eminfo
+fi
 
 %preun
 /sbin/service %{name} stop >/dev/null 2>&1
 /sbin/chkconfig --del %{name}
 
 %postun
-[ -d /usr/local/eminfo ] && mv /usr/local/eminfo /usr/local/eminfo_$(date +%s)
+if [ -d /usr/local/eminfo ]; then
+	mv /usr/local/eminfo /usr/local/eminfo_$(date +%s)
+else
+	:
+fi
 
 %changelog
 * Mon Sep 23 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
