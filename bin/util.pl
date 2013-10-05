@@ -201,6 +201,7 @@ sub format_phoutput_toxml {
 
 			$post_length += length($content);
 			### post_length: $post_length
+			next if $post_length == 0;
 			if ($post_length >= $max_length){
 				$xml_result .= "<line>post length exceed $max_length</line>\n";
 				last;
@@ -230,6 +231,7 @@ sub format_phoutput_toxml {
 
 		$post_length += length;
 		### post_length: $post_length
+		next if $post_length == 0;
 		if ($post_length >= $max_length){
 			$xml_result .= "<line>post length exceed $max_length</line>\n";
 			last;
