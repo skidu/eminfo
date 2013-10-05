@@ -513,6 +513,7 @@ read_eminfo_config(){
 # 3 : Missging arguments
 # 4 : ${config_file} empty / not exist 
 # 5 : [section].key not exist
+# 9 : WARN -> update global.id global.name
 # LogFlag:      CHNG0000
 # 
 update_eminfo_config() {
@@ -523,6 +524,13 @@ update_eminfo_config() {
 		"missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
   else
+	# return 9(warn) if global.id global.name
+	if [ "${section}" == "global" -a "${key}" == "id" ]; then
+		return 9
+	elif [ "${section}" == "global" -a "${key}" == "name" ]; then
+		return 9
+	fi
+	# set config_file
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
         	config_file="${CONFIG_FILE}"
         elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
@@ -592,6 +600,7 @@ update_eminfo_config() {
 # 3 : Missging arguments
 # 4 : ${config_file} empty / not exist 
 # 5 : [section] not exist
+# 9 : WARN -> add global.id global.name
 # LogFlag:      ADDC0000
 # 
 add_eminfo_config() {
@@ -602,6 +611,13 @@ add_eminfo_config() {
                 "missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
   else 
+	# return 9(warn) if global.id global.name
+	if [ "${section}" == "global" -a "${key}" == "id" ]; then
+		return 9
+	elif [ "${section}" == "global" -a "${key}" == "name" ]; then
+		return 9
+	fi
+	# set config_file 
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
         	config_file="${CONFIG_FILE}"
         elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
@@ -673,6 +689,7 @@ add_eminfo_config() {
 # 3 : Missging arguments
 # 4 : ${config_file} empty / not exist 
 # 5 : [section] not exist
+# 9 : WARN -> del global.id global.name
 # LogFlag:	DELC0000
 #
 del_eminfo_config() {
@@ -683,6 +700,13 @@ del_eminfo_config() {
 		"missing arguments, section=[${section}] key=[${key}]";
         return 3
   else
+	# return 9(warn) if global.id global.name
+	if [ "${section}" == "global" -a "${key}" == "id" ]; then
+		return 9
+	elif [ "${section}" == "global" -a "${key}" == "name" ]; then
+		return 9
+	fi
+	# set config_file 
 	if [ "${section}" == "global" -o "${section}" == "plugin_default" ]; then 
         	config_file="${CONFIG_FILE}"
         elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then

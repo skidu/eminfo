@@ -660,6 +660,7 @@ case "$#" in
 			case "$rc" in
 			"0") echo "delete [$2]-[$3] success [$(echo_green OK)]" 				;;
 			"2") echo "delete [$2]-[$3] skip [$(echo_yellow NoNeed: config [$3] already not exists)]"	;;
+			"9") echo "** $(echo_yellow "operation refused") **"					;;
 			*)   echo "delete [$2]-[$3] failed [$(echo_red FAIL)], details in ${EMINFO_LOG}"    	;;
 			esac
 			exit ${rc}
@@ -688,6 +689,7 @@ case "$#" in
 			case "$rc" in
 			"0") echo "add [$2]-[$3]:[$4] success [$(echo_green OK)]"  		;;
 			"2") echo "add [$2]-[$3]:[$4] skip [$(echo_yellow NoNeed: config [$3] already exists)]"		;;
+			"9") echo "** $(echo_yellow "operation refused") **" 					  ;;
 			*)   echo "add [$2]-[$3]:[$4] failed [$(echo_red FAIL)], details in ${EMINFO_LOG}"        ;;
 			esac
 			exit ${rc}
@@ -704,6 +706,7 @@ case "$#" in
 			"0") echo "update [$2]-[$3]:[$4] success [$(echo_green OK)]"					;;
 			"2") echo "update [$2]-[$3]:[$4] skip [$(echo_yellow NoNeed: config [$3] is already what you want)]" ;;
 			"5") echo "update [$2]-[$3]:[$4] warn [$(echo_yellow NoConf: config [$3] not found)]"	;;
+			"9") echo "** $(echo_yellow "operation refused") **" 					;;
 			*)   echo "update [$2]-[$3]:[$4] failed $(echo_red FAIL)], details in ${EMINFO_LOG}"		;;
 			esac
 			exit ${rc}
