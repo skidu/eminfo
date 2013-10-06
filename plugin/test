@@ -1,5 +1,11 @@
 #!/bin/bash
 
+BASE_DIR="$(/usr/local/eminfo/eminfo basedir)"
+[ -f "${BASE_DIR}/bin/include" -a -s "${BASE_DIR}/bin/include" ] && {
+        source ${BASE_DIR}/bin/include 2>&-
+}
+
+
 # Return Codes
 STATE_OK=0
 STATE_WARNING=1

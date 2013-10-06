@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-# use Smart::Comments;
+use Smart::Comments;
 
 my $action = shift;
 &help if !$action;
@@ -89,8 +89,11 @@ sub format_pstr_output_toterm {
 	### processed_content: $content
 	open my $fh, "<", \$content;
 	  while(<$fh>){
+		### process_line: $_
 		if (/\A(\w+)\s+:::\s+(.+)\Z/){
 			my ($color,$body) = ($1,$2);
+			### color: $color
+			### color_line: $body
 			if ($color eq 'green'){
 				$body = "\033[1;32m$body\033[0m";
 			} elsif ($color eq 'red'){
@@ -104,7 +107,7 @@ sub format_pstr_output_toterm {
 			s/[\r\n]//g;
 			s/&nbsp;/ /g;
 			s/<br>/\n/g;
-			s/\<[^\<\>]*\>//g;
+			#s/\<[^\<\>]*\>//g;   # trim (most likely) html-tag
 			s/\s*###\s*/\n/g;
 			print; #  if !(/\A\s+\Z/);
 		}
@@ -191,7 +194,7 @@ sub format_phoutput_toxml {
 			$content =~ s/\A\s+//g;   # trim head \s
 			$content =~ s/[\r\n]//g;  # trim \r\n
 			$content =~ s/&nbsp;/ /g;  # replace html space
-			$content =~ s/\<[^\<\>]*\>//g; # trim html-tag
+			# $content =~ s/\<[^\<\>]*\>//g;  # trim (most likely) html-tag 
 			# replace unsupported chars
 			$content =~ s/&/&amp;/g;
 			$content =~ s/</&lt;/g;
@@ -221,7 +224,7 @@ sub format_phoutput_toxml {
 		s/\A\s+//g;   # trim head \s
 		s/[\r\n]//g;  # trim \r\n
 		s/&nbsp;/ /g;   # replace html space
-		s/\<[^\<\>]*\>//g;  # trim html-tag
+		# s/\<[^\<\>]*\>//g;  # trim (most likely) html-tag 
 		# replace unsupported chars
 		s/&/&amp;/g;  
 		s/</&lt;/g;
