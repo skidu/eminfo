@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Smart::Comments;
+# use Smart::Comments;
 
 my $action = shift;
 &help if !$action;
