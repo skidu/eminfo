@@ -130,7 +130,7 @@ sub format_phoutput_toxml {
 
 	my $post_length = 0;
 	(my $max_length = `/usr/local/eminfo/eminfo view postlog post_max_length 2>&-`) =~ s/[\r\n]//g;
-	$max_length = 128000 if (!$max_length || $max_length =~ /\D/);
+	$max_length = 50000 if (!$max_length || $max_length =~ /\D/ || $max_length >= 50000);
 	### max_length: $max_length
 
 	my $xml_result = "<eminfo_plugin_result>\n";

@@ -87,9 +87,11 @@ ARRAY_CONFIG_RULES=(
 	"sendmail=>smtp_server_port"		"int:1:65535"
 	"sendmail=>time_out"			"int:1:300"
 	"sendmail=>charset"			"cbset:[utf8|gbk|gb2312|big5]"
+	"sendmail=>auth_user"			"emls"
 	"postlog=>post_server_port"		"int:1:65535"
 	"postlog=>post_time_out"		"int:1:300"
 	"postlog=>charset"			"cbset:[utf-8]"
+	"postlog=>post_max_length"		"int:1:50001"
 )
 
 
@@ -130,10 +132,9 @@ check_type_emls(){
 	for eml in `echo -e "${input}"`
 	do
 		if [ "${eml}" == "$(echo -e "${eml}" | grep -E -o "\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*")" ]; then
-			result="${result} [${eml}] valid email address;"
 			((oknum++))
 		else
-			result="${result} [${eml}] invalid email address;"
+			result="${result} [${eml}] invalid;"
 			((errnum++))
 		fi
 		((total++))
@@ -142,7 +143,7 @@ check_type_emls(){
 		result="CRIT, [${errnum}/${total}] invalid email address. ${result}"
 		rc=${STATE_CRIT}
 	} || {
-		result="OK, [${oknum}/${total}] valid email address. ${result}"
+		result="OK, [${oknum}/${total}] valid email address."
 		rc=${STATE_OK}
 	}
   }
