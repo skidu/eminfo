@@ -118,6 +118,7 @@ array_base_cmd=(
   /bin/unlink
   /usr/bin/readlink
   /usr/bin/stat
+  /bin/touch
   /bin/rm
   /bin/tar
   /bin/gzip
