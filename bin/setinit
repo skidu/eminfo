@@ -92,12 +92,12 @@ if [ -z "${eminfo_id//[ ]}" ]; then
 	echo -en "initializing eminfo id ..."; echo
 	echo -en "set eminfo_id as [$(echo_green "${eminfo_id}")] ... "
 	write_log -f "${EMINFO_LOG}" "SETINITX eminfo_id=[${eminfo_id}] setby=[${setby}]"
-	update_eminfo_config global id "${eminfo_id}"
+	update_eminfo_config rpminit global id "${eminfo_id}"
 	rc=$?
 	case "${rc}" in
 	"0")	echo_green "[OK]";echo					;;
 	"2")	echo_yellow "[SKIP]";echo				;;
-	"5")	add_eminfo_config global id "${eminfo_id}"
+	"5")	add_eminfo_config rpminit global id "${eminfo_id}"
 		rc=$?
 		case "${rc}" in
 		"0") echo_green "[OK]"; echo				;;

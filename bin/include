@@ -504,8 +504,8 @@ read_eminfo_config(){
 }
 
 # According to exist plugin-name/key and input value, update matched value in config file.
-# Usage:	update_eminfo_config {plugin-name} {config-name} {value}
-# Example:	update_eminfo_config check_sysload enable no
+# Usage:	update_eminfo_config [rpminit] {plugin-name} {config-name} {value}
+# Example:	update_eminfo_config 	       check_sysload enable no
 # Return:	
 # 0 : Update OK
 # 1 : Update ERROR
@@ -517,7 +517,12 @@ read_eminfo_config(){
 # LogFlag:      CHNG0000
 # 
 update_eminfo_config() {
-  local section=$1 key=$2 ; shift 2 ; local value=$*
+  local mode=$1 
+  if [ "${mode}" == "rpminit" ]; then   ### only called by bin/setinit rpminit
+ 	local section=$2 key=$3 ; shift 3 ; local value=$*
+  else
+  	local section=$1 key=$2 ; shift 2 ; local value=$*
+  fi
   local errinfo=  config_file=
   if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then
         write_log -f "${EMINFO_LOG}" "E0000000 update_eminfo_config error:"\
@@ -525,9 +530,9 @@ update_eminfo_config() {
         return 3
   else
 	# return 9(warn) if global.id global.name
-	if [ "${section}" == "global" -a "${key}" == "id" ]; then
+	if [ "${section}" == "global" -a "${key}" == "id" -a "${mode}" != "rpminit" ]; then
 		return 9
-	elif [ "${section}" == "global" -a "${key}" == "name" ]; then
+	elif [ "${section}" == "global" -a "${key}" == "name" -a "${mode}" != "rpminit" ]; then
 		return 9
 	fi
 	# set config_file
@@ -591,8 +596,8 @@ update_eminfo_config() {
 }
 
 # According to exist plugin-name and input key/value , add key = value into config file.
-# Usage:        add_eminfo_config {plugin-name} {config-name} {value}
-# Example:      add_eminfo_config check_sysload enable no
+# Usage:        add_eminfo_config [rpminit] {plugin-name} {config-name} {value}
+# Example:      add_eminfo_config 	    check_sysload enable no
 # Return:       
 # 0 : ADD OK
 # 1 : ADD ERROR
@@ -604,7 +609,12 @@ update_eminfo_config() {
 # LogFlag:      ADDC0000
 # 
 add_eminfo_config() {
-  local section=$1 key=$2 ; shift 2 ; local value=$*
+  local mode=$1 
+  if [ "${mode}" == "rpminit" ]; then   ### only called by bin/setinit rpminit
+        local section=$2 key=$3 ; shift 3 ; local value=$*
+  else 
+        local section=$1 key=$2 ; shift 2 ; local value=$*
+  fi
   local errinfo=  config_file=
   if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then 
         write_log -f "${EMINFO_LOG}" "E0000000 add_eminfo_config error:"\
@@ -612,9 +622,9 @@ add_eminfo_config() {
         return 3
   else 
 	# return 9(warn) if global.id global.name
-	if [ "${section}" == "global" -a "${key}" == "id" ]; then
+	if [ "${section}" == "global" -a "${key}" == "id" -a "${mode}" != "rpminit" ]; then
 		return 9
-	elif [ "${section}" == "global" -a "${key}" == "name" ]; then
+	elif [ "${section}" == "global" -a "${key}" == "name" -a "${mode}" != "rpminit" ]; then
 		return 9
 	fi
 	# set config_file 
