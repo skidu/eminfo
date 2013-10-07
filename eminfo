@@ -35,7 +35,7 @@ set +m
 #
 if [ -s ${BASE_DIR}/bin/include ]; then
 	# eval | sh | bash | source | . ${BASE_DIR}/bin/include
-  	source ${BASE_DIR}/bin/include  
+  	source ${BASE_DIR}/bin/include 2>&-
 else
   	echo "${BASE_DIR}/bin/include not exist or empty. exit" 
 	exit 1
