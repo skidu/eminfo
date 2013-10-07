@@ -92,12 +92,12 @@ if [ -z "${eminfo_id//[ ]}" ]; then
 	echo -en "initializing eminfo id ..."; echo
 	echo -en "set eminfo_id as [$(echo_green "${eminfo_id}")] ... "
 	write_log -f "${EMINFO_LOG}" "SETINITX eminfo_id=[${eminfo_id}] setby=[${setby}]"
-	update_eminfo_config rpminit global id "${eminfo_id}"
+	update_eminfo_config force global id "${eminfo_id}"
 	rc=$?
 	case "${rc}" in
 	"0")	echo_green "[OK]";echo					;;
 	"2")	echo_yellow "[SKIP]";echo				;;
-	"5")	add_eminfo_config rpminit global id "${eminfo_id}"
+	"5")	add_eminfo_config force global id "${eminfo_id}"
 		rc=$?
 		case "${rc}" in
 		"0") echo_green "[OK]"; echo				;;
@@ -145,12 +145,12 @@ if [ -z "${eminfo_name//[ ]}" -o "${eminfo_name//[ ]}" == "eminfo_ops.eyou.net" 
 	eminfo_name="${input_role}_${input_domain}"
 	echo -en "set eminfo_name as [$(echo_green "${eminfo_name}")] ... "
 	write_log -f "${EMINFO_LOG}" "SETINITX eminfo_name=[${eminfo_name}]"
-	update_eminfo_config global name "${eminfo_name}"
+	update_eminfo_config force global name "${eminfo_name}"
 	rc=$?
 	case "${rc}" in
 	"0")    echo_green "[OK]";echo                                  ;;
 	"2")    echo_yellow "[SKIP]";echo                               ;;
-	"5")    add_eminfo_config global name "${eminfo_name}"
+	"5")    add_eminfo_config force global name "${eminfo_name}"
 		rc=$?
 		case "${rc}" in
 		"0") echo_green "[OK]"; echo                            ;;

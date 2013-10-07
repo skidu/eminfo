@@ -99,7 +99,7 @@ fi
 						     ### it changes directory in sub shell-script.
 cd "${snap_workdir}" 2>/tmp/.ftmpxxx_eminfo.takesnap 1>/dev/null
 if [ "$?" != "0" ]; then
-   	errstr=$(cat /tmp/.ftmpxxx_eminfo.takesnap 2>&-)
+   	errstr=$(cat /tmp/.ftmpxxx_eminfo.takesnap 2>&-|tr -d '\r\n')
 	write_log -f ${TAKESNAP_LOG} "[${from}]"\
 		"ERROR: change directory to snap workdir error: [${errstr}]"
 	exit 1
