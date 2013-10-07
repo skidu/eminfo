@@ -26,6 +26,10 @@ export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:
 #
 # BASE_DIR=$(cd "$(dirname "$0")" && pwd)
 BASE_DIR="/usr/local/eminfo"
+[ "$1" == "basedir" -o "$1" == "b" ] && {
+	echo "${BASE_DIR}" 
+	exit 0
+}
 
 # === Turn Off Job Control
 #

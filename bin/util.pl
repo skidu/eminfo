@@ -118,7 +118,7 @@ sub format_pstr_output_toterm {
 # Convert plugin/handler output to xml-content
 # Note:		called by handler postlog
 # Note:		process chars:  & < > ' "   =====>  &amp; &lt; &gt; &apos; &quot;
-# Example:      format_phoutput_toxml  "{level}:{type}:{title | summary | details: item1. ### <font color=red> item2. &nbsp; </font> ### item3. ### }"  "123"
+# Example:      format_phoutput_toxml  "{level}:{str}:{title | summary | item1. ### <font color=red> item2. &nbsp; </font> ### item3. ### }"  "123"
 # Example:      format_phoutput_toxml  "{level}:{type}:{title}"  "123"
 # Example:	format_phoutput_toxml  "{crit}:{file}:{ /etc/passwd /etc/services /etc/shadow }"  "auto handler result here"
 #
@@ -202,15 +202,24 @@ sub format_phoutput_toxml {
 			$content =~ s/"/&quot;/g;
 			$content =~ s/'/&apos;/g;
 
-			$post_length += length($content);
+			my $len = length($content);
+			next if $len == 0;
+
+			
+			$post_length += $len;
+			### content: $content
+			### +content_len: $len
 			### post_length: $post_length
-			next if $post_length == 0;
 			if ($post_length >= $max_length){
 				$xml_result .= "<line>post length exceed $max_length</line>\n";
 				last;
 			}
 
-			$xml_result .= sprintf("<line size=%d%s>$content</line>\n",length($content),($color)?" color=$color":"");
+			if ($color) {
+				$xml_result .= "<line size=\"$len\" color=\"$color\">$content</line>\n";
+			} else {
+				$xml_result .= "<line size=\"$len\">$content</line>\n";
+			}
 		}
 	}
 	PLUGIN_END: {
@@ -232,15 +241,18 @@ sub format_phoutput_toxml {
 		s/"/&quot;/g;
 		s/'/&apos;/g;
 
+		next if length == 0;
+
 		$post_length += length;
+		### content: $_
+		### +content_len: length
 		### post_length: $post_length
-		next if $post_length == 0;
 		if ($post_length >= $max_length){
 			$xml_result .= "<line>post length exceed $max_length</line>\n";
 			last;
 		}
 
-		$xml_result .= sprintf("<line size=%d>$_</line>\n",length);
+		$xml_result .= "<line size=\"".length($_)."\">$_</line>\n";
 	}
 	HANDLER_END: {
 		$xml_result .= "</eminfo_autohandle_result>\n";
