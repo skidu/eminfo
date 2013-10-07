@@ -26,10 +26,6 @@ export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:
 #
 # BASE_DIR=$(cd "$(dirname "$0")" && pwd)
 BASE_DIR="/usr/local/eminfo"
-[ "$1" == "basedir" -o "$1" == "b" ] && {
-	echo "${BASE_DIR}" 
-	exit 0
-}
 
 # === Turn Off Job Control
 #
@@ -44,32 +40,6 @@ else
   	echo "${BASE_DIR}/bin/include not exist or empty. exit" 
 	exit 1
 fi
-
-# === PRE CHECK
-#
-result=$( eval ${PRECHECK_SH} 2>&1 )
-if [ "$?" != "0" ]; then
-	echo -e "\nPreCheck Result: Sorry, Current Enviroment is NOT Suitable to Run EMINFO \n" 
-	echo -e "${result}"
-	exit 1
-fi  
-
-# === CHECK id/name/receviers
-#
-eminfo_id=$(get_eminfo_id)
-if [ "${eminfo_id}" == "0000000000" ]; then
-	. ${SETINIT_SH} rpminit
-fi
-eminfo_name=$(get_global_name)
-if [ "${eminfo_name}" == "eminfo_ops.eyou.net" ]; then
-	. ${SETINIT_SH}
-fi
-default_receviers=$(get_mail_receviers plugin_default)
-if [ "${default_receviers}" == "root_bbk@126.com" ]; then
-	. ${SETINIT_SH}
-fi
-
-
 
 
 ### Help
@@ -238,6 +208,20 @@ else
   		exit 1
 	else
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script precheck return succeed[rc=${rc}]. continue..."
+	fi
+
+	# === CHECK id/name/receviers
+	eminfo_id=$(get_eminfo_id)
+	if [ "${eminfo_id}" == "0000000000" ]; then
+        	. ${SETINIT_SH} rpminit
+	fi
+	eminfo_name=$(get_global_name)
+	if [ "${eminfo_name}" == "eminfo_ops.eyou.net" ]; then
+        	. ${SETINIT_SH}
+	fi
+	default_receviers=$(get_mail_receviers plugin_default)
+		if [ "${default_receviers}" == "root_bbk@126.com" ]; then
+        	. ${SETINIT_SH}
 	fi
 
 	# === CHECK CONFIG FILE ON Start
