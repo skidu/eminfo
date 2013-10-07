@@ -199,6 +199,7 @@ else
 	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO starting ..."
 
 	# === PRE CHECK ON Start
+	echo -en "1. prechecking envrioment      ... "
 	result=$( eval ${PRECHECK_SH} 2>&1 )
 	rc=$?
 	if [ "$rc" != "0" ]; then
@@ -207,10 +208,12 @@ else
   		echo -e "${result}"
   		exit 1
 	else
+		echo -e "[$(echo_green "succeed!")]"
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script precheck return succeed[rc=${rc}]. continue..."
 	fi
 
 	# === CHECK id/name/receviers
+	echo -en "2. verifying id/name/receviers ... "
 	eminfo_id=$(get_eminfo_id)
 	if [ "${eminfo_id}" == "0000000000" ]; then
         	. ${SETINIT_SH} rpminit
@@ -223,8 +226,10 @@ else
 		if [ "${default_receviers}" == "root_bbk@126.com" ]; then
         	. ${SETINIT_SH}
 	fi
+  	echo -e "[$(echo_green "succeed!")]"
 
 	# === CHECK CONFIG FILE ON Start
+	echo -en "3. checking config file        ... "
 	result=$( eval ${CHECKCONF_SH} 2>&1 )
 	rc=$?
 	if [ "$rc" != "0" ]; then
@@ -233,10 +238,12 @@ else
   		echo -e "${result}"
   		exit 1
 	else
+		echo -e "[$(echo_green "succeed!")]"
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script checkconf return succeed[rc=${rc}]. continue..."
 	fi
 
 	# === MAKEDIR ON Start
+	echo -en "4. creating directories        ... "
 	result=$( eval ${MAKEDIR_SH} 2>&1 )
 	rc=$?
 	if [ "$rc" != "0" ]; then
@@ -245,10 +252,12 @@ else
 		echo -e "${result}"
 		exit 1
 	else
+		echo -e "[$(echo_green "succeed!")]"
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script makedir return succeed[rc=$rc}]. continue..."
 	fi
 
 	# === DIRECTORY CHECK ON Start
+	echo -en "5. checking directories        ... "
 	result=$( eval "${MAKEDIR_SH} -c" 2>&1 )
 	rc=$?
 	if [ "$rc" != "0" ]; then
@@ -258,17 +267,21 @@ else
   		echo -e "Try to Run: ${MAKEDIR_SH}\n"
   		exit 1
 	else
+		echo -e "[$(echo_green "succeed!")]"
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script makedir -c return succeed[rc=$rc}]. continue..."
 	fi
 
 	# === Execute Inner Plugins ON Start
+	echo -en "6. running inner plugins       ... "
 	for plugin_name in `list_inner_plugin_section`
 	do
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO executing inner plugins [${plugin_name}] ..."
 		process_inner_plugin "${plugin_name}" "startrun"   # startrun: no need to un_lock
 	done
+	echo -e "[$(echo_green "succeed!")]"
 	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO inner plugins execution done. details in ${INNER_LOG##*/}."
 	
+	echo -en "7. starting eminfo cron        ... "
 	{ while : ; do
 		
 		### trap signal HUP to reload bin/include
@@ -348,6 +361,7 @@ else
 
 	### save daemon pid
 	echo $! > ${PID_FILE}
+	echo -e "[$(echo_green "succeed!")]"
 fi 
 
 }
@@ -358,7 +372,7 @@ fi
 stop_core_cron() {
   local status=  rps=
 
-  echo_green trying to stop eminfo...
+  echo -en "trying to stop eminfo ... "
   status=$( show_status 2>&1 )
   if [ "$?" == "0" ]; then   ### is running    status: fake? is dangerous ==> SKIP
   	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO stopping..."
@@ -376,10 +390,10 @@ stop_core_cron() {
 			clear_dead_lock_pid "${p}"
   		done
 
-	echo_green "  [OK]"; echo
+	echo_green " [OK]"; echo
 	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO 3 => stop eminfo done"
   else
-	echo_red "  [SKIP]" ; echo
+	echo_yellow " [SKIP]" ; echo
 	echo "${status}"
   fi
 }
