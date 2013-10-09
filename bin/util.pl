@@ -151,6 +151,12 @@ sub format_phoutput_toxml {
 		### array_files: @files
 		for (@files) {
 			my $file_size = -s || 'unkn';
+			# replace unsupported chars
+			s/&/&amp;/g;
+        		s/</&lt;/g;
+        		s/>/&gt;/g;
+        		s/"/&quot;/g;
+        		s/'/&apos;/g;
 			$xml_result .= "<file size=$file_size>$_</file>\n";
 		}
 	} elsif ($type eq 'str'){
@@ -162,6 +168,12 @@ sub format_phoutput_toxml {
 			$xml_result .= "<title>post length exceed $max_length</title>\n";
 			goto PLUGIN_END;
 		} else {
+			# replace unsupported chars
+			$title =~ s/&/&amp;/g;
+        		$title =~ s/</&lt;/g;
+        		$title =~ s/>/&gt;/g;
+        		$title =~ s/"/&quot;/g;
+        		$title =~ s/'/&apos;/g;
 			$xml_result .= "<title>$title</title>\n";
 		}
 
@@ -173,6 +185,12 @@ sub format_phoutput_toxml {
 			$xml_result .= "<summary>post length exceed $max_length</summary>\n";
 			goto PLUGIN_END;
 		} else {
+			# replace unsupported chars
+                        $summary =~ s/&/&amp;/g;
+                        $summary =~ s/</&lt;/g;
+                        $summary =~ s/>/&gt;/g;
+                        $summary =~ s/"/&quot;/g;
+                        $summary =~ s/'/&apos;/g;
 			$xml_result .= "<summary>$summary</summary>\n";
 		}
 		
