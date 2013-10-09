@@ -5,7 +5,7 @@
 # 
 # Usage:     ./checkconf
 #
-# Example:   ./takesnap
+# Example:   ./checkconf
 #
 # Return Code:  0|1|2|3   ==>  (OK|WARN|CRIT|UNKN)
 #
