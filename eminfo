@@ -232,12 +232,15 @@ else
 	echo -en "3. checking config file        ... "
 	result=$( eval ${CHECKCONF_SH} 2>&1 )
 	rc=$?
-	if [ "$rc" != "0" ]; then
+	if [ "$rc" == "2" ]; then	# crit => exit
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script checkconf return failed[rc=${rc}]. exit"
   		echo -e "\nCheck Config Result: Sorry, Config File Contains Some Mistakes \n"
   		echo -e "${result}"
   		exit 1
-	else
+	elif [ "$rc" == "1" ]; then	# warn => continue
+		echo -e "[$(echo_yellow "warnning!")]"
+		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script checkconf return succeed[rc=${rc}]. continue..."
+	elif [ "$rc" == "0" ]; then	# succ => continue
 		echo -e "[$(echo_green "succeed!")]"
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script checkconf return succeed[rc=${rc}]. continue..."
 	fi
@@ -584,14 +587,10 @@ case "$#" in
 				view_extra_config "${p}"
 				echo;echo;
 			done
-		elif [ "$(read_eminfo_section "$2")" == "global" ]; then
-			view_extra_config "global"
-		elif [ "$(read_eminfo_section "$2")" == "sendmail" ]; then
-			view_extra_config "sendmail"
-		elif [ "$(read_eminfo_section "$2")" == "postlog" ]; then
-			view_extra_config "postlog"
-		elif [ "$(read_eminfo_section "$2")" == "takesnap" ]; then
-			view_extra_config "takesnap"
+		elif [ "$2" == "global" -o "$2" == "sendmail" ]; then
+			view_extra_config "$2"
+		elif [ "$2" == "postlog" -o "$2" == "takesnap" ]; then
+			view_extra_config "$2"
 		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
                         view_base_config "$2"
 			view_extra_config "$2"

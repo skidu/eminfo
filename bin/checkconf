@@ -54,8 +54,8 @@ exit 0
 #
 ARRAY_CONFIG_RULES=(
 	# global
-	#"global=>id"				"int:1:9999999999"
-	#"global=>name" 				"str:eminfo_ops.eyou.net"
+	"global=>id"				"int:100000000:9999999999"
+	"global=>name" 				"str:eminfo_ops.eyou.net"
 	"global=>scan_interval"  		"int:5:999"
 	"global=>attach_ini_mail"		"set:[yes|no]"
 	"global=>sysload_uplimit"		"int:0:999"
@@ -342,7 +342,7 @@ check_ortypes(){
 	rc=${STATE_OK}
   else
 	result="CRIT, [${type1}] return [${rc1}]; [${type2}] return [${rc2}]" 
-	rc=${STATE_CRIT}
+	rc=${STATE_WARN}
   fi
   echo -e "${result}"
   return "${rc}"
@@ -413,101 +413,80 @@ else
 	echo -e "$(echo_red [CRIT]) : [${CONFIG_FILE##*/}] contains blank section in [${blankline}]"
 fi
 
-## 3. check section name contain blank or not ?
-#blankname=$( cat ${CONFIG_FILE} |\
-#		awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' |\
-#		tr -d '[]' | awk '(NF>2){print $0}' )
-#if [ -z "${blankname//[ ]}" ]; then
-#	((oknum++))
-#	((totalnum++))
-#	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${CONFIG_FILE##*/}] each section NOT contains blank chars"
-#else
-#	((critnum++))
-#	((totalnum++))
-#	blankname=$(echo -e "${blankname}" | tr '\n' ';' )
-#	echo -e "$(echo_red [CRIT]) : line [ ${blankname} ], section contains blank chars"
-#fi
-
-# 4. check config file contains duplicated section name or not ?
+# 3. check config file contains duplicated section name or not ?
 duplsection=$( cat ${CONFIG_FILE} |\
 		tr -d ' \t' |\
 		awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' |\
 		awk '{a[$2]++;} END{for(i in a){if(a[i]>1){print a[i],i}}}' )
 if [ -z "${duplsection//[ ]}" ]; then
 	((oknum++))
-	((totalnum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${CONFIG_FILE##*/}] NOT contains duplicated section"
 else
 	((critnum++))
-	((totalnum++))
 	duplsection=$(echo -e "${duplsection}" | awk '{printf "%s duplicated section: %s, ",$1,$2}')
 	echo -e "$(echo_red [CRIT]) : [${CONFIG_FILE##*/}] contains duplicated section [${duplsection}]"
 fi
+((totalnum++))
 
-# 5. check if exists duplicated key name under one same section or not ?
+# 4. check if exists duplicated key name under one same section or not ?
 for section in `list_all_section`
 do
 	duplkey=$( list_section_keys  "${section}" | awk '{a[$1]++} END{for(i in a){if(a[i]>1){print a[i],i}}}' )
 	if [ -z "${duplkey//[ ]}" ]; then
 		((oknum++))
-		((totalnum++))
 		[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${section}] NOT contains duplicated key"
 	else
 		((critnum++))
-		((totalnum++))
 		duplkey=$(echo -e "${duplkey}" | awk '{printf "%s duplicated keys: %s, ",$1,$2}')
 		echo -e "$(echo_red [CRIT]) : [${section}] contains duplicated key [${duplkey}]"
 	fi
+	((totalnum++))
 done
 
-# 6. check if files under CONF_DIR is plugin configfile or not ?
+# 5. check if files under CONF_DIR is plugin configfile or not ?
 for configfile in `ls "${CONF_DIR}"`
 do
 	filepath="${CONF_DIR}/${configfile}"
 	[ "${filepath##*/}" == ".eminfo.ini" ] && continue
 	pluginname=$(is_plugin_configfile "${filepath}")
 	[ "${pluginname}" == "no" ] && {
-		((critnum++))
-		((totalnum++))
-		echo -e "$(echo_red [CRIT]) : [${configfile}] is not eminfo config file."
+		((warnnum++))
+		echo -e "$(echo_yellow [WARN]) : [${configfile}] is not eminfo config file."
 	} || {
 		((oknum++))
-		((totalnum++))
 		[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [${configfile}] is eminfo config file."
 	}
+	((totalnum++))
 done
 
-# 7. check eminfo_id  eminfo_name  default_mail_receviers
+# 6. check eminfo_id  eminfo_name  default_mail_receviers
 eminfo_id=$(get_eminfo_id)
 if [ "${eminfo_id}" == "0000000000" ]; then
 	((critnum++))
-	((totalnum++))
 	echo -e "$(echo_red [CRIT]) : [eminfo_id] is empty. try ${SETINIT_SH} rpminit"
 else
 	((oknum++))
-	((totalnum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [eminfo_id] = [${eminfo_id}]."
 fi
+((totalnum++))
 eminfo_name=$(get_global_name)
 if [ "${eminfo_name}" == "eminfo_ops.eyou.net" ]; then
-	((critnum++))
-	((totalnum++))
-	echo -e "$(echo_red [CRIT]) : [eminfo_name] is empty. try ${SETINIT_SH}"
+	((warnnum++))
+	echo -e "$(echo_yellow [WARN]) : [eminfo_name] is empty. try ${SETINIT_SH}"
 else
 	((oknum++))
-	((totalnum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [eminfo_name] = [${eminfo_name}]."
 fi
+((totalnum++))
 default_receviers=$(get_mail_receviers plugin_default)
 if [ "${default_receviers}" == "root_bbk@126.com" ]; then
-	((critnum++))
-	((totalnum++))
-	echo -e "$(echo_red [CRIT]) : [default_receviers] is empty. try ${SETINIT_SH}"
+	((warnnum++))
+	echo -e "$(echo_yellow [WARN]) : [default_receviers] is empty. try ${SETINIT_SH}"
 else
 	((oknum++))
-	((totalnum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [default_receviers] = [${default_receviers}]."
 fi
+((totalnum++))
 
 
 # print result
