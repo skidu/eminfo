@@ -1027,13 +1027,7 @@ get_action_type() {
 		"all")
 			output="${output} crit warn unkn succ tmout"	;;
 		"default")
-			### auto_handle_type ==> "default" means "none"
-			if [ "${action_type}" == "auto_handle_type" ]; then
-				output="none"	### break while "none"
-				break
-			else
-				output="${output} crit warn unkn tmout"
-			fi					;;
+			output="${output} crit warn unkn tmout"
 		"none")
 			output="none"  ### break while "none"
 			break						;;
