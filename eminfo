@@ -276,7 +276,7 @@ else
 
 	# === Execute Inner Plugins ON Start
 	echo -en "6. running inner plugins       ... "
-	for plugin_name in `list_inner_plugin_section`
+	for plugin_name in eminfo_clear_overdue eminfo_log_rotate
 	do
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO executing inner plugins [${plugin_name}] ..."
 		process_inner_plugin "${plugin_name}" "startrun"   # startrun: no need to un_lock
