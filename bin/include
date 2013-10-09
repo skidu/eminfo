@@ -2424,7 +2424,7 @@ process_inner_plugin() {
 process_plugin_timeout() {
   local plugin_name=$1
   local output="{tmout}:{str}:{ Plugin Execution TimeOut"\
-	"| $(html_red "${plugin_name}") execution timeout, has been terminated. }";
+"| $(html_red "${plugin_name}") execution timeout, has been terminated. }";
 
   # Step 0: update status
   update_status "${plugin_name}" "Cancle on Plugin TimeOut"
@@ -2504,9 +2504,9 @@ process_plugin_timeout() {
 process_sysoverload() {
   local plugin_name=$1  sysload_now=$2  sysload_limit=$3
   local output="{ovld}:{str}:{ System OverLoad"\
-	"| $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T)"\
-	"### Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]"\
-	"### Plugin: [${plugin_name}] has been cancled }";
+"| $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T)"\
+"### Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]"\
+"### Plugin: [${plugin_name}] has been cancled }";
   local hd_output="System OverLoaded, Nothing to do"
 
   # Step 0: update status.
