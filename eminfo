@@ -237,8 +237,9 @@ else
   		echo -e "\nCheck Config Result: Sorry, Config File Contains Some Mistakes \n"
   		echo -e "${result}"
   		exit 1
-	elif [ "$rc" == "1" ]; then	# warn => continue
+	elif [ "$rc" == "1" ]; then	# warn => print warnnings, continue
 		echo -e "[$(echo_yellow "warnning!")]"
+		echo -e "${result}"
 		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script checkconf return succeed[rc=${rc}]. continue..."
 	elif [ "$rc" == "0" ]; then	# succ => continue
 		echo -e "[$(echo_green "succeed!")]"
@@ -285,6 +286,7 @@ else
 	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO inner plugins execution done. details in ${INNER_LOG##*/}."
 	
 	echo -en "7. starting eminfo cron        ... "
+	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO starting eminfo core cron... "
 	{ while : ; do
 		
 		### trap signal HUP to reload bin/include
@@ -365,6 +367,7 @@ else
 	### save daemon pid
 	echo $! > ${PID_FILE}
 	echo -e "[$(echo_green "succeed!")]"
+	write_log -f "${EMINFO_LOG}" "S0000000 EMINFO start finished, pid=[$!]"
 fi 
 
 }
