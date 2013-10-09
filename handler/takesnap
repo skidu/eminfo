@@ -188,7 +188,7 @@ done
 
 # about release and dmidecode
 [ -x /usr/bin/lsb_release ] && /usr/bin/lsb_release -a > lsb_release-a
-[ -x /usr/sbin/dmidecode ] && /usr/sbin/dmidecode -a > dmidecode-a
+[ -x /usr/sbin/dmidecode ] && /usr/sbin/dmidecode > dmidecode
 [ -x /bin/uname ] && /bin/uname -a > uname-a
 
 # about securety
