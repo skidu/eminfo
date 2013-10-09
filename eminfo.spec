@@ -8,7 +8,7 @@ Packager: 	Zhang Guangzheng <zhang.elinks@gmail.com>
 BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
 Source0: 	eminfo-1.0-beta2.tgz
 Source1: 	eminfo.init
-Requires: 		coreutils >= 5.97, bash >= 3.2
+Requires: 		coreutils >= 5.97, bash >= 3.1
 Requires:		e2fsprogs >= 1.39, procps >= 3.2.7
 Requires:		psmisc >= 22.2, util-linux >= 2.13
 Requires:		SysVinit >= 2.86, nc >= 1.84
@@ -19,6 +19,9 @@ Requires:		curl >= 7.15.5, bc >= 1.06
 Requires(post): 	chkconfig
 Requires(preun): 	chkconfig, initscripts
 Requires(postun): 	coreutils >= 5.97
+#
+# All of version requires are based on OS rhel5.1 release
+#
 
 %description 
 pluginable platform written by perl/shell for linux ops.
