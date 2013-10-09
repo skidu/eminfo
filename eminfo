@@ -256,7 +256,7 @@ else
 		exit 1
 	else
 		echo -e "[$(echo_green "succeed!")]"
-		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script makedir return succeed[rc=$rc}]. continue..."
+		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script makedir return succeed[rc=${rc}]. continue..."
 	fi
 
 	# === DIRECTORY CHECK ON Start
@@ -271,7 +271,7 @@ else
   		exit 1
 	else
 		echo -e "[$(echo_green "succeed!")]"
-		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script makedir -c return succeed[rc=$rc}]. continue..."
+		write_log -f "${EMINFO_LOG}" "S0000000 EMINFO script makedir -c return succeed[rc=${rc}]. continue..."
 	fi
 
 	# === Execute Inner Plugins ON Start
