@@ -1721,7 +1721,7 @@ clear_dead_lock_pid() {
 #  1.1. for each pid, if directory /proc/${pid}/ exists, search all of its son-pids
 #  1.2. send signal TERM to all son pids
 #  1.3. read /proc/${pid}/cmdline as variable cmdline1
-#  1.4. send signal TERM to ${pid}, sleep 1 seconds in case the process trap signal TERM
+#  1.4. send signal TERM to ${pid}, sleep 3 seconds in case the process trap signal TERM
 #  1.5. if directory /proc/${pid}/ still exists, read /proc/${pid}/cmdline as variable cmdline2
 #  1.6. if cmdline1=cmdline2, send signal KILL to ${pid}, no more than 3 times.
 # 2. remove pid file
@@ -1762,7 +1762,7 @@ stopps_by_pidfile() {
 			write_log -f "${EMINFO_LOG}" "STP00000 EMINFO terminating father pid:"\
 				"[${x}] => [${cmdline}] SIG:TERM ";
 			kill -15 "${x}" 1>&- 2>&-	 ### step: 1.4
-			sleep 1
+			sleep 3   ### in case the process trap signal TERM
 
 			if [ -d "/proc/${x}" ]; then
 				local cmdline2=$(cat /proc/${x}/cmdline 2>&-)    ### step: 1.5
