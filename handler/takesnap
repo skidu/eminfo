@@ -148,8 +148,8 @@ if type -all set >/dev/null 2>&1 ; then set > set ; fi
 [ -x /sbin/fdisk ] && /sbin/fdisk -l > fdisk-l
 [ -x /bin/mount ] && /bin/mount > mount
 [ -x /bin/df ] && {
-	/bin/df -Th > df-Th
-	/bin/df -Ti > df-Ti
+	/bin/df -Thl > df-Thl
+	/bin/df -Til > df-Til
 }
 [ -x /sbin/lspci ] && /sbin/lspci > lspci
 [ -x /sbin/lsusb ] && /sbin/lsusb > lsusb
