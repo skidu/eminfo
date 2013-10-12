@@ -80,6 +80,7 @@ ARRAY_CONFIG_RULES=(
 	"eminfo_clear_overdue=>tmpfile_reserve_time"  "int:1:999"
 	"eminfo_clear_overdue=>logfile_reserve_time"  "int:1:999"
 	"eminfo_clear_overdue=>snapfile_reserve_time" "int:1:999"
+	"eminfo_clear_overdue=>snapdir_maxsize"	      "int:1:10240"
 	"eminfo_log_rotate=>frequency"		      "time"
 	"eminfo_log_rotate=>force_size_uplimit"	      "int:1:2047"
 

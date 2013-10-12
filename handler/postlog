@@ -169,9 +169,11 @@ write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"INFO: url-encode input data finished."
 
 write_log -f ${POSTLOG_LOG} "[${from}]"\
-	"INFO: posting text-plain data: [${content}], [${hd_content}]"
-write_log -f ${POSTLOG_LOG} "[$from]"\
-	"INFO: posting url-encoded data: [${postdata}]"
+	"INFO: posting data ..."
+#write_log -f ${POSTLOG_LOG} "[${from}]"\	## => lead to huge postlog.log
+	# "INFO: posting text-plain data: [${content}], [${hd_content}]"
+# write_log -f ${POSTLOG_LOG} "[$from]"\	## => lead to huge postlog.log
+	# "INFO: posting url-encoded data: [${postdata}]"
 
 # curl -s: silient
 result=$( /usr/bin/curl -k -s --connect-timeout ${post_time_out} -d "${postdata}" "https://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
