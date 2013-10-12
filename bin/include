@@ -2243,15 +2243,12 @@ process_plugin() {
 
   # Step 6: exec plugin / obtain returned code / obtain returned stuff
   [ ! -x "${PLUGIN_DIR}/${plugin_name}" ] && chmod a+x "${PLUGIN_DIR}/${plugin_name}"
-  ### local is wrong: won't get return code, return code always be 0.
-  #@# local output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )  
-  local output=  plain_output=
+  ### local output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )    # wrong! can NOT get return code, as always be 0.
+  local output=
   output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )
   local rc=$?
-  # trim html tag in plugin output. convert html output into plain.
-  plain_output=$( ${PLUTIL} format_pstr_output_toplain "${output}" ) 
   write_log -f ${EMINFO_LOG} ${jid} ${plugin_name} "execution completed."\
-	"return code: [${rc}]  return string: [${plain_output}]. CONTINUE";
+	"return code: [${rc}]  return string: [${output}]. CONTINUE";
   update_status "${plugin_name}" "${output}"
 
 
@@ -2316,7 +2313,7 @@ process_plugin() {
 	
   # Step 9: check action: auto_handle
   local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type ${rc})
-  local hd_output=  plain_hdoutput=
+  local hd_output=
   if [ "${a_hand}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "auto handle disabled. SKIP";
 	hd_output="auto handle is disabled. Nothing to do"
@@ -2329,9 +2326,8 @@ process_plugin() {
  		[ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
 		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
 		local hd_rc=$?
- 		plain_hdoutput=$( ${PLUTIL} format_pstr_output_toplain "${hd_output}" )
 		write_log ${jid} ${plugin_name} "auto handler execution completed."\
-			"return code:[${hd_rc}] return string: [${plain_hdoutput}] CONTINUE";
+			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
 		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
   	else
 		write_log ${jid} ${plugin_name} "auto handler:"\
@@ -2443,7 +2439,7 @@ process_plugin_timeout() {
 
   # Step 3: auto handler while timeout
   local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type "tmout")
-  local hd_output=  plain_hdoutput=
+  local hd_output=
   if [ "${a_hand}" != "yes" ]; then
  	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle disabled. SKIP";
 	hd_output="auto handle is disabled. Nothing to do"
@@ -2456,9 +2452,8 @@ process_plugin_timeout() {
                 [ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
 		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
 		local hd_rc=$?
-		plain_hdoutput=$( ${PLUTIL} format_pstr_output_toplain "${hd_output}" )
                 write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle execution completed."\
-			"return code:[${hd_rc}] return string: [${plain_hdoutput}] CONTINUE";
+			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
 		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
         else
                 write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\

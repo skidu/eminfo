@@ -9,7 +9,6 @@ my $action = shift;
 
 &help if $action eq 'help';
 &part_pstr_output(@ARGV)           if $action eq 'part_pstr_output';
-&format_pstr_output_toplain(@ARGV) if $action eq 'format_pstr_output_toplain';
 &format_pstr_output_toterm(@ARGV)  if $action eq 'format_pstr_output_toterm';
 &format_phoutput_toxml(@ARGV)	   if $action eq 'format_phoutput_toxml';
 
@@ -21,7 +20,6 @@ sub help {
 print <<EOF
 Example:
   part_pstr_output {1-6} {allof-plugin-output}}
-  format_pstr_output_toplain {output-contain-htmlcode}
   format_pstr_output_toterm  {output-contain-htmlcode-htmlcolor}
   format_phoutput_toxml {allof-plugin-output}  {allof-handler-output}
 
@@ -60,20 +58,6 @@ sub part_pstr_output {
 	} elsif ($mode eq 'print'){
 		print $result;
 	}
-}
-
-# Trim HTML-TAG in plugin output (last filed)
-# Note:		remove <>/&nbsp;
-# Note:		output must be one-line.
-# Usage:	format_pstr_output_toplain {output-last-filed}
-#
-sub format_pstr_output_toplain {
-	my $content = shift;
-	exit(1) if !defined $content;
-	exit(1) if $content =~ m/\A\s*\Z/;
-	$content =~ s/\<[^\<\>]*\>//g;
-	$content =~ s/&nbsp;/ /g;
-	print $content;
 }
 
 # Convert HTML-Color to TERM-Color in plugin output (last filed)
