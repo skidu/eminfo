@@ -127,10 +127,10 @@ do
 done
 
 # set default
-[ -z "${plugin_name//[ ]}" ] && show_usage 	### plugin_name ~ ( {plugin_name} , NULL  )
-[ -z "${jobid//[ ]}" ] && show_usage		### jobid ~ ( NNNNNNNN , ovld , tmout )
-[ -z "${content//[ ]}" ] && show_usage
-[ -z "${hd_content//[ ]}" ] && hd_content="Nothing to do"
+[ -z "${plugin_name}" ] && show_usage 	### plugin_name ~ ( {plugin_name} , NULL  )
+[ -z "${jobid}" ] && show_usage		### jobid ~ ( NNNNNNNN , ovld , tmout )
+[ -z "${content}" ] && show_usage
+[ -z "${hd_content}" ] && hd_content="Nothing to do"
 from="${plugin_name}.${jobid}"
 
 write_log -f ${POSTLOG_LOG} ""
@@ -140,7 +140,7 @@ write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
 post_server=$(read_eminfo_config postlog post_server)
 queue_name=$(read_eminfo_config postlog queue_name)
 auth_pass=$(read_eminfo_config postlog auth_pass)
-[ -z "${post_server//[ ]}" -o -z "${queue_name//[ ]}" -o -z "${auth_pass//[ ]}" ] && {
+[ -z "${post_server}" -o -z "${queue_name}" -o -z "${auth_pass}" ] && {
 	write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"ERROR: configurations not complete:"\
 		"[post_server,queue_name,auth_pass can't be empty]. EXIT"
@@ -150,21 +150,21 @@ write_log -f ${POSTLOG_LOG} "[${from}]"\
 	"INFO: set post_server=[${post_server}], queue_name=[${queue_name}], auth_pass=[XXXXXXXX]"
 
 charset=$(read_eminfo_config postlog charset)
-[ -z "${charset//[ ]}" ] && {
+[ -z "${charset}" ] && {
 	write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"WARN: charset empty, set default charset=[utf-8]"
 	charset="utf-8"
 }
 
 post_time_out=$(read_eminfo_config postlog post_time_out)
-[ -z "${post_time_out//[ ]}" -o ! -z "${post_time_out//[0-9]}" ] && {
+[ -z "${post_time_out}" -o ! -z "${post_time_out//[0-9]}" ] && {
 	write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"WARN: invalid post timeout [$post_time_out], set post_time_out=[10]"
 	post_time_out="10"
 }
 
 post_server_port=$(read_eminfo_config postlog post_server_port)
-[ -z "${post_server_port//[ ]}" -o ! -z "${post_server_port//[0-9]}" ] && {
+[ -z "${post_server_port}" -o ! -z "${post_server_port//[0-9]}" ] && {
 	write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"WARN: invalid post_port [${post_server_port}], set post_server_port=[1218]"
 	post_server_port="1218"
