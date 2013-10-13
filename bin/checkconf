@@ -11,11 +11,18 @@
 #
 
 
-[ -z ${BASE_DIR} ]  && {
-        path=$( cd $(dirname $0) && pwd)
-        BASE_DIR=${path%/*}
-        source ${BASE_DIR}/bin/include 2>&-
-}
+BASE_DIR="/usr/local/eminfo"
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
 
 
 # echo "${ARRAY_BASE_CONFIG[*]}"
