@@ -148,7 +148,7 @@ take_snap() {
 
 # about env
 [ -x /bin/env ] && /bin/env > env
-if type -all set >/dev/null 2>&1 ; then set > set ; fi
+# if type -all set >/dev/null 2>&1 ; then set > set ; fi
 
 # about disk and devices
 [ -x /sbin/fdisk ] && /sbin/fdisk -l > fdisk-l
@@ -157,8 +157,8 @@ if type -all set >/dev/null 2>&1 ; then set > set ; fi
 	/bin/df -Thl > df-Thl
 	/bin/df -Til > df-Til
 }
-[ -x /sbin/lspci ] && /sbin/lspci > lspci
-[ -x /sbin/lsusb ] && /sbin/lsusb > lsusb
+#[ -x /sbin/lspci ] && /sbin/lspci > lspci
+#[ -x /sbin/lsusb ] && /sbin/lsusb > lsusb
 
 # about network
 [ -x /sbin/iptables-save ] && /sbin/iptables-save > iptables-save
@@ -169,7 +169,7 @@ if type -all set >/dev/null 2>&1 ; then set > set ; fi
 #[ -f /proc/net/tcp ] && cat /proc/net/tcp > proc-tcp
 #[ -f /proc/net/udp ] && cat /proc/net/udp > proc-udp
 [ -x /bin/netstat ] && {
-	/bin/netstat -an > netstat-an
+	# /bin/netstat -an > netstat-an
 	/bin/netstat -tlnp > netstat-tlnp
 }
 service network status > network-status 2>&1
@@ -222,12 +222,12 @@ done
 [ -f /etc/sysctl.conf ] && cat /etc/sysctl.conf > sysctl.conf.etc
 [ -f /etc/bashrc ] && cat /etc/bashrc > bashrc.etc
 [ -f /etc/profile ] && cat /etc/profile > profile.etc
-[ -f /etc/rc.sysinit ] && cat /etc/rc.sysinit > rc.sysinit.etc
+# [ -f /etc/rc.sysinit ] && cat /etc/rc.sysinit > rc.sysinit.etc
 [ -f /etc/crontab ] && cat /etc/crontab > crontab.etc
 [ -f /etc/mtab ] && cat /etc/mtab > mtab.etc
 [ -f /etc/exports ] && cat /etc/exports > exports.etc
 ls /etc/cron.{hourly,daily,weekly,monthly} > cron.list
-[ -f /etc/init.d/functions ] && cat /etc/init.d/functions > functions.etc.init.d
+# [ -f /etc/init.d/functions ] && cat /etc/init.d/functions > functions.etc.init.d
 
 # system log files.
 [ -f /var/log/messages ] && tail -n 200 /var/log/messages > messages.var.log
