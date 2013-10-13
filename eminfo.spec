@@ -50,11 +50,7 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 %post
 /sbin/chkconfig --add %{name}
 if [ -L "/usr/bin/eminfo" ]; then
-	if [ "$(/usr/bin/readlink /usr/bin/eminfo)" == "/usr/local/eminfo/eminfo" ]; then
-		:
-	else
-		echo "symbolic link /usr/bin/eminfo did't link to /usr/local/eminfo/eminfo"
-	fi
+	:
 else
 	/bin/ln -sv /usr/local/eminfo/eminfo /usr/bin/eminfo
 fi

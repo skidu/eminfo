@@ -33,9 +33,14 @@ set +m
 
 # === LOAD INCLUDE FILE
 #
-if [ -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
 	# eval | sh | bash | source | . ${BASE_DIR}/bin/include
-  	source ${BASE_DIR}/bin/include 2>&-
+  	source ${BASE_DIR}/bin/include 2>&1
+	rc=$?
+	[ "$rc" != "0" ] && {
+		echo "load include file failed with status $rc"
+		exit 1
+	}
 else
   	echo "${BASE_DIR}/bin/include not exist or empty. exit" 
 	exit 1
@@ -311,6 +316,10 @@ else
 			write_log -f "${EMINFO_LOG}" "TRAP0000 EMINFO Main:::EXIT"
 			exit 1
 		' 15
+
+		### trap signal ERR to catch unsucceed function or command
+		trap ' write_log -f "${ERRLOG}" "TRAPERROR [LINE:$LINENO] exited with status: $?" 
+		' ERR
 
 		### Important !!!  
 		### [wait] can NOT be placed in  "list|while ... done"  struct  !!!

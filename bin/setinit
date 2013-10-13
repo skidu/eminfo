@@ -89,8 +89,7 @@ if [ -z "${eminfo_id//[ ]}" ]; then
 		setby="kern_uuid: ${kern_uuid}"
 		eminfo_id=$(echo -n "${kern_uuid}"|/usr/bin/cksum|awk '{print $1}'|tr -d '\r\n')
 	fi
-	echo -en "initializing eminfo id ..."; echo
-	echo -en "set eminfo_id as [$(echo_green "${eminfo_id}")] ... "
+	echo -en "initialized set eminfo_id as [$(echo_green "${eminfo_id}")] ... "
 	write_log -f "${EMINFO_LOG}" "SETINITX eminfo_id=[${eminfo_id}] setby=[${setby}]"
 	update_eminfo_config force global id "${eminfo_id}"
 	rc=$?

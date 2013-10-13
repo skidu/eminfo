@@ -10,10 +10,11 @@
 
 
 # BASE_DIR DEF
-[ -z ${BASE_DIR} ] && {
-  	path=$( cd $(dirname $0) && pwd)
-  	BASE_DIR=${path%/*}
-}
+#[ -z ${BASE_DIR} ] && {
+#  	path=$( cd $(dirname $0) && pwd)
+#  	BASE_DIR=${path%/*}
+#}
+BASE_DIR="/usr/local/eminfo"
 
 
 
@@ -63,6 +64,7 @@ POSTLOG_LOG="${LOG_DIR}/postlog.log"
 TAKESNAP_LOG="${LOG_DIR}/takesnap.log"
 UPDATE_LOG="${LOG_DIR}/update.log"
 SENDMAIL_LOG="${LOG_DIR}/sendmail.log"
+ERRLOG="${LOG_DIR}/error.log"
 
 # CFG DEF
 CONFIG_FILE="${CONF_DIR}/.eminfo.ini"
@@ -1027,7 +1029,7 @@ get_action_type() {
 		"all")
 			output="${output} crit warn unkn succ tmout"	;;
 		"default")
-			output="${output} crit warn unkn tmout"
+			output="${output} crit warn unkn tmout"		;;
 		"none")
 			output="none"  ### break while "none"
 			break						;;
