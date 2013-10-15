@@ -64,7 +64,7 @@ fi
 
 %changelog
 * Sun Oct 13 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
-- fixed some bugs for 1.0-beta3 release
+- fixed some bugs for eminfo-1.0-beta3 release
 * Mon Sep 23 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
 - redesgin by perl/shell for eminfo-1.0-beta2.rpm
 - seperated into three packets: main/plugin/tool

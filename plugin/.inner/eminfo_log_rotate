@@ -4,14 +4,31 @@
 # Inner Plugin:  periodic rollback logfiles.
 #
 
-if [ -z "${BASE_DIR}" ]; then
-	path=$(cd $(dirname $0) && pwd)  
-	BASE_DIR=${path%/*}
-	BASE_DIR=${BASE_DIR%/*}
-	source ${BASE_DIR}/bin/include 2>&-
+BASE_DIR="/usr/local/eminfo"
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }   
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
 fi
 
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
 
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
 
 # Read plugin config value here
 force_size_uplimit=$( read_eminfo_config eminfo_log_rotate force_size_uplimit )
@@ -21,7 +38,7 @@ force_size_uplimit=$( read_eminfo_config eminfo_log_rotate force_size_uplimit )
 
 # check function here
 check() {
-  local result=
+  local result= rollnum=0
   array_logfiles=( 
 		${EMINFO_LOG} 
 		${INNER_LOG} 
@@ -38,11 +55,11 @@ check() {
 
   for file in  ${array_logfiles[@]}
   do
-	[ -f "${file}" ] && {
+	if [ -f "${file}" ]; then
 
 		## 1. check filesize
-		local size=$( du -sm "${file}" 2>&- | awk '{print $1}' )
-		[ -z "${size}"  -o ! -z "${size//[0-9]}" ] || {
+		local size=$( /usr/bin/du -sm "${file}" 2>&- | awk '{print $1}' )
+		if [ -z "${size}"  -o ! -z "${size//[0-9]}" ]; then
 			[ "$( echo "${size} >= ${force_size_uplimit}" | bc )" == "1" ] &&  {
 				local basefile="${BACK_DIR}/${file##*/}.$(date +%F).${size}M"
 				local dstfile="${basefile}"
@@ -54,10 +71,11 @@ check() {
 				done
 
 		    		mv  "${file}" "${dstfile}" 2>&-
-		    		result="${result} [${file}] filesize:[${size}M >= ${force_size_uplimit}M]: roll back [${file}] => [${dstfile}];"
+				((rollnum++))
+		    		result="${result} [${file}] filesize:[${size}M >= ${force_size_uplimit}M] ### rollback:[${dstfile}] ### ### "
 		    		continue
 			}
-		}
+		fi
 
 		## 2. check current time : the begining of newday or not
 		local day_start=$(date -d "" +%s)     ### the begining of today
@@ -75,7 +93,8 @@ check() {
 			done	
 			
 			mv "${file}" "${dstfile}" 2>&-
-			result="${result} [${file}] newday begin:[$(date +%F_%T)]: roll back [${file}] => [${dstfile}];"
+			((rollnum++))
+			result="${result} [${file}] newday:[$(date +%F_%T)] ### rollback:[${dstfile}] ### ###"
 			continue
 		}
 
@@ -96,7 +115,8 @@ check() {
 				done
 
 			    	mv "${file}" "${dstfile}" 2>&-
-			    	result="${result} [${file}] newday logitem:[${tail_day} <> ${head_day}]: roll back [${file}] => [${dstfile}];"
+				((rollnum++))
+			    	result="${result} [${file}] newlog:[${tail_day} <> ${head_day}] ### rollback:[${dstfile}] ### ###"
 			    	continue
 			}
 		}
@@ -117,15 +137,30 @@ check() {
 				done
 	
 				mv "${file}" "${dstfile}" 2>&-
-				result="${result} [${file}] [ headday: ${head_day} <> today: ${today}]: roll back [${file}] => [${dstfile}];"
+				((rollnum++))
+				result="${result} [${file}] headday:[${head_day} <> today] ### rollback:[${dstfile}] ### ###"
 				continue
 			}
 		}
-	}
+	fi
   done
   
-  [ -z "${result//[ ]}" ] && result="Nothing to do"
-  echo "${result}"
+  [ -z "${result}" ] && {
+  	EXIT_STATUS="${STATE_OK}"
+  	LEVEL="ok"
+	TYPE="str"
+	CONTENT="Nothing to do | No files to be processed"
+  } || {
+	EXIT_STATUS="${STATE_OK}"
+	LEVEL="ok"
+	TYPE="str"
+	CONTENT="RollBack finished | ${rollnum} files rolled back | ${result}"
+  }
+
 }
 
 check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}

@@ -4,18 +4,35 @@
 # Inner Plugin:  periodic clear tmpfiles logfiles snapfiles.
 #
 
-if [ -z "${BASE_DIR}" ]; then
-	path=$(cd $(dirname $0) && pwd)  
-	BASE_DIR=${path%/*}
-	BASE_DIR=${BASE_DIR%/*}
-	source ${BASE_DIR}/bin/include 2>&-
+BASE_DIR="/usr/local/eminfo"
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }   
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
 fi
 
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
 
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
 
 # Read plugin config value here
-tmpfile_reserve_time=$( read_eminfo_config eminfo_clear_overdue tmpfile_reserve_time)
-logfile_reserve_time=$( read_eminfo_config eminfo_clear_overdue logfile_reserve_time)
+tmpfile_reserve_time=$( read_eminfo_config eminfo_clear_overdue tmpfile_reserve_time )
+logfile_reserve_time=$( read_eminfo_config eminfo_clear_overdue logfile_reserve_time )
 snapfile_reserve_time=$( read_eminfo_config eminfo_clear_overdue snapfile_reserve_time )
 snapdir_maxsize=$( read_eminfo_config eminfo_clear_overdue snapdir_maxsize )
 
@@ -32,23 +49,34 @@ check() {
   local total_num=0  t_num=0  l_num=0  s_num=0
 
   # First check if the top directories which to be searched is invalid or not.
-  # You must take care here becase it releated to deletion operations.
+  # You must take care here because it releated to deletion operations.
   # If one of the following three variables is invalid, exit.
   [ "$( sub_str "${TMP_DIR}" "eminfo/tmp" )" == "no" ] && {
-	result="Critical Error: TMP_DIR [${TMP_DIR}] is invalid"
-	echo "${result}"
-	return 1
+	EXIT_STATUS=${STATE_CRIT};
+	LEVEL="unknown";
+	TYPE="str";
+	CONTENT="Critical Error: TMP_DIR [${TMP_DIR}] is invalid";
+	return
   }
   [ "$( sub_str "${BACK_DIR}" "eminfo/log/backup" )" == "no" ] && {
-	result="Critical Error: BACK_DIR [${BACK_DIR}] is invalid"
-	echo "${result}"
-	return 1
+        EXIT_STATUS=${STATE_CRIT};
+        LEVEL="unknown";
+        TYPE="str";
+	CONTENT="Critical Error: BACK_DIR [${BACK_DIR}] is invalid"
+	return
   }
   [ "$( sub_str "${SNAPSHOT_DIR}" "eminfo/log/snapshot" )" == "no" ] && {
-	result="Critical Error: SNAPSHOT_DIR [${SNAPSHOT_DIR}] is invalid"
-	echo "${result}"
-	return 1
+        EXIT_STATUS=${STATE_CRIT};
+        LEVEL="unknown";
+        TYPE="str";
+        CONTENT="Critical Error: SNAPSHOT_DIR [${SNAPSHOT_DIR}] is invalid"
+	return
   }
+
+  # Search files by /usr/bin/find with option -follow  (this maybe dangerous)
+  # This may be very dangerous if somebody created a symbolic link like this:
+  # ln -sv /etc/  eminfo/log/snapshot/
+  # Hope nobody would be stupid like that
 
   # 1. search tmpfiles
 
@@ -63,43 +91,43 @@ check() {
 
   # search tmpfiles in tmpdirs.
   [ -z "${tmpfile_dirlist//[ ]/}" ] && {
-	result="${result} tmpfile: No temperary directories be searched;" 
+	result="${result} tmpfile: No temperary directories be searched ###" 
   } || {
-	tmpfiles=$( find ${tmpfile_dirlist} -follow -type f -ctime +${tmpfile_reserve_time} -print 2>&- )
+	tmpfiles=$( /usr/bin/find ${tmpfile_dirlist} -follow -type f -ctime +${tmpfile_reserve_time} -print 2>&- )
 	[ -z "${tmpfiles}" ] && {
 		t_num=0
 	} || {
 		t_num=$(echo -e "${tmpfiles}" | wc -l)
 	}
 	dellist="${dellist} ${tmpfiles} \n"   ### \n here is important
-  	result="${result} tmpfile: ${t_num} files;"
+  	result="${result} tmpfile: ${t_num} files ###"
   }
 
   # 2. search logfiles
-  logfiles=$( find ${BACK_DIR} -follow -type f -ctime +${logfile_reserve_time} -print 2>&- )
+  logfiles=$( /usr/bin/find ${BACK_DIR} -follow -type f -ctime +${logfile_reserve_time} -print 2>&- )
   [ -z "${logfiles}" ] && {
 	l_num=0
   } || {
   	l_num=$(echo -e "${logfiles}" | wc -l)
   }
   dellist="${dellist} ${logfiles} \n"   ### \n here is important
-  result="${result} logfile: ${l_num} files;"
+  result="${result} logfile: ${l_num} files ###"
 
   # 3. search snapfiles
-  snapfiles=$( find ${SNAPSHOT_DIR} -follow -type f -ctime +${snapfile_reserve_time} -print 2>&- )
+  snapfiles=$( /usr/bin/find ${SNAPSHOT_DIR} -follow -type f -ctime +${snapfile_reserve_time} -print 2>&- )
   [ -z "${snapfiles}" ] && {
 	s_num=0
   } || {
   	s_num=$(echo -e "${snapfiles}" | wc -l)
   }
   dellist="${dellist} ${snapfiles} \n"   ### \n here is important
-  result="${result} snapfiles: ${s_num} files;"
+  result="${result} snapfiles: ${s_num} files ###"
 
   total_num=$(( ${t_num} + ${l_num} + ${s_num} ))
   [ "${total_num}" == "0" ] && {
-	result="No file to be cleaned up;" 
+	result="No file to be cleaned up ###" 
   } || {
-	result="${result} total: ${total_num} files to be cleaned up: $( echo -e "${dellist}" | tr '\n' ' ' ); "
+	result="${result} total: ${total_num} files to be cleaned up: $(echo -e "${dellist}" | tr '\n' ' ') ###"
   }
 
   # 4. delete files
@@ -111,30 +139,37 @@ check() {
 
   # 5. check snapdir_maxsize
   # remove oldest directory if {SNAPSHOT_DIR} maxsize exceed 
-  snap_dirsize=$( du -sm "${SNAPSHOT_DIR}" 2>&- | awk '{print $1}' )
+  snap_dirsize=$( /usr/bin/du -sm "${SNAPSHOT_DIR}" 2>&- | awk '{print $1}' )
   if [ -z "${snap_dirsize}" -o ! -z "${snap_dirsize//[0-9]}" ]; then
-	result="${result} snap directory size invalid [${snap_dirsize}]."
+	result="${result} snap directory size invalid [${snap_dirsize}] ###"
   else
   	if [ $snap_dirsize -gt ${snapdir_maxsize} ]; then
-		result="${result} snap directory size [${snap_dirsize}M] >= [${snapdir_maxsize}M], cleaning up"
-		oldestdir=$( find "${SNAPSHOT_DIR}" -mindepth 1 -maxdepth 1 | sort -n | head -n1)
+		result="${result} snap directory size [${snap_dirsize}M] >= [${snapdir_maxsize}M], cleaning up ###"
+		oldestdir=$( /usr/bin/find "${SNAPSHOT_DIR}" -mindepth 1 -maxdepth 1 | sort -n | head -n1)
 		if [ "$( sub_str "${oldestdir}" "eminfo/log/snapshot/" )" == "yes" ]; then
-			result="${result}; oldest dir: [${oldestdir}] will be removed"
+			result="${result} oldest dir: [${oldestdir}] will be removed ###"
 			rmerr=$( /bin/rm -rf "${oldestdir}" 2>&1 1>/dev/null )
 			if [ "$?" == "0" ]; then
-				result="${result}; remove [${oldestdir}] success."
+				result="${result} remove [${oldestdir}] success ###"
 			else
-				result="${result}; remove [${oldestdir}] failed: [${rmerr}]."
+				result="${result} remove [${oldestdir}] failed: [${rmerr}] ###"
 			fi
 		else
-       			result="${result}; oldest dir: [${oldestdir}] is invalid, nothing to do."
+       			result="${result} oldest dir: [${oldestdir}] is invalid, nothing to do ###"
 		fi
 	else
-		result="${result} snap directory size [${snap_dirsize}M], nothing to do."
+		result="${result} snap directory size [${snap_dirsize}M], nothing to do ###"
   	fi
   fi
 
-  echo "${result}"
+  EXIT_STATUS="${STATE_OK}"
+  LEVEL="ok"
+  TYPE="str"
+  CONTENT="Clear_Overdue Files Finished | No Alert | ${result}"
 }
 
 check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}  

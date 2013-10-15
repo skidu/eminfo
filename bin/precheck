@@ -137,6 +137,8 @@ array_base_cmd=(
   /usr/bin/od
   /usr/bin/tr
   /usr/bin/curl
+  /usr/bin/find
+  /usr/bin/du
   /usr/bin/nc
   /sbin/blkid
   /usr/bin/uuidgen
