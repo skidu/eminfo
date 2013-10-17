@@ -291,7 +291,7 @@ get_pidkids_bypid() {
 	return 2
   }
   if [ -z "${father_pid//[0-9]}" ]; then
-	array_result=( $(pstree -p ${father_pid} |\
+	array_result=( $(/usr/bin/pstree -p ${father_pid} |\
 			 grep -E -o "\([0-9]+\)" |\
 			 tr -d '[\(\)]' | tail -n +2 |\
 			 tr '\n\r' ' ') )
@@ -305,6 +305,29 @@ get_pidkids_bypid() {
      echo -n "${array_result[$i]} "
   done
   unset array_result
+}
+
+# According to input ppid, output kids number
+# Usage:	get_kidsnum {father_pid}
+# Example:	get_kidsnum 1876
+#
+get_kidsnum() {
+  local father_pid=$1
+  local result=
+  # if empty, pstree will output all kid pids of init(1)
+  [ -z "${father_pid}" ] && {
+        write_log -f "${EMINFO_LOG}" "E0000000 get_kidsnum error:"\
+                "missing arguments, father_pid=[${father_pid}]";
+        return 2
+  }
+  if [ -z "${father_pid//[0-9]}" ]; then
+	result=$(/usr/bin/pstree -p ${father_pid} | grep -E -o -c "\([0-9]+\)")
+  else
+	write_log -f "${EMINFO_LOG}" "E0000000 get_kidsnum error:"\
+		"input father_pid must be interger: [${father_pid}]";
+	return 1
+  fi
+  echo "${result}"
 }
 
 # Check the file is plugin config file or not, retun plugin-name if valid file.
@@ -2167,13 +2190,13 @@ process_plugin() {
   local debug=$(get_debug "${plugin_name}")   ### set debug flag
   [ "${debug}" == "yes" ] && export _DEBUG="1" || export _DEBUG="0"
 
-  # Step 2: check current overloaded or not,  yes ==> process_sysoverload ==> return
+  # Step 2.1: check current overloaded or not,  yes ==> process_sysoverload ==> return
   SYSLOAD_UPLIMIT=$( read_eminfo_config global sysload_uplimit )
   [ -z "${SYSLOAD_UPLIMIT}" -o ! -z "${SYSLOAD_UPLIMIT//[0-9]}" ] && SYSLOAD_UPLIMIT=30
   local sysload=$( cut -d" " -f1 /proc/loadavg 2>&- )
   if [ "$(echo  "${sysload} > $SYSLOAD_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
-	write_log -f "${EMINFO_LOG}" "${jid} ${plugin_name} system overloaded:"\
-		"[${sysload}] uplimit: [${SYSLOAD_UPLIMIT}] EXIT";
+	write_log -f "${EMINFO_LOG}" "${jid} ${plugin_name} system overloaded,"\
+		"[${sysload}] > [${SYSLOAD_UPLIMIT}], EXIT";
 	process_sysoverload "${plugin_name}" "${sysload}" "${SYSLOAD_UPLIMIT}"
 	update_lastrun_and_nextrun "${plugin_name}"
 	un_lock "${plugin_name}"	# unlock first
@@ -2185,6 +2208,32 @@ process_plugin() {
   else
 	write_log ${jid} ${plugin_name} "system load normal: [${sysload}] CONTINUE";
   fi
+
+  # Step 2.2: check current eminfo kids exceed or not,  yes ==> process_kidsexceed ==> return
+  KIDSNUM_UPLIMIT=$( read_eminfo_config global max_kidsnum )
+  [ -z "${KIDSNUM_UPLIMIT}" -o ! -z "${KIDSNUM_UPLIMIT//[0-9]}" ] && KIDSNUM_UPLIMIT=30
+  if [ -f "${PID_FILE}" -a -s "${PID_FILE}" ]; then
+ 	read empid < "${PID_FILE}"
+  	local kidsnum=$( get_kidsnum "${empid}" )
+  	if [ "$(echo  "${kidsnum} > $KIDSNUM_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
+		write_log -f "${EMINFO_LOG}" "${jid} ${plugin_name} kids number exceed,"\
+			"[${kidsnum}] > [${KIDSNUM_UPLIMIT}], EXIT";
+		process_kidsexceed "${plugin_name}" "${kidsnum}" "${KIDSNUM_UPLIMIT}"
+		update_lastrun_and_nextrun "${plugin_name}"
+		un_lock "${plugin_name}"	# unlock first
+		del_fpid "${plugin_name}"	# then del pid file
+		write_log ${jid} ${plugin_name}\
+			"update lastrun time / release LOG / release runlock done. FINISHED.";
+		unset _LOG
+		return 1
+  	else
+		write_log ${jid} ${plugin_name} "eminfo kids number normal: [${kidsnum}] CONTINUE";
+  	fi
+  else
+	write_log ${jid} ${plugin_name}\
+		"eminfo pid file not exist or empty, SKIP max_kids_num check, CONTINUE"
+  fi
+
 
   # Step 3: check if input plugin-name registered in config file or not
   write_log ${jid} ${plugin_name} "START";
@@ -2500,7 +2549,7 @@ process_sysoverload() {
   local hd_output="System OverLoaded, Nothing to do"
 
   # Step 0: update status.
-  update_status "${plugin_name}" "Cancle on System Overload"
+  update_status "${plugin_name}" "Cancled as System Overload"
 
   # Step 1: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
@@ -2519,6 +2568,37 @@ process_sysoverload() {
 }
 
 
+# Process system overloaded
+# Usage:    	process_kidsexceed plugin-name   kidsnum_now  kidsnum_limit
+# Example:	process_kidsexceed check_smtp_svr  32  30
+# LogFlag: 	KIDS0000
+# 
+process_kidsexceed() {
+  local plugin_name=$1  kidsnum_now=$2  kidsnum_limit=$3
+  local output="{kids}:{str}:{ Too Many Kid Processes"\
+"| $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T)"\
+"### Kids Running: [${kidsnum_now}] over than Uplimit: [${kidsnum_limit}]"\
+"### Plugin: [${plugin_name}] has been cancled }";
+  local hd_output="Kid Processes Number Exceed, Nothing to do"
+
+  # Step 0: update status.
+  update_status "${plugin_name}" "Cancle as Kid Processes Number Exceed."
+
+  # Step 1: take snapshot whatever.
+  write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
+	"[${kidsnum_now} >= ${kidsnum_limit}] 1 => take snapshot";
+  ${TAKESNAP_SH} -f "${plugin_name}" -s "kids" >/dev/null 2>&1
+
+  # Step 2: send alert mail whatever.
+  write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
+	"[${kidsnum_now} >= ${kidsnum_limit}] 2 => send alert mail";
+  ${SENDMAIL} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}"
+
+  # Step 3: post alert information whatever.
+  write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
+	"[${kidsnum_now} >= ${kidsnum_limit}] 3 => post alert data";
+  ${POSTLOG_SH} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}"
+}
 
 
 
@@ -2533,6 +2613,7 @@ process_sysoverload() {
 # plugin_name="check_pop_svr"
 
 # get_pidkids_bypid 1
+# get_kidsnum 1177
 # stopps_by_pidfile  /tmp/1.pid
 # stopps_by_pidfile /bak/workdir/eminfo/tmp/run/check_sysload.pid
 # stopps_by_pidfile /var/run/sshd.pid
