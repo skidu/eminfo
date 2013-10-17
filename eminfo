@@ -56,20 +56,20 @@ cat << EOF
 	help					stuff you are reading
   	version					print version
 	basedir					print basedir
-	start   				start eminfo
-	stop    				stop eminfo
-	status					show eminfo status
-	precheck				check previous start
-	checkconf    	[-v]			check config file
+	status					print eminfo status
+	start   				start eminfo daemon
+	stop    				stop eminfo daemon
+	precheck				check system environment on start
+	checkconf    	[-v]			check config file validity on start
 	reload					reload include file (not config file) on fly
 	makedir		[-c]			create basic directories
-	list         	[plugin]		list schedule stat (list all on default)
-	init	     	[plugin]		reset schedul stat, [all] for every plugin
-	report       	[plugin]		report last status, [all] for every plugin
-	enable       	[plugin]		enable plugin (change plugin config enable=yes)
-	disable      	[plugin]		disable plugin (change plugin config enable=no)
-	run		[plugin]		run plugin once and format output on console
-	view		[plugin] [key]		print config->value, [all] for every plugin
+	list         	[plugin]		list plugin's schedule stat, (default list all)
+	init	     	plugin			reset plugin's schedul stat, [all] for every plugin
+	report       	plugin			report plugin's last result, [all] for every plugin
+	enable       	plugin			enable plugin (change plugin config enable=yes)
+	disable      	plugin			disable plugin (change plugin config enable=no)
+	run		plugin			run plugin once and format output on terminal
+	view		plugin [key]		print config->value, [all] for every plugin
 	config					help stuff about eminfo config-*
 	config-help				help stuff about eminfo config-* (same as above)
 	?					help stuff about short tips 
@@ -81,10 +81,10 @@ cat << EOF
 
   $(echo_green "Options:")
 	config-help				help stuff about config you are reading
-	config-view  	[plugin] [key]		print config=>value, [all] for every plugin
-  	config-add   	[plugin] [key] [value]  add config=>value for plugin
-	config-del   	[plugin] [key]		delete config for plugin
-	config-update 	[plugin] [key] [value]  update conifg=>value for plugin
+	config-view  	plugin key		print config value, [all] for every plugin
+  	config-add   	plugin key value  	add config and set value for plugin
+	config-del   	plugin key		delete config for plugin
+	config-update 	plugin key value	update config value for plugin
 EOF
 }
 
