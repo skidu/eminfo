@@ -104,7 +104,6 @@ array_base_cmd=(
   /usr/bin/dirname
   /bin/basename
   /usr/bin/bc 
-  /sbin/pidof
   /bin/sed
   /bin/awk
   /bin/gawk
@@ -130,9 +129,6 @@ array_base_cmd=(
   /bin/tar
   /bin/gzip
   /bin/chmod
-  /bin/chown
-  /usr/bin/chattr
-  /usr/bin/python
   /usr/bin/perl
   /usr/bin/od
   /usr/bin/tr

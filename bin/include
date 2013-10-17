@@ -2242,7 +2242,7 @@ process_plugin() {
   fi
 
   # Step 6: exec plugin / obtain returned code / obtain returned stuff
-  [ ! -x "${PLUGIN_DIR}/${plugin_name}" ] && chmod a+x "${PLUGIN_DIR}/${plugin_name}"
+  [ ! -x "${PLUGIN_DIR}/${plugin_name}" ] && /bin/chmod a+x "${PLUGIN_DIR}/${plugin_name}"
   ### local output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )    # wrong! can NOT get return code, as always be 0.
   local output=
   output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )
@@ -2323,7 +2323,7 @@ process_plugin() {
 	if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
 		write_log ${jid} ${plugin_name} "auto handler:"\
 			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
- 		[ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
+ 		[ ! -x "${HANDLER_DIR}/${handler}" ] && /bin/chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
 		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
 		local hd_rc=$?
 		write_log ${jid} ${plugin_name} "auto handler execution completed."\
@@ -2395,7 +2395,7 @@ process_inner_plugin() {
   fi
 
   # Step 3: execute plugin / get return stuff
-  [ ! -x "${INNER_DIR}/${plugin_name}" ] && chmod a+x "${INNER_DIR}/${plugin_name}"
+  [ ! -x "${INNER_DIR}/${plugin_name}" ] && /bin/chmod a+x "${INNER_DIR}/${plugin_name}"
   output=$( eval "${INNER_DIR}/${plugin_name}" 2>&1 )
   write_log -f ${INNER_LOG} ${jid} ${plugin_name} "execution completed."\
 	"return: [${output}]";
@@ -2449,7 +2449,7 @@ process_plugin_timeout() {
         if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
                 write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\
 			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
-                [ ! -x "${HANDLER_DIR}/${handler}" ] && chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
+                [ ! -x "${HANDLER_DIR}/${handler}" ] && /bin/chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
 		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
 		local hd_rc=$?
                 write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle execution completed."\
