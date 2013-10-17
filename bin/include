@@ -96,12 +96,12 @@ ARRAY_BASE_CONFIG=(
   frequency
   exec_tmout
   maxerr_times
-  take_snapshot_type
-  mail_notify_type
-  post_notify_type
+  take_snapshot
+  mail_notify
+  post_notify
   mail_receviers
-  attach_snap_mail
-  auto_handle_type
+  attsnap_mail
+  auto_handle
   auto_handler
   debug
 )
@@ -827,19 +827,19 @@ get_debug() {
   echo "${result}"
 }
 
-# Get plugin attach_snap_mail	config-name:  attach_snap_mail
+# Get plugin attsnap_mail config-name:  attsnap_mail
 # Note: called by script: bin/sendmail
 # Note: if returned config-value null or invalid, return yes
 #
-get_attach_snap_mail() {
+get_attsnap_mail() {
   local plugin_name=$1  result=
   [ -z "${plugin_name}" ] && {
-        write_log -f "${EMINFO_LOG}" "E0000000 get_attach_snap_mail error: missing plugin name";
+        write_log -f "${EMINFO_LOG}" "E0000000 get_attsnap_mail error: missing plugin name";
         return 1
   }
 
-  result=$(read_eminfo_config ${plugin_name} attach_snap_mail)
-  [ -z "${result}" ] && result=$(read_eminfo_config default attach_snap_mail)
+  result=$(read_eminfo_config ${plugin_name} attsnap_mail)
+  [ -z "${result}" ] && result=$(read_eminfo_config default attsnap_mail)
   # check null or invalid or not
   [ -z "${result}" ] && {
  	result="yes"
@@ -993,9 +993,9 @@ get_maxerr_times() {
 }
 
 # Get plugin's xxxx_action_type value.		
-# allowed action_type ==> [ take_snapshot_type | mail_notify_type | post_notify_type | auto_handle_type ]
+# allowed action_type ==> [ take_snapshot | mail_notify | post_notify | auto_handle ]
 # Usage:      get_action_type  plugin-name  xxxx_action_type
-# Example:	get_action_type  check_sysload mail_notify_type
+# Example:	get_action_type  check_sysload mail_notify
 # Note: invalid values will be ignored, only return valid values.
 # Note: duplication items will be removed.
 # Return:  1: plugin_name or action_type empty  2: action_type invalid
@@ -1009,10 +1009,10 @@ get_action_type() {
 		"missing plugin_name or action_type : [$*]";
         return 1
   }
-  [ "${action_type}" != "take_snapshot_type" -a "${action_type}" != "mail_notify_type" -a "${action_type}" != "post_notify_type" -a "${action_type}" != "auto_handle_type" ] && {
+  [ "${action_type}" != "take_snapshot" -a "${action_type}" != "mail_notify" -a "${action_type}" != "post_notify" -a "${action_type}" != "auto_handle" ] && {
 	write_log -f "${EMINFO_LOG}" "E0000000 get_action_type error:"\
 		"action_type: [${action_type}] is invalid,"\
-		"only [ take_snapshot_type/mail_notify_type/post_notify_type/auto_handle_type ] is acceptable.";
+		"only [ take_snapshot/mail_notify/post_notify/auto_handle ] is acceptable.";
 	return 2
   }
 
@@ -1045,11 +1045,11 @@ get_action_type() {
 
 # Take action or not
 # Argument 1:  plugin-name
-# Argument 2:  action_type => take_snapshot_type mail_notify_type post_notify_type auto_handle_type
+# Argument 2:  action_type => take_snapshot mail_notify post_notify auto_handle
 # Argument 3:  event	=> 0 1 2 3 4 tmout
-# Example:	take_action_ornot  check_sysload mail_notify_type 3
-# Example:	take_action_ornot  check_v4_ps post_notify_type 0
-# Example:	take_action_ornot  check_cpu_usage take_snapshot_type tmout
+# Example:	take_action_ornot  check_sysload mail_notify 3
+# Example:	take_action_ornot  check_v4_ps post_notify 0
+# Example:	take_action_ornot  check_cpu_usage take_snapshot tmout
 # 
 take_action_ornot() {
   local plugin_name=$1  action_type=$2  event=$3
@@ -2299,8 +2299,8 @@ process_plugin() {
   	fi
   fi
 
-  # Step 8: check action: take_snapshot_type
-  local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot_type ${rc})
+  # Step 8: check action: take_snapshot
+  local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot ${rc})
   if [ "${t_snap}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "take snapshot disabled. SKIP";
   else
@@ -2311,7 +2311,7 @@ process_plugin() {
   fi
 	
   # Step 9: check action: auto_handle
-  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type ${rc})
+  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle ${rc})
   local hd_output=
   if [ "${a_hand}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "auto handle disabled. SKIP";
@@ -2335,8 +2335,8 @@ process_plugin() {
 	fi
   fi
 
-  # Step 10: check action: post_notify_type
-  local p_alert=$(take_action_ornot "${plugin_name}" post_notify_type ${rc})
+  # Step 10: check action: post_notify
+  local p_alert=$(take_action_ornot "${plugin_name}" post_notify ${rc})
   if [ "${p_alert}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "post notify disabled. SKIP";
   else
@@ -2347,8 +2347,8 @@ process_plugin() {
 		"details in ${POSTLOG_LOG##*/}. CONTINUE";
   fi
 
-  # Step 11: check action: mail_notify_type
-  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify_type ${rc})
+  # Step 11: check action: mail_notify
+  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify ${rc})
   if [ "${m_alert}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
   else
@@ -2426,7 +2426,7 @@ process_plugin_timeout() {
   [ "$( echo "${plugin_name}" | grep -E -o "^eminfo_" )" != "" ] && return 0
 
   # Step 2: take snapshot
-  local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot_type "tmout")
+  local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot tmout)
   if [ "${t_snap}" != "yes" ]; then
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} take snapshot disabled. SKIP";
   else
@@ -2437,7 +2437,7 @@ process_plugin_timeout() {
   fi
 
   # Step 3: auto handler while timeout
-  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle_type "tmout")
+  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle "tmout")
   local hd_output=
   if [ "${a_hand}" != "yes" ]; then
  	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle disabled. SKIP";
@@ -2462,7 +2462,7 @@ process_plugin_timeout() {
   fi
 
   # Step 4: post timeout information
-  local p_alert=$(take_action_ornot "${plugin_name}" post_notify_type "tmout")
+  local p_alert=$(take_action_ornot "${plugin_name}" post_notify "tmout")
   if [ "${p_alert}" != "yes" ]; then
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify disabled. SKIP";
   else
@@ -2473,7 +2473,7 @@ process_plugin_timeout() {
   fi
 
   # Step 5: send timeout notify mail
-  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify_type "tmout")
+  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify "tmout")
   if [ "${m_alert}" != "yes" ]; then
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify disabled. SKIP";
   else
@@ -2584,7 +2584,7 @@ process_sysoverload() {
 
 # get_frequency check_sysload
 
-# get_action_type check_sysload post_notify_type1
+# get_action_type check_sysload post_notify1
 # conv_time2sec 1800sec
 
 # update_status report_sysinfo "{ok}:{file}:{/var/log/secure_report.2013.4.10.csv /var/log/secure /etc/passwd /tmp/.hack.tgz}"

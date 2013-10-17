@@ -168,21 +168,21 @@ else
 fi
 
 ### attch_snap_mail
-attach_snap_mail_args=
+attsnap_mail_args=
 # Don't attach snapshot on following special case.
 if [ "${jobid}" == "ovld" -o "${jobid}" == "00000000" -o "${plugin_name}" == "FNULL" ]; then
-	attach_snap_mail="no"
+	attsnap_mail="no"
 else
-	attach_snap_mail=$(get_attach_snap_mail "${plugin_name}")
+	attsnap_mail=$(get_attsnap_mail "${plugin_name}")
 fi
-if [ "${attach_snap_mail}" == "yes" ]; then
+if [ "${attsnap_mail}" == "yes" ]; then
 	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 		"INFO: attach sanp mail enabled, now trying to take snapshot"
 	snap_file=$( eval ${TAKESNAP_SH} -f "${plugin_name}" -s "${jobid}.sendmail" 2>&- )
 	if [ -f "${snap_file}" -a -s "${snap_file}" ]; then
 		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 			"INFO: add attachment Snap-TAR-File:[${snap_file}]"
-		attach_snap_mail_args=" -a "${snap_file}" "
+		attsnap_mail_args=" -a "${snap_file}" "
 	else
 		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 			"ERROR: Snap-TAR-File:[${snap_file}] not exist or empty"
@@ -262,7 +262,7 @@ case "${mail_type}" in
 			-xu "${auth_user}" -xp "${auth_pass}" \
 			-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 			-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -m "Refer to attachments for details." \
-			-a ${att_file_args}  ${attach_snap_mail_args} ${attach_ini_mail_args} 2>&1 )
+			-a ${att_file_args}  ${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 			[ "$?" == "0" ] && ((t_s+=1)) || ((t_e+=1))
 			write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 				"INFO: [${n}/${t}], sending mail to [${x}] end. result: ${result}"
@@ -291,7 +291,7 @@ case "${mail_type}" in
 	    		-xu "${auth_user}" -xp "${auth_pass}" \
 	    		-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 	    		-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -o message-file="${mailbody_path}" \
-	    		${attach_snap_mail_args} ${attach_ini_mail_args} 2>&1 )
+	    		${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 	    	  [ "$?" == "0" ] && ((t_s+=1)) || ((t_e+=1))
 	    	  write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 			"INFO: [${n}/${t}], sending mail to [${x}] end. result: ${result}"

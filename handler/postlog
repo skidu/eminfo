@@ -47,12 +47,12 @@ genpost_asxml(){
   local frequency=$(get_frequency "${plugin}")
   local exec_tmout=$(get_exec_tmout "${plugin}")
   local maxerr_times=$(get_maxerr_times "${plugin}")
-  local take_snapshot_type=$(get_action_type "${plugin}" take_snapshot_type)
-  local mail_notify_type=$(get_action_type "${plugin}" mail_notify_type)
-  local post_notify_type=$(get_action_type "${plugin}" post_notify_type)
+  local take_snapshot=$(get_action_type "${plugin}" take_snapshot)
+  local mail_notify=$(get_action_type "${plugin}" mail_notify)
+  local post_notify=$(get_action_type "${plugin}" post_notify)
   local mail_receviers=$(get_mail_receviers "${plugin}" mail_receviers)
-  local attach_snap_mail=$(get_attach_snap_mail "${plugin}")
-  local auto_handle_type=$(get_action_type "${plugin}" auto_handle_type)
+  local attsnap_mail=$(get_attsnap_mail "${plugin}")
+  local auto_handle=$(get_action_type "${plugin}" auto_handle)
   local auto_handler=$(get_auto_handler "${plugin}" auto_handler)
   local debug=$(get_debug "${plugin}")
   userdef2xml() {
@@ -82,12 +82,12 @@ genpost_asxml(){
 <frequency>${frequency}</frequency>
 <exec_tmout>${exec_tmout}</exec_tmout>
 <maxerr_times>${maxerr_times}</maxerr_times>
-<take_snapshot_type>${take_snapshot_type}</take_snapshot_type>
-<mail_notify_type>${mail_notify_type}</mail_notify_type>
-<post_notify_type>${post_notify_type}</post_notify_type>
+<take_snapshot>${take_snapshot}</take_snapshot>
+<mail_notify>${mail_notify}</mail_notify>
+<post_notify>${post_notify}</post_notify>
 <mail_receviers>${mail_receviers}</mail_receviers>
-<attach_snap_mail>${attach_snap_mail}</attach_snap_mail>
-<auto_handle_type>${auto_handle_type}</auto_handle_type>
+<attsnap_mail>${attsnap_mail}</attsnap_mail>
+<auto_handle>${auto_handle}</auto_handle>
 <auto_handler>${auto_handler}</auto_handler>
 <debug>${debug}</debug>
 </basic>
