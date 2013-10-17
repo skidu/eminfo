@@ -442,29 +442,20 @@ list_section_keys(){
   echo -e "${result}"
 }
 
-# According to input plugin-name, output matched plugin-name in config file.
-# Example:	read_eminfo_section  check_sysload
+# According to input plugin-name, output matched plugin-name in plugin config file.
+# Example:	read_plugin_section  check_sysload
 # Return:	0 1 2 3 :  OK | Missing arguments | ${config_file} empty / not exist | Null
 #
-read_eminfo_section(){
+read_plugin_section(){
   local section=$1  value= config_file=
   if [ -z "${section}" ]; then 
-	write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_section error:"\
+	write_log -f "${EMINFO_LOG}" "E0000000 read_plugin_section error:"\
 		"missing arguments, section=[${section}]";
 	return 1
   else
-	if [ "${section}" == "global" -o "${section}" == "default" ]; then 
-        	config_file="${CONFIG_FILE}"
-	elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
-		config_file="${CONFIG_FILE}"
-  	elif [ "$(echo "${section}" | grep -E -o "^eminfo_")" != "" ]; then
-        	config_file="${CONFIG_FILE}"
-  	else 
-        	config_file="${CONF_DIR}/${section}.ini"
-  	fi
-
+        config_file="${CONF_DIR}/${section}.ini"
 	if [ ! -f "${config_file}" -o ! -s "${config_file}" ]; then
-		write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_section error:"\
+		write_log -f "${EMINFO_LOG}" "E0000000 read_plugin_section error:"\
 			"config file [${config_file}] not exists or empty.";
 		return 2
 	else
@@ -475,10 +466,39 @@ read_eminfo_section(){
 			echo "${value}" 
 			return 0
 		else
-			# write_log -f "${EMINFO_LOG}" E0000000 read_eminfo_section error: "[${section}]"  return NULL.
 			return 3
 		fi
 	fi
+  fi
+}
+
+# According to input section-name, output matched section-name in eminfo config file.
+# Example:	read_eminfo_section   eminfo_iam_alive
+# Return:	0 1 2 3 :  OK | Missing arguments | ${config_file} empty / not exist | Null
+#
+read_eminfo_section() {
+  local section=$1  value= config_file=
+  if [ -z "${section}" ]; then 
+        write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_section error:"\
+                "missing arguments, section=[${section}]";
+        return 1
+  else 
+	config_file="${CONFIG_FILE}"
+        if [ ! -f "${config_file}" -o ! -s "${config_file}" ]; then 
+                write_log -f "${EMINFO_LOG}" "E0000000 read_eminfo_section error:"\
+                        "config file [${config_file}] not exists or empty.";
+                return 2
+        else 
+                value=$(cat ${config_file} |\
+                        grep -E -v "^[ \t]*;" | tr -d ' \t' |\
+                        sed -e '/^\['${section}'\]$/!d; s/^\[//; s/\]$//;')
+                if [ -n "${value}" ]; then 
+                        echo "${value}" 
+                        return 0
+                else 
+                        return 3
+                fi   
+        fi   
   fi
 }
 
@@ -2246,7 +2266,7 @@ process_plugin() {
 	unset _LOG
 	return 1
   else
-  	if [ "$(read_eminfo_section "${plugin_name}" )" != "${plugin_name}" ]; then   ### plugin finished
+  	if [ "$(read_plugin_section "${plugin_name}" )" != "${plugin_name}" ]; then   ### plugin finished
 		write_log ${jid} ${plugin_name} "not registered in config file. EXIT";
 		update_status "${plugin_name}" "EXIT on Not Registered";
 		update_lastrun_and_nextrun "${plugin_name}"
@@ -2543,13 +2563,13 @@ process_plugin_timeout() {
 process_sysoverload() {
   local plugin_name=$1  sysload_now=$2  sysload_limit=$3
   local output="{ovld}:{str}:{ System OverLoad"\
-"| $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T)"\
-"### Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]"\
-"### Plugin: [${plugin_name}] has been cancled }";
+"| ${plugin_name} has been cancled at $(date +%F_%T)"\
+"| $(html_red "Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]") ### "\
+"Plugin: [${plugin_name}] has been cancled ### }";
   local hd_output="System OverLoaded, Nothing to do"
 
   # Step 0: update status.
-  update_status "${plugin_name}" "Cancled as System Overload"
+  update_status "${plugin_name}" "${output}"
 
   # Step 1: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
@@ -2576,13 +2596,13 @@ process_sysoverload() {
 process_kidsexceed() {
   local plugin_name=$1  kidsnum_now=$2  kidsnum_limit=$3
   local output="{kids}:{str}:{ Too Many Kid Processes"\
-"| $(html_red "${plugin_name}") has been cancled. | Date: $(date +%F_%T)"\
-"### Kids Running: [${kidsnum_now}] over than Uplimit: [${kidsnum_limit}]"\
-"### Plugin: [${plugin_name}] has been cancled }";
+"| ${plugin_name} has been cancled at $(date +%F_%T)"\
+"| $(html_red "Kids Running: [${kidsnum_now}] over than Uplimit: [${kidsnum_limit}]") ### "\
+"Plugin: [${plugin_name}] has been cancled ### }";
   local hd_output="Kid Processes Number Exceed, Nothing to do"
 
   # Step 0: update status.
-  update_status "${plugin_name}" "Cancle as Kid Processes Number Exceed."
+  update_status "${plugin_name}" "${output}"
 
   # Step 1: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
@@ -2604,6 +2624,7 @@ process_kidsexceed() {
 
 
 #################  Debug Area  #####################
+
 
 
 # read_eminfo_config check_v5_mailq notify_alert

@@ -520,7 +520,7 @@ case "$#" in
 	"?")
 		show_shorttips		;;
 	"list"|"l")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		if [ "$(read_plugin_section "$2")" == "$2" ]; then	### must be plugin
 			list_plugin_status  "$2"
 		else
 			echo plugin  $(echo_yellow "[$2]") : not registered in config file.
@@ -528,7 +528,7 @@ case "$#" in
 		fi
 			;;	
 	"enable"|"e")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		if [ "$(read_plugin_section "$2")" == "$2" ]; then	### must be plugin
                         enable_plugin  "$2"
 			rc=$?
 			case "$rc" in
@@ -552,7 +552,7 @@ case "$#" in
                 fi
 			;;
 	"disable"|"d")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		if [ "$(read_plugin_section "$2")" == "$2" ]; then	### must be plugin
                         disable_plugin  "$2"
 			rc=$?
 			case "$rc" in
@@ -578,7 +578,7 @@ case "$#" in
 	"init"|"i")
 		if [ "$2" == "all" -o "$2" == "a" ]; then
 			init_plugin
-		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		elif [ "$(read_plugin_section "$2")" == "$2" ]; then	### must be plugin
                         init_plugin  "$2"
 		else
                         echo plugin  $(echo_yellow "[$2]") : not registered in config file.
@@ -587,8 +587,16 @@ case "$#" in
 			;;
 	"view"|"config-view"|"v")
 		if [ "$2" == "all" -o "$2" == "a" ]; then
-			view_extra_config "global"
-			for p in `list_plugin_section`
+			view_extra_config "global"		### output about eminfo section 
+			view_base_config  "default"
+			view_extra_config "sendmail"
+			view_extra_config "postlog"
+			view_extra_config "takesnap"
+			for p in `list_inner_plugin_section`	### output inner plugins
+			do
+				view_extra_config "${p}"
+			done
+			for p in `list_plugin_section`		### output plugins
 			do
 				view_base_config  "${p}"
 				view_extra_config "${p}"
@@ -598,7 +606,9 @@ case "$#" in
 			view_extra_config "$2"
 		elif [ "$2" == "postlog" -o "$2" == "takesnap" ]; then
 			view_extra_config "$2"
-		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		elif [ "$2" == "default" ]; then
+			view_base_config "$2"
+		elif [ "$(read_plugin_section "$2")" == "$2" ]; then	### must be plugin
                         view_base_config "$2"
 			view_extra_config "$2"
 		else
@@ -609,18 +619,20 @@ case "$#" in
 	"report"|"R")
 		if [ "$2" == "all" -o "$2" == "a" ]; then
 			. ${REPORT_SH} "all"
-		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		elif [ "$(read_plugin_section "$2")" == "$2" ]; then 	### is plugin
 			. ${REPORT_SH} "$2"
-		else
-			echo plugin $(echo_yellow "[$2]") : not registered in config file.
-			exit 9;
+		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
+			if [ ! -z "$( echo "${2}" | grep -E -o "^eminfo_" )" ]; then    ### is inner plugin
+				. ${REPORT_SH} "$2"
+			fi
 		fi
 			;;
 	"run"|"r")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
-			if [ -z "$( echo "${2}" | grep -E -o "^eminfo_" )" ]; then
-				output=$( eval "${PLUGIN_DIR}/${2}" 2>&1 )
-			else
+		if [ "$(read_plugin_section "$2")" == "$2" ]; then	### is plugin
+			output=$( eval "${PLUGIN_DIR}/${2}" 2>&1 )
+			. ${REPORT_SH} -f "$2" -i "${output}"
+		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
+			if [ ! -z "$( echo "${2}" | grep -E -o "^eminfo_" )" ]; then	### is inner plugin
 				output=$( eval "${INNER_DIR}/${2}" 2>&1 )
 			fi
 			. ${REPORT_SH} -f "$2" -i "${output}"
@@ -652,17 +664,17 @@ case "$#" in
 
 	case "$1" in 
         "view"|"config-view"|"v")
-                if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+                if [ "$(read_eminfo_section "$2")" == "$2" -o "$(read_plugin_section "$2")" == "$2" ]; then
 			read_eminfo_config "$2" "$3"
 			rc=$?
 			exit ${rc}
                 else
-                        echo plugin $(echo_yellow "[$2]") : not registered in config file.
+                        echo section $(echo_yellow "[$2]") : not registered in config file.
                         exit 9;
                 fi
                         ;;
 	"config-del")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		if [ "$(read_eminfo_section "$2")" == "$2" -o "$(read_plugin_section "$2")" == "$2" ]; then
 			del_eminfo_config "$2" "$3"
 			rc=$?
 			case "$rc" in
@@ -673,7 +685,7 @@ case "$#" in
 			esac
 			exit ${rc}
 		else
-			echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			echo section  $(echo_yellow "[$2]") : not registered in config file.
 			exit 9;
 		fi
 		;;
@@ -691,7 +703,7 @@ case "$#" in
 
 	case "$1" in
 	"config-add")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		if [ "$(read_eminfo_section "$2")" == "$2" -o "$(read_plugin_section "$2")" == "$2" ]; then
 			add_eminfo_config "$2" "$3" "$4"
 			rc=$?
 			case "$rc" in
@@ -702,12 +714,12 @@ case "$#" in
 			esac
 			exit ${rc}
 		else
-			echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			echo section  $(echo_yellow "[$2]") : not registered in config file.
 			exit 9;
 		fi
 		;;
 	"config-update")
-		if [ "$(read_eminfo_section "$2")" == "$2" ]; then
+		if [ "$(read_eminfo_section "$2")" == "$2" -o "$(read_plugin_section "$2")" == "$2" ]; then
 			update_eminfo_config "$2" "$3" "$4"
 			rc=$?
 			case "$rc" in
@@ -719,7 +731,7 @@ case "$#" in
 			esac
 			exit ${rc}
 		else
-			echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			echo section  $(echo_yellow "[$2]") : not registered in config file.
 			exit 9;
 		fi
 		;;
