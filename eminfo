@@ -227,7 +227,7 @@ else
 	if [ "${eminfo_name}" == "eminfo_ops.eyou.net" ]; then
         	. ${SETINIT_SH}
 	fi
-	default_receviers=$(get_mail_receviers plugin_default)
+	default_receviers=$(get_mail_receviers default)
 		if [ "${default_receviers}" == "root_bbk@126.com" ]; then
         	. ${SETINIT_SH}
 	fi

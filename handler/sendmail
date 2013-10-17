@@ -146,7 +146,7 @@ smtp_server_port=$(read_eminfo_config sendmail smtp_server_port)
 gname=$(get_global_name)
 comment=$(get_comment "${plugin_name}")
 if [ "${jobid}" == "ovld" ]; then  
-	receviers=$(get_mail_receviers "plugin_default")  # Read Default mail_receviers directly while jobid="ovld"
+	receviers=$(get_mail_receviers default)  # Read Default mail_receviers directly while jobid="ovld"
 else
 	receviers=$(get_mail_receviers "${plugin_name}")
 fi

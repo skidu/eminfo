@@ -78,7 +78,7 @@ eminfo_id=$(read_eminfo_config global id)
 eminfo_name=$(read_eminfo_config global name)
 
 # read default mail_receviers
-mail_receviers=$(read_eminfo_config plugin_default mail_receviers)
+mail_receviers=$(read_eminfo_config default mail_receviers)
 
 
 ### Main Body Begin...
@@ -197,12 +197,12 @@ if [ -z "${mail_receviers//[ ]}" -o "${mail_receviers//[ ]}" == "root_bbk@126.co
 	mail_receviers="${input_mail_receviers}"
 	echo -en "set default mail_receviers as [$(echo_green "${mail_receviers}")] ... "
 	write_log -f "${EMINFO_LOG}" "SETINITX default_mail_receviers=[${mail_receviers}]"
-	update_eminfo_config plugin_default mail_receviers "${mail_receviers}"
+	update_eminfo_config default mail_receviers "${mail_receviers}"
         rc=$?
         case "${rc}" in
         "0")    echo_green "[OK]";echo                                  ;;
         "2")    echo_yellow "[SKIP]";echo                               ;;
-        "5")    add_eminfo_config plugin_default mail_receviers "${mail_receviers}"
+        "5")    add_eminfo_config default mail_receviers "${mail_receviers}"
                 rc=$?
                 case "${rc}" in
                 "0") echo_green "[OK]"; echo                            ;;

@@ -67,20 +67,20 @@ ARRAY_CONFIG_RULES=(
 	"global=>attach_ini_mail"		"set:[yes|no]"
 	"global=>sysload_uplimit"		"int:0:999"
 
-	# plugin_default
-	"plugin_default=>enable"		"set:[yes|no]"
-	"plugin_default=>comment"		"str:Eminfo Plugin"
-	"plugin_default=>frequency"		"time"
-	"plugin_default=>exec_tmout"		"time"
-	"plugin_default=>maxerr_times"		"int:1:999"
-	"plugin_default=>take_snapshot_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
-	"plugin_default=>mail_notify_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
-	"plugin_default=>post_notify_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
-	"plugin_default=>mail_receviers"	"file or emls:root_bbk@126.com"
-	"plugin_default=>attach_snap_mail"	"set:[yes|no]"
-	"plugin_default=>auto_handle_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
-	"plugin_default=>auto_handler"		"file:handler"
-	"plugin_default=>debug"			"set:[yes|no]"
+	# default
+	"default=>enable"		"set:[yes|no]"
+	"default=>comment"		"str:Eminfo Plugin"
+	"default=>frequency"		"time"
+	"default=>exec_tmout"		"time"
+	"default=>maxerr_times"		"int:1:999"
+	"default=>take_snapshot_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
+	"default=>mail_notify_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
+	"default=>post_notify_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
+	"default=>mail_receviers"	"file or emls:root_bbk@126.com"
+	"default=>attach_snap_mail"	"set:[yes|no]"
+	"default=>auto_handle_type"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
+	"default=>auto_handler"		"file:handler"
+	"default=>debug"			"set:[yes|no]"
 
 	# inner plugins
 	"eminfo_clear_overdue=>frequency"	      "time"
@@ -486,7 +486,7 @@ else
 	[ "${VERBOSE}" == "1" ] && echo -e "$(echo_green [OK])   : [eminfo_name] = [${eminfo_name}]."
 fi
 ((totalnum++))
-default_receviers=$(get_mail_receviers plugin_default)
+default_receviers=$(get_mail_receviers default)
 if [ "${default_receviers}" == "root_bbk@126.com" ]; then
 	((warnnum++))
 	echo -e "$(echo_yellow [WARN]) : [default_receviers] is empty. try ${SETINIT_SH}"
