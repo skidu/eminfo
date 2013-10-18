@@ -39,15 +39,15 @@ post_time_out=$(read_eminfo_config postlog post_time_out)
 post_server_port=$(read_eminfo_config postlog post_server_port)
 
 # if null or invalid set default.
-[ -z "${charset//[ ]}" ] && {
+[ -z "${charset}" ] && {
         charset="utf-8"
 }
 
-[ -z "${post_time_out//[ ]}" -o ! -z "${post_time_out//[0-9]}" ] && {
+[ -z "${post_time_out}" -o ! -z "${post_time_out//[0-9]}" ] && {
         post_time_out="10"
 }
 
-[ -z "${post_server_port//[ ]}" -o ! -z "${post_server_port//[0-9]}" ] && {
+[ -z "${post_server_port}" -o ! -z "${post_server_port//[0-9]}" ] && {
         post_server_port="1218"
 }
 

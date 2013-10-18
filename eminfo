@@ -363,6 +363,7 @@ else
 
 		### sleep for a while.
 		INTERVAL=$( read_eminfo_config global scan_interval )
+		[ -z "${INTERVAL}" -o ! -z "${INTERVAL//[0-9]}" ] && INTERVAL=5
 		sleep ${INTERVAL}
 
 	done 

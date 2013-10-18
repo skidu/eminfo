@@ -142,6 +142,25 @@ smtp_server_port=$(read_eminfo_config sendmail smtp_server_port)
         smtp_server_port="25"
 }
 
+
+# check smtp host status
+if [ -f "${SMTPHOST_STATUS}" -a -s "${SMTPHOST_STATUS}" ]; then
+	status=$(/bin/awk '{print $1;exit}' "${SMTPHOST_STATUS}" 2>&-)
+	conn_details=$(/bin/awk '{$1="";print;exit;}' "${SMTPHOST_STATUS}" 2>&-)
+	if [ "${status}" != "0" ]; then
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"WARN: smtp host seems down, [${conn_details}], exit"
+		exit 2;
+	else
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"INFO: smtp host seems online, [${conn_details}], continue."
+	fi
+else
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"INFO: smtp host status file not exist or empty, continue."
+fi
+
+
 # read global.name / read plugin comment / read plugin mail-receviers 
 gname=$(get_global_name)
 comment=$(get_comment "${plugin_name}")

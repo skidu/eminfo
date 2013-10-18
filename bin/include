@@ -80,6 +80,8 @@ TMP_LASTRUN="${TMP_DIR}/.lastrun.dat"
 TMP_NEXTRUN="${TMP_DIR}/.nextrun.dat"
 TMP_REPEAT="${TMP_DIR}/.repeat.dat"
 TMP_STATUS="${TMP_DIR}/.status.dat"
+SMTPHOST_STATUS="${TMP_DIR}/.smtphost.status"
+POSTHOST_STATUS="${TMP_DIR}/.posthost.status"
 
 # OTHER FILE DEF
 PINYIN_FILE="${OPT_DIR}/pinyin.txt"
