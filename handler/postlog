@@ -66,40 +66,40 @@ genpost_asxml(){
   local userdef_asxml=$(userdef2xml "${plugin}")
   local plugin_handler_xmloutput=$( ${PLUTIL} format_phoutput_toxml "${content}" "${hd_content}" )
 
-  cat <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- eminfo postdata start -->
-<eminfo_postdata>
-<eminfo_id>${eminfo_id}</eminfo_id>
-<eminfo_gname>${gname}</eminfo_gname>
-<eminfo_jobid>${jobid}</eminfo_jobid>
-<eminfo_jobts>${jobts}</eminfo_jobts>
-<eminfo_plugin_config>
-<basic>
-<name>${plugin}</name>
-<enable>${enable}</enable>
-<comment>${comment}</comment>
-<frequency>${frequency}</frequency>
-<exec_tmout>${exec_tmout}</exec_tmout>
-<maxerr_times>${maxerr_times}</maxerr_times>
-<take_snapshot>${take_snapshot}</take_snapshot>
-<mail_notify>${mail_notify}</mail_notify>
-<post_notify>${post_notify}</post_notify>
-<mail_receviers>${mail_receviers}</mail_receviers>
-<attsnap_mail>${attsnap_mail}</attsnap_mail>
-<auto_handle>${auto_handle}</auto_handle>
-<auto_handler>${auto_handler}</auto_handler>
-<debug>${debug}</debug>
-</basic>
-<userdef>
-${userdef_asxml}
-</userdef>
-</eminfo_plugin_config>
-${plugin_handler_xmloutput}
-<additional>
-</additional>
-</eminfo_postdata>
-<!-- eminfo postdata end -->
+  cat <<-EOF
+	<?xml version="1.0" encoding="UTF-8"?>
+	<!-- eminfo postdata start -->
+		<eminfo_postdata>
+		<eminfo_id>${eminfo_id}</eminfo_id>
+		<eminfo_gname>${gname}</eminfo_gname>
+		<eminfo_jobid>${jobid}</eminfo_jobid>
+		<eminfo_jobts>${jobts}</eminfo_jobts>
+		<eminfo_plugin_config>
+			<basic>
+				<name>${plugin}</name>
+				<enable>${enable}</enable>
+				<comment>${comment}</comment>
+				<frequency>${frequency}</frequency>
+				<exec_tmout>${exec_tmout}</exec_tmout>
+				<maxerr_times>${maxerr_times}</maxerr_times>
+				<take_snapshot>${take_snapshot}</take_snapshot>
+				<mail_notify>${mail_notify}</mail_notify>
+				<post_notify>${post_notify}</post_notify>
+				<mail_receviers>${mail_receviers}</mail_receviers>
+				<attsnap_mail>${attsnap_mail}</attsnap_mail>
+				<auto_handle>${auto_handle}</auto_handle>
+				<auto_handler>${auto_handler}</auto_handler>
+				<debug>${debug}</debug>
+			</basic>
+			<userdef>
+				${userdef_asxml}
+			</userdef>
+		</eminfo_plugin_config>
+		${plugin_handler_xmloutput}
+		<additional>
+		</additional>
+		</eminfo_postdata>
+	<!-- eminfo postdata end -->
 EOF
 }
 
