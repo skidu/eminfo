@@ -114,6 +114,7 @@ array_base_cmd=(
   /bin/cat
   /bin/ps
   /bin/mkdir
+  /bin/mktemp
   /bin/cut
   /usr/bin/pstree
   /usr/bin/tr

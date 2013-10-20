@@ -61,11 +61,14 @@ exit 0
 #
 ARRAY_CONFIG_RULES=(
 	# global
-	"global=>id"				"int:100000000:9999999999"
-	"global=>name" 				"str:eminfo_ops.eyou.net"
+	#"global=>id"				"int:100000000:9999999999"
+	#"global=>name" 				"str:eminfo_ops.eyou.net"
 	"global=>scan_interval"  		"int:5:999"
 	"global=>attach_ini_mail"		"set:[yes|no]"
 	"global=>sysload_uplimit"		"int:0:999"
+	"global=>max_kidsnum"			"int:0:99"
+	"global=>plugin_maxlen"			"int:1:65536"
+	"global=>handler_maxlen"		"int:1:32768"
 
 	# default
 	"default=>enable"		"set:[yes|no]"
@@ -76,7 +79,7 @@ ARRAY_CONFIG_RULES=(
 	"default=>take_snapshot"	"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
 	"default=>mail_notify"		"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
 	"default=>post_notify"		"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
-	"default=>mail_receviers"	"file or emls:root_bbk@126.com"
+	#"default=>mail_receviers"	"file or emls:root_bbk@126.com"
 	"default=>attsnap_mail"		"set:[yes|no]"
 	"default=>auto_handle"		"cbset:[crit|warn|unkn|succ|tmout|all|none|default]"
 	"default=>auto_handler"		"file:handler"
@@ -90,6 +93,10 @@ ARRAY_CONFIG_RULES=(
 	"eminfo_clear_overdue=>snapdir_maxsize"	      "int:1:10240"
 	"eminfo_log_rotate=>frequency"		      "time"
 	"eminfo_log_rotate=>force_size_uplimit"	      "int:1:2047"
+	"eminfo_self_check=>frequency"		      "time"
+	"eminfo_iam_alive=>frequency"		      "time"
+	"eminfo_check_remote=>frequency"	      "time"
+	"eminfo_check_remote=>exec_tmout"	      "time"
 
 	# handler
 	"sendmail=>smtp_server_port"		"int:1:65535"
