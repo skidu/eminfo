@@ -69,6 +69,7 @@ ARRAY_CONFIG_RULES=(
 	"global=>max_kidsnum"			"int:0:99"
 	"global=>plugin_maxlen"			"int:1:65536"
 	"global=>handler_maxlen"		"int:1:32768"
+	"global=>notify_onmisform"		"set:[yes|no]"
 
 	# default
 	"default=>enable"		"set:[yes|no]"
