@@ -967,7 +967,7 @@ get_mail_receviers() {
   else
         [ -z "${result}" ] && result="root_bbk@126.com"  ### set default whatever.
   fi
-  echo -e "${result}"
+  echo -en "${result}"
 }
 
 # Get plugin auto handler	config-name auto_handler
@@ -1522,7 +1522,7 @@ gen_tmpfile() {
   }
 
   [ ! -d "${TMP_DIR}/${plugin_name}" ] && mkdir -p ${TMP_DIR}/${plugin_name} 2>&-
-  local filepath="${TMP_DIR}/${plugin_name}/${plugin_name}_$(mktemp -u XXXXXXXX)"
+  local filepath="${TMP_DIR}/${plugin_name}/${plugin_name}_$(/bin/mktemp -u XXXXXXXX 2>&-)"
   # only collect stderr output.
   errinfo=$( touch "${filepath}" 2>&1 1>/dev/null )
   rc=$?
@@ -2198,7 +2198,7 @@ view_extra_config() {
 }
 
 # Process plugin 
-# Note:		core function, each registered and enabled plugin will be handed over to this function.
+# Note:		core function, each enabled plugin will be handed over to this function.
 # Usage:        process_plugin   plugin_name
 # LogFlag:	random 8 character
 #
@@ -2207,7 +2207,7 @@ process_plugin() {
   local plugin_name=$1
 
   # Step 1: set jid / set debug flag / set logfile
-  local jid=$(mktemp -u XXXXXXXX)      ### set random/unique jid
+  local jid=$(/bin/mktemp -u XXXXXXXX 2>&-)      ### set random/unique jid
   export _LOG="${EMINFO_LOG}"          ### set logfile 
   local debug=$(get_debug "${plugin_name}")   ### set debug flag
   [ "${debug}" == "yes" ] && export _DEBUG="1" || export _DEBUG="0"
@@ -2217,7 +2217,7 @@ process_plugin() {
   [ -z "${SYSLOAD_UPLIMIT}" -o ! -z "${SYSLOAD_UPLIMIT//[0-9]}" ] && SYSLOAD_UPLIMIT=30
   local sysload=$( cut -d" " -f1 /proc/loadavg 2>&- )
   if [ "$(echo  "${sysload} > $SYSLOAD_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
-	write_log -f "${EMINFO_LOG}" "${jid} ${plugin_name} system overloaded,"\
+	write_log "${jid} ${plugin_name} system overloaded,"\
 		"[${sysload}] > [${SYSLOAD_UPLIMIT}], EXIT";
 	process_sysoverload "${plugin_name}" "${sysload}" "${SYSLOAD_UPLIMIT}"
 	update_lastrun_and_nextrun "${plugin_name}"
@@ -2238,7 +2238,7 @@ process_plugin() {
  	read empid < "${PID_FILE}"
   	local kidsnum=$( get_kidsnum "${empid}" )
   	if [ "$(echo  "${kidsnum} > $KIDSNUM_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
-		write_log -f "${EMINFO_LOG}" "${jid} ${plugin_name} kids number exceed,"\
+		write_log "${jid} ${plugin_name} kids number exceed,"\
 			"[${kidsnum}] > [${KIDSNUM_UPLIMIT}], EXIT";
 		process_kidsexceed "${plugin_name}" "${kidsnum}" "${KIDSNUM_UPLIMIT}"
 		update_lastrun_and_nextrun "${plugin_name}"
@@ -2260,8 +2260,8 @@ process_plugin() {
   # Step 3: check if input plugin-name registered in config file or not
   write_log ${jid} ${plugin_name} "START";
   if [ -z "${plugin_name}" ]; then   ### plugin finished
-	write_log ${jid} "plugin_name empty. please specify plugin_name. EXIT";
-	update_status "${plugin_name}" "EXIT on Null Name"
+	write_log ${jid} "plugin_name empty, please specify plugin_name. EXIT";
+	update_status "${plugin_name}" "EXIT on Empty Plugin Name"
 	update_lastrun_and_nextrun "${plugin_name}"
 	un_lock "${plugin_name}"	# unlock first
 	del_fpid "${plugin_name}"	# then del pid file
@@ -2270,7 +2270,7 @@ process_plugin() {
   else
   	if [ "$(read_plugin_section "${plugin_name}" )" != "${plugin_name}" ]; then   ### plugin finished
 		write_log ${jid} ${plugin_name} "not registered in config file. EXIT";
-		update_status "${plugin_name}" "EXIT on Not Registered";
+		update_status "${plugin_name}" "EXIT on Plugin NOT Registered";
 		update_lastrun_and_nextrun "${plugin_name}"
 		un_lock "${plugin_name}"	# unlock first
 		del_fpid "${plugin_name}"	# then del pid file
@@ -2286,7 +2286,7 @@ process_plugin() {
   if [ "${status}" != "yes" ]; then	### plugin finished
 	write_log ${jid} ${plugin_name} "not enabled."\
 		"status=[${status}] EXIT";
-	update_status "${plugin_name}" "EXIT on Not Enabled"
+	update_status "${plugin_name}" "EXIT on Plugin Disabled"
 	update_lastrun_and_nextrun "${plugin_name}"
 	un_lock "${plugin_name}"	# unlock first
 	del_fpid "${plugin_name}"	# then del pid file
@@ -2297,10 +2297,10 @@ process_plugin() {
   fi
 
   # Step 5: check if plugin file exists under PLUGIN_DIR or not
-  if [ ! -f "${PLUGIN_DIR}/${plugin_name}" ]; then	### plugin finished
+  if [ ! -f "${PLUGIN_DIR}/${plugin_name}" -o ! -s "${PLUGIN_DIR}/${plugin_name}" ]; then	### plugin finished
 	write_log ${jid} ${plugin_name} "plugin file:"\
-		"[${PLUGIN_DIR}/${plugin_name}] not exist. EXIT";
-	update_status "${plugin_name}" "EXIT on Plugin File Not Found"
+		"[${PLUGIN_DIR}/${plugin_name}] not exist or empty. EXIT";
+	update_status "${plugin_name}" "EXIT on Plugin File Not Found or Empty"
 	update_lastrun_and_nextrun "${plugin_name}"
 	un_lock "${plugin_name}"	# unlock first
 	del_fpid "${plugin_name}"	# then del pid file
@@ -2312,13 +2312,125 @@ process_plugin() {
   fi
 
   # Step 6: exec plugin / obtain returned code / obtain returned stuff
-  [ ! -x "${PLUGIN_DIR}/${plugin_name}" ] && /bin/chmod a+x "${PLUGIN_DIR}/${plugin_name}"
-  ### local output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )    # wrong! can NOT get return code, as always be 0.
-  local output=
+  [ -x "${PLUGIN_DIR}/${plugin_name}" ] || {
+	/bin/chmod a+x "${PLUGIN_DIR}/${plugin_name}" 2>&-
+  }
+  # local output=$( eval "..." 2>&1 )    # is wrong! can NOT get returned code, as be 0 always
+  local output=  rc=
   output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )
-  local rc=$?
+  rc=$?
   write_log -f ${EMINFO_LOG} ${jid} ${plugin_name} "execution completed."\
 	"return code: [${rc}]  return string: [${output}]. CONTINUE";
+
+  # Step 6.1: check plugin output max length
+  PLUGIN_MAXLEN=$( read_eminfo_config global plugin_maxlen )
+  [ -z "${PLUGIN_MAXLEN}" -o ! -z "${PLUGIN_MAXLEN//[0-9]}" ] && PLUGIN_MAXLEN=65536
+  local plugin_output_length="${#output}"
+  if [ "$(echo  "${plugin_output_length} > $PLUGIN_MAXLEN" | bc 2>&-)" == "1" ]; then      ### truncate and plugin continue.
+	write_log "${jid} ${plugin_name} plugin output length exceed,"\
+		"[${plugin_output_length}] > [${PLUGIN_MAXLEN}], TRUNCATE";
+	output="${output:0-${PLUGIN_MAXLEN}}"
+	output="${output}}"		### completion '}' after truncated
+	write_log "${jid} ${plugin_name} plugin output length exceed,"\
+		"truncated result: [${output}], CONTINUE"
+  else
+	write_log ${jid} ${plugin_name} "plugin output length normal: [${plugin_output_length}] CONTINUE";
+  fi
+
+  # Step 6.2: check plugin return code
+  case "${rc}" in
+  "0"|"1"|"2"|"3"|"4")
+	write_log ${jid} ${plugin_name} "plugin return code normal: [${rc}], CONTINUE";
+	;;
+  *)
+	write_log ${jid} ${plugin_name} "plugin return code invalid: [${rc}], EXIT";  	  ### plugin finished
+        process_plugin_exception "${plugin_name}"  "rc"  "${rc}"
+        update_lastrun_and_nextrun "${plugin_name}"
+        un_lock "${plugin_name}"        # unlock first
+        del_fpid "${plugin_name}"       # then del pid file
+        write_log ${jid} ${plugin_name}\
+                "update lastrun time / release LOG / release runlock done. FINISHED.";
+        unset _LOG
+        return 1
+	;;
+  esac 
+
+  # Step 6.3: check plugin output format
+
+  # Step 6.3.1: check output lines number
+  local output_linenum=
+  output_linenum=$(echo -en "${output}"|awk 'END{print NR}')
+  if [ "${output_linenum}" != "1" ]; then
+        write_log "${jid} ${plugin_name} plugin output lines number invalid:"\
+                "[${output_linenum}], should be one-line-output, EXIT";
+	process_plugin_exception "${plugin_name}"  "lines"  "${output_linenum}"
+        update_lastrun_and_nextrun "${plugin_name}"
+        un_lock "${plugin_name}"        # unlock first
+        del_fpid "${plugin_name}"       # then del pid file
+        write_log ${jid} ${plugin_name}\
+                "update lastrun time / release LOG / release runlock done. FINISHED.";
+        unset _LOG
+        return 1
+  else
+        write_log ${jid} ${plugin_name} "plugin output lines number normal: [${output_linenum}] CONTINUE";
+  fi
+
+  # Step 6.3.2: check output parts format
+  local part3=$( ${PLUTIL} "part_pstr_output" "3" "${output}" )
+  if [ -z "${part3}" ]; then
+        write_log "${jid} ${plugin_name} plugin output format unrecognized, EXIT";
+	process_plugin_exception "${plugin_name}"  "format" "3th part empty"
+        update_lastrun_and_nextrun "${plugin_name}"
+        un_lock "${plugin_name}"        # unlock first
+        del_fpid "${plugin_name}"       # then del pid file
+        write_log ${jid} ${plugin_name}\
+                "update lastrun time / release LOG / release runlock done. FINISHED.";
+        unset _LOG
+        return 1
+  else
+	write_log ${jid} ${plugin_name} "plugin output format normal, CONTINUE";
+  fi
+
+  # Step 6.3.3: check output part1 -> {level}
+  local part1=$( ${PLUTIL} "part_pstr_output" "1" "${output}" | tr '[A-Z]' '[a-z]' )
+  case "${part1}" in
+  "ok"|"warn"|"crit"|"unknown"|"noop")
+	write_log ${jid} ${plugin_name} "plugin output level normal: [${part1}], CONTINUE";
+	;;
+  *)
+	write_log ${jid} ${plugin_name} "plugin output level invalid: [${part1}], EXIT";	### plugin finished
+	process_plugin_exception "${plugin_name}"  "level"  "${part1}"
+        update_lastrun_and_nextrun "${plugin_name}"
+        un_lock "${plugin_name}"        # unlock first
+        del_fpid "${plugin_name}"       # then del pid file
+        write_log ${jid} ${plugin_name}\
+                "update lastrun time / release LOG / release runlock done. FINISHED.";
+        unset _LOG
+        return 1
+	;;
+  esac
+
+ # Step 6.3.4: check output part2 -> {type}
+  local part2=$( ${PLUTIL} "part_pstr_output" "2" "${output}" | tr '[A-Z]' '[a-z]' )
+  case "${part2}" in
+  "file"|"str")
+	write_log ${jid} ${plugin_name} "plugin output type normal: [${part2}], CONTINUE";
+	;;
+  *)
+	write_log ${jid} ${plugin_name} "plugin output type invalid: [${part2}], EXIT";		### plugin finished
+	process_plugin_exception "${plugin_name}"  "type"  "${part2}"
+        update_lastrun_and_nextrun "${plugin_name}"
+        un_lock "${plugin_name}"        # unlock first
+        del_fpid "${plugin_name}"       # then del pid file
+        write_log ${jid} ${plugin_name}\
+                "update lastrun time / release LOG / release runlock done. FINISHED.";
+        unset _LOG
+        return 1
+	;;
+  esac
+  
+
+  # update plugin execution result
   update_status "${plugin_name}" "${output}"
 
 
@@ -2333,8 +2445,8 @@ process_plugin() {
   # return status: 4:NOOP
   elif [ "${rc}" == "4" ]; then  ### plugin finished. 
 	write_log ${jid} ${plugin_name}\
-		"return status: [NOOP]. Noting to do.  EXIT";
-	# update_status "${plugin_name}" "EXIT on Return NOOP"
+		"return status: [NOOP], Noting to do. EXIT";
+	update_status "${plugin_name}" "EXIT on Plugin Return NOOP"
 	update_lastrun_and_nextrun "${plugin_name}"
 	un_lock "${plugin_name}"	# unlock first
 	del_fpid "${plugin_name}"	# then del pid file
@@ -2383,7 +2495,7 @@ process_plugin() {
 	
   # Step 9: check action: auto_handle
   local a_hand=$(take_action_ornot "${plugin_name}" auto_handle ${rc})
-  local hd_output=
+  local hd_output=  hd_rc=
   if [ "${a_hand}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "auto handle disabled. SKIP";
 	hd_output="auto handle is disabled. Nothing to do"
@@ -2395,7 +2507,7 @@ process_plugin() {
 			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
  		[ ! -x "${HANDLER_DIR}/${handler}" ] && /bin/chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
 		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
-		local hd_rc=$?
+		hd_rc=$?
 		write_log ${jid} ${plugin_name} "auto handler execution completed."\
 			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
 		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
@@ -2449,7 +2561,7 @@ process_inner_plugin() {
   local plugin_name=$1  mode=$2 output=
 
   # Step 1: set random/unique jid
-  local jid=$(mktemp -u XXXXXXXX)    
+  local jid=$(/bin/mktemp -u XXXXXXXX 2>&-) 
 
   # Step 2: check plugin script 
   write_log -f ${INNER_LOG} ${jid} ${plugin_name} "START"
@@ -2509,7 +2621,7 @@ process_plugin_timeout() {
 
   # Step 3: auto handler while timeout
   local a_hand=$(take_action_ornot "${plugin_name}" auto_handle "tmout")
-  local hd_output=
+  local hd_output=  hd_rc=
   if [ "${a_hand}" != "yes" ]; then
  	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle disabled. SKIP";
 	hd_output="auto handle is disabled. Nothing to do"
@@ -2521,7 +2633,7 @@ process_plugin_timeout() {
 			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
                 [ ! -x "${HANDLER_DIR}/${handler}" ] && /bin/chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
 		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
-		local hd_rc=$?
+		hd_rc=$?
                 write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle execution completed."\
 			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
 		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
@@ -2575,17 +2687,17 @@ process_sysoverload() {
 
   # Step 1: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
-	"[${sysload_now} >= ${sysload_limit}] 1 => take snapshot";
+	"[${sysload_now} >= ${sysload_limit}] 1 => taking snapshot";
   ${TAKESNAP_SH} -f "${plugin_name}" -s "ovld" >/dev/null 2>&1
 
   # Step 2: send alert mail whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
-	"[${sysload_now} >= ${sysload_limit}] 2 => send alert mail";
+	"[${sysload_now} >= ${sysload_limit}] 2 => sending alert mail";
   ${SENDMAIL} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}"
 
   # Step 3: post alert information whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
-	"[${sysload_now} >= ${sysload_limit}] 3 => post alert data";
+	"[${sysload_now} >= ${sysload_limit}] 3 => posting alert data";
   ${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}"
 }
 
@@ -2608,20 +2720,73 @@ process_kidsexceed() {
 
   # Step 1: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
-	"[${kidsnum_now} >= ${kidsnum_limit}] 1 => take snapshot";
+	"[${kidsnum_now} >= ${kidsnum_limit}] 1 => taking snapshot";
   ${TAKESNAP_SH} -f "${plugin_name}" -s "kids" >/dev/null 2>&1
 
   # Step 2: send alert mail whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
-	"[${kidsnum_now} >= ${kidsnum_limit}] 2 => send alert mail";
+	"[${kidsnum_now} >= ${kidsnum_limit}] 2 => sending alert mail";
   ${SENDMAIL} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}"
 
   # Step 3: post alert information whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
-	"[${kidsnum_now} >= ${kidsnum_limit}] 3 => post alert data";
+	"[${kidsnum_now} >= ${kidsnum_limit}] 3 => posting alert data";
   ${POSTLOG_SH} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}"
 }
 
+# Process plugin exception rcode/output
+# Usage:	process_plugin_exception {plugin-name}  {reason_type}  {reason_value}
+# Note:		reason_type	~  rc|lines|format|level|type
+# Example:	process_plugin_exception sysload  rc  9
+# LogFlag:	MISF0000
+#
+process_plugin_exception() {
+  local plugin_name=$1  reason_type=$2  reason_value=$3 
+  local reason=
+  case "${reason_type}" in
+  "rc") 
+	reason="plugin return code invalid: [${reason_value}], only 0-4 allowed"
+	;;
+  "lines")
+	reason="plugin output lines number invalid: [${reason_value}], only one-line allowed"
+	;;
+  "format")
+	reason="plugin output format unrecognized: [${reason_value}], only {a}:{b}:{c} allowed"
+	;;
+  "level")
+	reason="plugin output level unrecognized: [${reason_value}], only [ok,warn,crit,unknown,noop] allowed"
+	;;
+  "type")
+	reason="plugin output type unrecognized: [${reason_value}], only [file,str] allowed"
+	;;
+  esac
+  local output="{misform}:{str}:{ Misforma Plugin Output"\
+"| ${plugin_name} has been cancled at $(date +%F_%T)"\
+"| misforma on [${reason_type}] ### "\
+"$(html_red "${reason}") ### }";
+  local hd_output="Plugin Output Misform, Nothing to do"
+
+  # Step 0: update status.
+  update_status "${plugin_name}" "${output}"
+
+  # Step 1: send misforma notify-mail or not ?
+  local notify_onmisform=$(read_eminfo_config global notify_onmisform)
+  [ -z "${notify_onmisform}" ] && notify_onmisform="yes"
+  if [ "${notify_onmisform}" == "yes" ]; then
+  	write_log -f "${EMINFO_LOG}" "MISF0000 EMINFO output misforma:"\
+        	"[${reason}] 1 => sending notify mail";
+  	${SENDMAIL} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}"
+  else
+	write_log -f "${EMINFO_LOG}" "MISF0000 EMINFO output misforma:"
+		"[${reason}] 1 => send notify mail disabled, SKIP" 
+  fi
+
+  # Step 2: post misforma information whatever.
+  write_log -f "${EMINFO_LOG}" "MISF0000 EMINFO output misforma:"\
+        "[${reason}] 2 => posting notify data";
+  ${POSTLOG_SH} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}"
+
+}
 
 
 
