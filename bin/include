@@ -2379,7 +2379,7 @@ process_plugin() {
   local part3=$( ${PLUTIL} "part_pstr_output" "3" "${output}" )
   if [ -z "${part3}" ]; then
         write_log "${jid} ${plugin_name} plugin output format unrecognized, EXIT";
-	process_plugin_exception "${plugin_name}"  "format" "3th part empty"
+	process_plugin_exception "${plugin_name}"  "format" "third part empty"
         update_lastrun_and_nextrun "${plugin_name}"
         un_lock "${plugin_name}"        # unlock first
         del_fpid "${plugin_name}"       # then del pid file

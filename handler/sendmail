@@ -188,8 +188,8 @@ fi
 
 ### attch_snap_mail
 attsnap_mail_args=
-# Don't attach snapshot on following special case.
-if [ "${jobid}" == "ovld" -o "${jobid}" == "00000000" -o "${plugin_name}" == "FNULL" ]; then
+# Don't attach snapshot on following special case.  ovld/misf
+if [ "${jobid}" == "ovld" -o "${jobid}" == "misf" ]; then
 	attsnap_mail="no"
 else
 	attsnap_mail=$(get_attsnap_mail "${plugin_name}")
