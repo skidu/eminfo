@@ -185,6 +185,8 @@ do
 	}
 done
 
+[ -x /sbin/sysctl ] && /sbin/sysctl -A > sysctl-A
+
 # about dmesg
 [ -x /bin/dmesg ] && /bin/dmesg > dmesg
 
