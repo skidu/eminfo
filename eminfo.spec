@@ -63,7 +63,7 @@ fi
 %postun
 
 %changelog
-* Wed Oct 23 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
+* Wed Oct 24 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
 - eminfo-1.0-beta4.rpm release
 - various misforma check on plugin output
 - strict on plugin/handler max output length
