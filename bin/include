@@ -2329,7 +2329,7 @@ process_plugin() {
   if [ "$(echo  "${plugin_output_length} > $PLUGIN_MAXLEN" | bc 2>&-)" == "1" ]; then      ### truncate and plugin continue.
 	write_log "${jid} ${plugin_name} plugin output length exceed,"\
 		"[${plugin_output_length}] > [${PLUGIN_MAXLEN}], TRUNCATE";
-	output="${output:0-${PLUGIN_MAXLEN}}"
+	output="${output:0:${PLUGIN_MAXLEN}}"
 	output="${output}}"		### completion '}' after truncated
 	write_log "${jid} ${plugin_name} plugin output length exceed,"\
 		"truncated result: [${output}], CONTINUE"
@@ -2516,7 +2516,7 @@ process_plugin() {
   		if [ "$(echo  "${handler_output_length} > $HANDLER_MAXLEN" | bc 2>&-)" == "1" ]; then  ### truncate it
         		write_log "${jid} ${plugin_name} handler output length exceed,"\
                 		"[${handler_output_length}] > [${HANDLER_MAXLEN}], TRUNCATE";
-        		hd_output="${hd_output:0-${HANDLER_MAXLEN}}"
+        		hd_output="${hd_output:0:${HANDLER_MAXLEN}}"
         		hd_output="${hd_output}}"             ### completion '}' after truncated
         		write_log "${jid} ${plugin_name} handler output length exceed,"\
                 		"truncated result: [${hd_output}], CONTINUE"
