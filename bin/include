@@ -2209,7 +2209,7 @@ process_plugin() {
 	write_log "${jid} ${plugin_name} system overloaded,"\
 		"[${sysload}] > [${SYSLOAD_UPLIMIT}], EXIT";
 	process_sysoverload "${plugin_name}" "${sysload}" "${SYSLOAD_UPLIMIT}"
-	update_lastrun_and_nextrun "${plugin_name}"
+	# update_lastrun_and_nextrun "${plugin_name}"		## no need, processed in process_sysoverload()
 	un_lock "${plugin_name}"	# unlock first
 	del_fpid "${plugin_name}"	# then del pid file
 	write_log ${jid} ${plugin_name}\
@@ -2230,7 +2230,7 @@ process_plugin() {
 		write_log "${jid} ${plugin_name} kids number exceed,"\
 			"[${kidsnum}] > [${KIDSNUM_UPLIMIT}], EXIT";
 		process_kidsexceed "${plugin_name}" "${kidsnum}" "${KIDSNUM_UPLIMIT}"
-		update_lastrun_and_nextrun "${plugin_name}"
+		# update_lastrun_and_nextrun "${plugin_name}"		## no need, processed in process_kidsexceed()
 		un_lock "${plugin_name}"	# unlock first
 		del_fpid "${plugin_name}"	# then del pid file
 		write_log ${jid} ${plugin_name}\
@@ -2334,7 +2334,7 @@ process_plugin() {
   *)
 	write_log ${jid} ${plugin_name} "plugin return code invalid: [${rc}], EXIT";  	  ### plugin finished
         process_plugin_exception "${plugin_name}"  "rc"  "${rc}"
-        update_lastrun_and_nextrun "${plugin_name}"
+        # update_lastrun_and_nextrun "${plugin_name}"		## no need, processed in process_plugin_exception()
         un_lock "${plugin_name}"        # unlock first
         del_fpid "${plugin_name}"       # then del pid file
         write_log ${jid} ${plugin_name}\
@@ -2353,7 +2353,7 @@ process_plugin() {
         write_log "${jid} ${plugin_name} plugin output lines number invalid:"\
                 "[${output_linenum}], should be one-line-output, EXIT";
 	process_plugin_exception "${plugin_name}"  "lines"  "${output_linenum}"
-        update_lastrun_and_nextrun "${plugin_name}"
+        # update_lastrun_and_nextrun "${plugin_name}"    ## no need, processed in process_plugin_exception()
         un_lock "${plugin_name}"        # unlock first
         del_fpid "${plugin_name}"       # then del pid file
         write_log ${jid} ${plugin_name}\
@@ -2369,7 +2369,7 @@ process_plugin() {
   if [ -z "${part3}" ]; then
         write_log "${jid} ${plugin_name} plugin output format unrecognized, EXIT";
 	process_plugin_exception "${plugin_name}"  "format" "third part empty"
-        update_lastrun_and_nextrun "${plugin_name}"
+        # update_lastrun_and_nextrun "${plugin_name}"	   ## no need, processed in process_plugin_exception()
         un_lock "${plugin_name}"        # unlock first
         del_fpid "${plugin_name}"       # then del pid file
         write_log ${jid} ${plugin_name}\
@@ -2389,7 +2389,7 @@ process_plugin() {
   *)
 	write_log ${jid} ${plugin_name} "plugin output level invalid: [${part1}], EXIT";	### plugin finished
 	process_plugin_exception "${plugin_name}"  "level"  "${part1}"
-        update_lastrun_and_nextrun "${plugin_name}"
+        # update_lastrun_and_nextrun "${plugin_name}"   ## no need, processed in process_plugin_exception()
         un_lock "${plugin_name}"        # unlock first
         del_fpid "${plugin_name}"       # then del pid file
         write_log ${jid} ${plugin_name}\
@@ -2408,7 +2408,7 @@ process_plugin() {
   *)
 	write_log ${jid} ${plugin_name} "plugin output type invalid: [${part2}], EXIT";		### plugin finished
 	process_plugin_exception "${plugin_name}"  "type"  "${part2}"
-        update_lastrun_and_nextrun "${plugin_name}"
+        # update_lastrun_and_nextrun "${plugin_name}"		## no need, processed in process_plugin_exception()
         un_lock "${plugin_name}"        # unlock first
         del_fpid "${plugin_name}"       # then del pid file
         write_log ${jid} ${plugin_name}\
@@ -2600,10 +2600,11 @@ process_inner_plugin() {
 process_plugin_timeout() {
   local plugin_name=$1
   local output="{tmout}:{str}:{ Plugin Execution TimeOut"\
-"| $(html_red "${plugin_name}") execution timeout, has been terminated. }";
+"| ${plugin_name} has been cancled at $(date +%F_%T)"\
+"| $(html_red "${plugin_name} execution timeout, has been terminated.") ### }";
 
   # Step 0: update status
-  update_status "${plugin_name}" "Cancled on Plugin TimeOut"
+  update_status "${plugin_name}" "${output}"
 
   # Step 1: update lastrun and nextrun
   update_lastrun_and_nextrun "${plugin_name}"
@@ -2703,7 +2704,10 @@ process_sysoverload() {
   # Step 0: update status.
   update_status "${plugin_name}" "${output}"
 
-  # Step 1: take snapshot whatever.
+  # Step 1: update lastrun and nextrun.
+  update_lastrun_and_nextrun "${plugin_name}"
+
+  # Step 2: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
 	"[${sysload_now} >= ${sysload_limit}] 1 => taking snapshot";
   ${TAKESNAP_SH} -f "${plugin_name}" -s "ovld" >/dev/null 2>&1
@@ -2736,17 +2740,20 @@ process_kidsexceed() {
   # Step 0: update status.
   update_status "${plugin_name}" "${output}"
 
-  # Step 1: take snapshot whatever.
+  # Step 1: update lastrun and nextrun.
+  update_lastrun_and_nextrun "${plugin_name}"
+
+  # Step 2: take snapshot whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
 	"[${kidsnum_now} >= ${kidsnum_limit}] 1 => taking snapshot";
   ${TAKESNAP_SH} -f "${plugin_name}" -s "kids" >/dev/null 2>&1
 
-  # Step 2: send alert mail whatever.
+  # Step 3: send alert mail whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
 	"[${kidsnum_now} >= ${kidsnum_limit}] 2 => sending alert mail";
   ${SENDMAIL} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}"
 
-  # Step 3: post alert information whatever.
+  # Step 4: post alert information whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
 	"[${kidsnum_now} >= ${kidsnum_limit}] 3 => posting alert data";
   ${POSTLOG_SH} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}"
@@ -2787,7 +2794,10 @@ process_plugin_exception() {
   # Step 0: update status.
   update_status "${plugin_name}" "${output}"
 
-  # Step 1: send misforma notify-mail or not ?
+  # Step 1: update lastrun and nextrun.
+  update_lastrun_and_nextrun "${plugin_name}"
+
+  # Step 2: send misforma notify-mail or not ?
   local notify_onmisform=$(read_eminfo_config global notify_onmisform)
   [ -z "${notify_onmisform}" ] && notify_onmisform="yes"
   if [ "${notify_onmisform}" == "yes" ]; then
@@ -2799,7 +2809,7 @@ process_plugin_exception() {
 		"[${reason}] 1 => send notify mail disabled, SKIP" 
   fi
 
-  # Step 2: post misforma information whatever.
+  # Step 3: post misforma information whatever.
   write_log -f "${EMINFO_LOG}" "MISF0000 EMINFO output misforma:"\
         "[${reason}] 2 => posting notify data";
   ${POSTLOG_SH} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}"
