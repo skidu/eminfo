@@ -136,6 +136,9 @@ show_shorttips() {
 cat << EOF
 
   $(echo_green "ShortTips:")
+	help		=> h
+	version		=> v
+	basedir		=> b
 	precheck        => p 
 	checkconf	=> c
 	makedir		=> m
@@ -147,6 +150,8 @@ cat << EOF
 	enable		=> e
 	disable		=> d
 	config-view 	=> v 
+	config-add	=> a
+	config-update	=> u
 
   $(echo_green "ShortTips Example:")
         eminfo  h
@@ -158,12 +163,14 @@ cat << EOF
         eminfo  s 
         eminfo  l  [ln|le|lr|li]
         eminfo  i  pop_svr | all | a
-        eminfo  v  pop_svr | all | a
-	eminfo  v  pop_svr enable
         eminfo  R  pop_svr | all | a  [Re|Rr|Ri]
         eminfo  r  pop_svr
         eminfo  e  pop_svr
         eminfo  d  pop_svr
+        eminfo  v  pop_svr | all | a
+	eminfo  v  pop_svr enable
+	eminfo  a  pop_svr enable yes
+	eminfo  u  pop_svr enable no
 
 EOF
 }
@@ -513,7 +520,7 @@ case "$#" in
 
 "2")
 	[ -z "${2//[ ]}" ] && {
-		echo_yellow "second argument [${2}] is null.";echo
+		echo_yellow "need arguments.";echo
 		exit 1
 	}
 
@@ -524,7 +531,7 @@ case "$#" in
 		if [ "$(read_plugin_section "$2")" == "$2" ]; then	### must be plugin
 			list_plugin_status  "$2"
 		else
-			echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			echo "plugin $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
 		fi
 			;;	
@@ -548,7 +555,7 @@ case "$#" in
 			esac
 			exit $rc;
 		else
-                        echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			echo "plugin $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
                 fi
 			;;
@@ -572,7 +579,7 @@ case "$#" in
                         esac
 			exit $rc;
 		else
-                        echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			echo "plugin $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
                 fi
 			;;
@@ -582,7 +589,7 @@ case "$#" in
 		elif [ "$(read_plugin_section "$2")" == "$2" ]; then	### must be plugin
                         init_plugin  "$2"
 		else
-                        echo plugin  $(echo_yellow "[$2]") : not registered in config file.
+			echo "plugin $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
                 fi
 			;;
@@ -603,17 +610,17 @@ case "$#" in
 				view_extra_config "${p}"
 				echo;echo;
 			done
-		elif [ "$2" == "global" -o "$2" == "sendmail" ]; then
-			view_extra_config "$2"
-		elif [ "$2" == "postlog" -o "$2" == "takesnap" ]; then
-			view_extra_config "$2"
-		elif [ "$2" == "default" ]; then
-			view_base_config "$2"
+		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then	### is eminfo section
+			if [ "$2" == "default" ]; then
+				view_base_config "$2"
+			else
+				view_extra_config "$2"
+			fi
 		elif [ "$(read_plugin_section "$2")" == "$2" ]; then	### must be plugin
                         view_base_config "$2"
 			view_extra_config "$2"
 		else
-                        echo plugin $(echo_yellow "[$2]") : not registered in config file.
+			echo "plugin $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
 		fi
 			;;
@@ -631,14 +638,16 @@ case "$#" in
 	"run"|"r")
 		if [ "$(read_plugin_section "$2")" == "$2" ]; then	### is plugin
 			output=$( eval "${PLUGIN_DIR}/${2}" 2>&1 )
+			[ "${#output}" -gt 131072 ] && output="${output:0:131000}}"
 			. ${REPORT_SH} -f "$2" -i "${output}"
 		elif [ "$(read_eminfo_section "$2")" == "$2" ]; then
 			if [ ! -z "$( echo "${2}" | grep -E -o "^eminfo_" )" ]; then	### is inner plugin
 				output=$( eval "${INNER_DIR}/${2}" 2>&1 )
+				[ "${#output}" -gt 131072 ] && output="${output:0:131000}}"
 			fi
 			. ${REPORT_SH} -f "$2" -i "${output}"
 		else
-			echo plugin $(echo_yellow "[$2]") : not registered in config file.
+			echo "plugin $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
 		fi
 			;;
@@ -659,7 +668,7 @@ case "$#" in
 	;;
 "3")
 	[ -z "${2//[ ]}" -o -z "${3//[ ]}"  ] && {
-		echo_yellow "second argument [${2}] or third argument [${3}] is null.";echo
+		echo_yellow "need arguments.";echo
 		exit 1
         }
 
@@ -670,7 +679,7 @@ case "$#" in
 			rc=$?
 			exit ${rc}
                 else
-                        echo section $(echo_yellow "[$2]") : not registered in config file.
+			echo "section $(echo_yellow "[$2]") : not registered in any config file."
                         exit 9;
                 fi
                         ;;
@@ -686,7 +695,7 @@ case "$#" in
 			esac
 			exit ${rc}
 		else
-			echo section  $(echo_yellow "[$2]") : not registered in config file.
+			echo "section $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
 		fi
 		;;
@@ -698,12 +707,12 @@ case "$#" in
 	;;
 "4")
 	[ -z "${2//[ ]}" -o -z "${3//[ ]}" -o -z "${4//[ ]}" ] && {
-		echo_yellow "second argument [${2}] or third argument [${3}] or fourth argument [${4}] is null.";echo
+		echo_yellow "need arguments.";echo
 		exit 1
 	}
 
 	case "$1" in
-	"config-add")
+	"config-add"|"a")
 		if [ "$(read_eminfo_section "$2")" == "$2" -o "$(read_plugin_section "$2")" == "$2" ]; then
 			add_eminfo_config "$2" "$3" "$4"
 			rc=$?
@@ -715,11 +724,11 @@ case "$#" in
 			esac
 			exit ${rc}
 		else
-			echo section  $(echo_yellow "[$2]") : not registered in config file.
+			echo "section $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
 		fi
 		;;
-	"config-update")
+	"config-update"|"u")
 		if [ "$(read_eminfo_section "$2")" == "$2" -o "$(read_plugin_section "$2")" == "$2" ]; then
 			update_eminfo_config "$2" "$3" "$4"
 			rc=$?
@@ -732,7 +741,7 @@ case "$#" in
 			esac
 			exit ${rc}
 		else
-			echo section  $(echo_yellow "[$2]") : not registered in config file.
+			echo "section $(echo_yellow "[$2]") : not registered in any config file."
 			exit 9;
 		fi
 		;;

@@ -446,30 +446,19 @@ list_section_keys(){
 
 # According to input plugin-name, output matched plugin-name in plugin config file.
 # Example:	read_plugin_section  check_sysload
-# Return:	0 1 2 3 :  OK | Missing arguments | ${config_file} empty / not exist | Null
+# Return:	0 1:  OK | Missing arguments
 #
 read_plugin_section(){
-  local section=$1  value= config_file=
+  local section=$1
   if [ -z "${section}" ]; then 
 	write_log -f "${EMINFO_LOG}" "E0000000 read_plugin_section error:"\
 		"missing arguments, section=[${section}]";
 	return 1
   else
         config_file="${CONF_DIR}/${section}.ini"
-	if [ ! -f "${config_file}" -o ! -s "${config_file}" ]; then
-		write_log -f "${EMINFO_LOG}" "E0000000 read_plugin_section error:"\
-			"config file [${config_file}] not exists or empty.";
-		return 2
-	else
-		value=$(cat ${config_file} |\
-			grep -E -v "^[ \t]*;" | tr -d ' \t' |\
-			sed -e '/^\['${section}'\]$/!d; s/^\[//; s/\]$//;')
-		if [ -n "${value}" ]; then
-			echo "${value}" 
-			return 0
-		else
-			return 3
-		fi
+	if [ "$(is_plugin_configfile "${config_file}")" == "${section}" ]; then
+		echo "${section}"
+		return 0
 	fi
   fi
 }
