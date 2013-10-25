@@ -2601,7 +2601,7 @@ process_plugin_timeout() {
   local plugin_name=$1
   local output="{tmout}:{str}:{ Plugin Execution TimeOut"\
 "| ${plugin_name} has been cancled at $(date +%F_%T)"\
-"| $(html_red "${plugin_name} execution timeout, has been terminated.") ### }";
+"| $(html_red "Plugin: [${plugin_name}] execution timeout, has been terminated.") ### }";
 
   # Step 0: update status
   update_status "${plugin_name}" "${output}"
@@ -2787,7 +2787,7 @@ process_plugin_exception() {
   esac
   local output="{misform}:{str}:{ Misforma Plugin Output"\
 "| ${plugin_name} has been cancled at $(date +%F_%T)"\
-"| misforma on [${reason_type}] ### "\
+"| plugin ${plugin_name} output misforma on [${reason_type}] ### "\
 "$(html_red "${reason}") ### }";
   local hd_output="Plugin Output Misform, Nothing to do"
 
