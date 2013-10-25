@@ -2435,7 +2435,7 @@ process_plugin() {
   elif [ "${rc}" == "4" ]; then  ### plugin finished. 
 	write_log ${jid} ${plugin_name}\
 		"return status: [NOOP], Noting to do. EXIT";
-	update_status "${plugin_name}" "EXIT on Plugin Return NOOP"
+	# update_status "${plugin_name}" "EXIT on Plugin Return NOOP"
 	update_lastrun_and_nextrun "${plugin_name}"
 	un_lock "${plugin_name}"	# unlock first
 	del_fpid "${plugin_name}"	# then del pid file
@@ -2603,9 +2603,12 @@ process_plugin_timeout() {
 "| $(html_red "${plugin_name}") execution timeout, has been terminated. }";
 
   # Step 0: update status
-  update_status "${plugin_name}" "Cancle on Plugin TimeOut"
+  update_status "${plugin_name}" "Cancled on Plugin TimeOut"
 
-  # Step 1: stop timeout plugin 
+  # Step 1: update lastrun and nextrun
+  update_lastrun_and_nextrun "${plugin_name}"
+
+  # Step 2: stop timeout plugin 
   stop_single_plugin "${plugin_name}"
   # return here while inner plugin
   [ "$( echo "${plugin_name}" | grep -E -o "^eminfo_" )" != "" ] && return 0
