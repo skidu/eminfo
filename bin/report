@@ -52,17 +52,18 @@ print_record(){
 		return 1
   	fi
   elif [ "${MODE}" == "1" ]; then  ## read from command args.
-	line="$*"		
+	shift; line="$*"		
   fi
 
   if [ -z "${line}" ]; then
 	ts="-"
-	result="No Status Record, Maybe Never been Running or No Such Plugin"
+	result="No Record, Maybe Plugin Never been Running or Plugin Return Nothing"
 	output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
-"\nResult   : ${result}"\
+"\nResult   :"\
+"\n${result}"\
 "\n"
-  	[ "${MODE}" == "0" ] && echo -e "\n${output}\n${aline}\n"
+  	echo -e "\n${output}\n${aline}\n"
 	return 0
   else
 	if [ "${MODE}" == "0" ]; then
@@ -134,7 +135,7 @@ do
 		show_usage		  ;;
         esac
 done
-[ ! -z "${plugin_name}" -a ! -z "${content}" ] && MODE=1
+[ ! -z "${plugin_name}" -o ! -z "${content}" ] && MODE=1
 
 if [ "${MODE}" == "0" ]; then
 	plugin_name="${1}"
