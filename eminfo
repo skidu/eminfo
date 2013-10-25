@@ -604,6 +604,7 @@ case "$#" in
 			for p in `list_inner_plugin_section`	### output inner plugins
 			do
 				view_extra_config "${p}"
+				echo;echo;
 			done
 			for p in `list_plugin_section`		### output plugins
 			do
