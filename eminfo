@@ -72,7 +72,7 @@ cat << EOF
 	view		plugin [key]		print config->value, [all] for every plugin
 	config					help stuff about eminfo config-*
 	config-help				help stuff about eminfo config-* (same as above)
-	?					help stuff about short tips 
+	?					help stuff about short args
 EOF
 }
 
@@ -103,15 +103,15 @@ cat << EOF
 	eminfo  reload
 	eminfo  start | stop | status | list
         eminfo  list     	pop_svr
-	eminfo  init     	sysload | all
-	eminfo  report   	port | all
+	eminfo  init     	sysload
+	eminfo  report   	sysload
 	eminfo  enable   	sysload
 	eminfo  disable  	sysload
 	eminfo  run		sysload
-	eminfo  view		sysload | all
+	eminfo  view		sysload
 	eminfo  view		sysload enable
 	eminfo  config
-	eminfo  config-view
+	eminfo  config-help
 
 EOF
 }
@@ -120,12 +120,13 @@ show_confexample() {
 cat << EOF
 
   $(echo_green "Example:")
+	eminfo  config
 	eminfo  config-help
-	eminfo  config-view     pop_svr | all
+	eminfo  config-view     pop_svr
 	eminfo  config-view     pop_svr comment
 	eminfo  config-add	pop_svr time_out 5
+	eminfo  config-update	pop_svr time_out 10
 	eminfo  config-del	pop_svr time_out 
-	eminfo  config-update	pop_svr pop_svr 10
 
 EOF
 }
