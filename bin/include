@@ -2510,7 +2510,7 @@ process_plugin() {
         		write_log "${jid} ${plugin_name} handler output length exceed,"\
                 		"truncated result: [${hd_output}], CONTINUE"
   		else 
-        		write_log ${jid} ${plugin_name} "handler output length normal: [${handler_output_length}] CONTINUE";
+        		write_log "${jid} ${plugin_name} handler output length normal: [${handler_output_length}] CONTINUE";
   		fi
 		hd_output="auto handler [${HANDLER_DIR}/${handler}] return [${hd_output}]"
   	else
@@ -2638,6 +2638,19 @@ process_plugin_timeout() {
 		hd_rc=$?
                 write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handle execution completed."\
 			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
+                HANDLER_MAXLEN=$( read_eminfo_config global handler_maxlen )
+                [ -z "${HANDLER_MAXLEN}" -o ! -z "${HANDLER_MAXLEN//[0-9]}" ] && PLUGIN_MAXLEN=32768
+                local handler_output_length="${#hd_output}"
+                if [ "$(echo  "${handler_output_length} > $HANDLER_MAXLEN" | bc 2>&-)" == "1" ]; then  ### truncate it
+                        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} handler output length exceed,"\
+                                "[${handler_output_length}] > [${HANDLER_MAXLEN}], TRUNCATE";
+                        hd_output="${hd_output:0:${HANDLER_MAXLEN}}"
+                        hd_output="${hd_output}}"             ### completion '}' after truncated
+                        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} handler output length exceed,"\
+                                "truncated result: [${hd_output}], CONTINUE"
+                else 
+			write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} handler output length normal: [${handler_output_length}] CONTINUE";
+                fi   
 		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
         else
                 write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\

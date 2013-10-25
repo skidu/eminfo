@@ -62,7 +62,7 @@ exit 0
 ARRAY_CONFIG_RULES=(
 	# global
 	#"global=>id"				"int:100000000:9999999999"
-	#"global=>name" 				"str:eminfo_ops.eyou.net"
+	#"global=>name" 			"str:eminfo_ops.eyou.net"
 	"global=>scan_interval"  		"int:5:999"
 	"global=>attach_ini_mail"		"set:[yes|no]"
 	"global=>sysload_uplimit"		"int:0:999"
