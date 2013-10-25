@@ -596,11 +596,11 @@ case "$#" in
 			;;
 	"view"|"config-view"|"v")
 		if [ "$2" == "all" -o "$2" == "a" ]; then
-			view_extra_config "global"		### output about eminfo section 
-			view_base_config  "default"
-			view_extra_config "sendmail"
-			view_extra_config "postlog"
-			view_extra_config "takesnap"
+			view_extra_config "global"; echo;echo;	### output about eminfo section 
+			view_base_config  "default"; echo;echo;
+			view_extra_config "sendmail"; echo;echo;
+			view_extra_config "postlog"; echo;echo;
+			view_extra_config "takesnap"; echo;echo;
 			for p in `list_inner_plugin_section`	### output inner plugins
 			do
 				view_extra_config "${p}"
