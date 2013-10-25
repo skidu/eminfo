@@ -64,19 +64,40 @@ print_record(){
 "\n${result}"\
 "\n"
   	echo -e "\n${output}\n${aline}\n"
-	return 0
+	return 1
   else
-	if [ "${MODE}" == "0" ]; then
+	if [ "${MODE}" == "0" ]; then    ### read from status file, no need to check misforma.
 		ts=$(echo -e "${line}" | awk '{print $2}')
 		ts=$(date -d "1970-01-01 UTC ${ts} seconds" +%F_%T 2>&-)
-		result=$(echo -e "${line}" | awk '{$1=$2="";print;exit;}')
-	else
+		result=$(echo -e "${line}" | awk '{$1=$2="";print;exit;}')  
+	elif [ "${MODE}" == "1" ]; then  ### read from args, need to check various misforma here.
 		ts=$(date +%F_%T)
 		result="${line}"
+		## check line number
+		if [ "$(echo -en "${result}"|awk 'END{print NR}')" != "1" ]; then
+			result="Misforma, Plugin Output More Than One Line"
+			output="\nPlugin   : ${pname}"\
+"\nTime     : ${ts}"\
+"\nResult   :"\
+"\n${result}"\
+"\n"
+			echo -e "\n${output}\n${aline}\n"
+			return 1
+		## check output format
+		elif [ -z "$(${PLUTIL} "part_pstr_output" "3" "${result}" 2>&-)" ]; then
+			result="Misforma, Plugin Output Format Unrecognized"
+			output="\nPlugin   : ${pname}"\
+"\nTime     : ${ts}"\
+"\nResult   :"\
+"\n${result}"\
+"\n"
+			echo -e "\n${output}\n${aline}\n"
+			return 1
+		fi
 	fi
 
 	level=$(${PLUTIL} part_pstr_output 1 "${result}"|tr '[a-z]' '[A-Z]')
-	type=$(${PLUTIL} part_pstr_output 2 "${result}")
+	type=$(${PLUTIL} part_pstr_output 2 "${result}"|tr '[A-Z]' '[a-z]')
 	case "${type}" in 
 	"str")
 		title=$(${PLUTIL} part_pstr_output 4 "${result}")
@@ -105,11 +126,11 @@ print_record(){
 "\n"
 		;;
 	*)
-		local part3=$(${PLUTIL} part_pstr_output 3 "${result}")
+		result="Misforma, Plugin Output Type Unrecognized, Only [file|str] Accepted"
 		output="\nPlugin   : ${pname}"\
 "\nTime     : ${ts}"\
 "\nResult   :"\
-"\nOutput Type Invalid, type=[${part3}]"\
+"\n${result}"\
 "\n"
 		;;
 	esac
