@@ -52,7 +52,7 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 if [ -L "/usr/bin/eminfo" ]; then
 	:
 else
-	/bin/ln -sv /usr/local/eminfo/eminfo /usr/bin/eminfo
+	/bin/ln -s /usr/local/eminfo/eminfo /usr/bin/eminfo
 fi
 /bin/bash /usr/local/eminfo/bin/setinit rpminit
 
@@ -61,6 +61,11 @@ fi
 /sbin/chkconfig --del %{name}
 
 %postun
+if [ -L "/usr/bin/eminfo" ]; then
+	rm -f /usr/bin/eminfo
+else
+	:
+fi
 
 %changelog
 * Wed Oct 24 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
