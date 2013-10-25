@@ -85,7 +85,7 @@ check() {
 	return
   fi
 
-  local result=  oknum=0 unknnum=0 warnnum=0
+  local result=  oknum=0 unknnum=0 warnnum=0 total=0
   if [ -z "${post_server}" ]; then
 	flag=1		### failed
 	now=$(date +%F_%T)
@@ -107,6 +107,7 @@ check() {
 	echo "${flag} ${now} ${content}" > ${POSTHOST_STATUS}
 	result="${result} ${content} ### "
   fi
+  ((total++))
 
   if [ -z "${smtp_server}" ]; then
 	flag=1		### failed
@@ -129,22 +130,23 @@ check() {
 	echo "${flag} ${now} ${content}" > ${SMTPHOST_STATUS}
 	result="${result} ${content} ### "
   fi
+  ((total++))
 
   if [ "${warnnum}" != "0" ]; then
 	EXIT_STATUS=${STATE_WARNING};
 	LEVEL="warn";
 	TYPE="str";
-	CONTENT="connection check failed | ${warnnum} failed | ${result} ";
+	CONTENT="connection check failed | ${warnnum}/${total} connection check failed | ${result} ";
   elif [ "${unknnum}" != "0" ]; then
 	EXIT_STATUS=${STATE_UNKNOWN};
         LEVEL="unknown";
         TYPE="str";
-        CONTENT="connectioin check unknown | ${unknnum} unknown | ${result} ";
+        CONTENT="connectioin check unknown | ${unknnum}/${total} connection check unknown | ${result} ";
   else
 	EXIT_STATUS=${STATE_OK};
 	LEVEL="ok";
 	TYPE="str";
-	CONTENT="connectioin check succeed | ${oknum} succeed | ${result} ";
+	CONTENT="connectioin check succeed | ${oknum}/${total} connection check succeed | ${result} ";
   fi
 }
 
