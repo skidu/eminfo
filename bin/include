@@ -1846,15 +1846,6 @@ stop_single_plugin() {
   else
 	write_log -f "${EMINFO_LOG}" "STP00000 EMINFO stop plugin"\
 		"[${plugin_name}]: 1 => stop process on pidfile: [${pidfile}]";
-	# local plugin_pid=$(cat "${pidfile}" 2>&-)
-	# local plugin_cmd=$(cat /proc/${plugin_pid}/cmdline 2>&-)
-	# if [ "$(sub_str "${plugin_cmd}" "${plugin_name}")" == "yes" ]; then
-		# write_log -f "${EMINFO_LOG}" STP00000 EMINFO stop plugin "[${plugin_name}]: 1.1 => pid=[${plugin_pid}],command=[${plugin_cmd}]. check fake OK"
-  		# stopps_by_pidfile "${pidfile}"
-	# else
-		# write_log -f "${EMINFO_LOG}" STP00000 EMINFO stop plugin "[${plugin_name}]: 1.1 => pid=[${plugin_pid}],command=[${plugin_cmd}] Error: running process fake => END"
-		# return 1
-	# fi
   	stopps_by_pidfile "${pidfile}"
 	write_log -f "${EMINFO_LOG}" "STP00000 EMINFO stop plugin"\
 		"[${plugin_name}]: 2 => remove lockfile";
