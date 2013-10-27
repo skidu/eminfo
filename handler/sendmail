@@ -58,7 +58,7 @@ conv_output2mailbody() {
   echo "${details}" | sed -e 's/###/<br>\n/g';
   echo "<br>------------------<br>"
   echo "$(html_green "Auto Handle:") <br><br>"
-  echo "${hd_content}"
+  echo "${hd_content}" | sed -e 's/###/<br>\n/g'; 
   } >> "${mailbody}" 2>&1
   rc=$?
   if [ "${rc}" == "0" ]; then
