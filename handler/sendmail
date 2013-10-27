@@ -54,7 +54,6 @@ conv_output2mailbody() {
   echo "$(html_green "Title:")  &nbsp;&nbsp;&nbsp;&nbsp; ${title} <br><br>"
   echo "$(html_green "Summary:") &nbsp;&nbsp;&nbsp;&nbsp; ${summary} <br><br>"
   echo "$(html_green "Details:") <br><br>"
-  # echo "${details}" | awk -F"###" '{ for(i=1;i<=NF;i++) {printf "%s<br>\n",$i} }'
   echo "${details}" | sed -e 's/###/<br>\n/g';
   echo "<br>------------------<br>"
   echo "$(html_green "Auto Handle:") <br><br>"

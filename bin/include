@@ -2503,7 +2503,7 @@ process_plugin() {
   		else 
         		write_log "${jid} ${plugin_name} handler output length normal: [${handler_output_length}] CONTINUE";
   		fi
-		hd_output="auto handler [${HANDLER_DIR}/${handler}] return [${hd_output}]"
+		hd_output="auto handler [${HANDLER_DIR}/${handler}] return ### ### [${hd_output}]"
   	else
 		write_log ${jid} ${plugin_name} "auto handler:"\
 			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
@@ -2646,7 +2646,7 @@ process_plugin_timeout() {
                 else 
 			write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} handler output length normal: [${handler_output_length}] CONTINUE";
                 fi   
-		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return [${hd_output}]"
+		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return ### ### [${hd_output}]"
         else
                 write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} auto handler:"\
 			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
