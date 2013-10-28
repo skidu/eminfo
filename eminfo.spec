@@ -1,12 +1,12 @@
 Summary: 	pluginable platform written by perl/shell for linux ops.
 Name: 		eminfo
 Version: 	1.0
-Release: 	beta4
+Release: 	beta5
 License: 	GPLv3
 Group:  	Extension
 Packager: 	Zhang Guangzheng <zhang.elinks@gmail.com>
 BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
-Source0: 	eminfo-1.0-beta4.tgz
+Source0: 	eminfo-1.0-beta5.tgz
 Source1: 	eminfo.init
 Requires: 		coreutils >= 5.97, bash >= 3.1
 Requires:		e2fsprogs >= 1.39, procps >= 3.2.7
@@ -68,6 +68,11 @@ else
 fi
 
 %changelog
+* Tue Oct 29 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
+- eminfo-1.0-beta5.rpm release
+- update lastrun/nextrun on plugin terminated as timeout
+- update handler output to fit sendmail
+- add eminfo argument takesnap/t
 * Wed Oct 24 2013 Guangzheng Zhang <zhang.elinks@gmail.com>
 - eminfo-1.0-beta4.rpm release
 - various misforma check on plugin output

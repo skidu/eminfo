@@ -63,6 +63,7 @@ cat << EOF
 	checkconf    	[-v]			check config file validity on start
 	reload					reload include file (not config file) on fly
 	makedir		[-c]			create basic directories
+	takesnap				create system snapshot once
 	list         	[plugin]		list plugin's schedule stat, (default list all)
 	init	     	plugin			reset plugin's schedul stat, [all] for every plugin
 	report       	plugin			report plugin's last result, [all] for every plugin
@@ -100,6 +101,7 @@ cat << EOF
 	eminfo  precheck
 	eminfo  checkconf [-v]
 	eminfo	makedir  [-c]
+	eminfo  takesnap
 	eminfo  reload
 	eminfo  start | stop | status | list
         eminfo  list     	pop_svr
@@ -143,6 +145,7 @@ cat << EOF
 	precheck        => p 
 	checkconf	=> c
 	makedir		=> m
+	takesnap	=> t
 	status          => s 
 	list            => l	( ln le lr li )
 	init            => i 
@@ -161,6 +164,7 @@ cat << EOF
         eminfo  p 
         eminfo  c 
 	eminfo	m
+	eminfo  t
         eminfo  s 
         eminfo  l  [ln|le|lr|li]
         eminfo  i  pop_svr | all | a
@@ -506,6 +510,8 @@ case "$#" in
 		. ${CHECKCONF_SH}		;;
 	"makedir"|"m")
 		. ${MAKEDIR_SH}			;;
+	"takesnap"|"t")
+		. ${TAKESNAP_SH} 		;;
 	"reload")
 		reload_core_cron		;;
 	"config"|"config-help")
