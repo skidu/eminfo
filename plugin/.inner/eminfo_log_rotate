@@ -48,8 +48,8 @@ check() {
 		${UPDATE_LOG} 
 		${SENDMAIL_LOG} 
 		${ERRLOG}
-		"${LOG_DIR}/sync_user524.log"
-		"${LOG_DIR}/sync_userfail.log"
+		"${LOG_DIR}/emp_sync_user524.log"
+		"${LOG_DIR}/emp_sync_userfail.log"
 		"${LOG_DIR}/cancle_migrate.log"
 		)
 
