@@ -1510,7 +1510,7 @@ gen_tmpfile() {
 	return 1
   }
 
-  [ ! -d "${TMP_DIR}/${plugin_name}" ] && mkdir -p ${TMP_DIR}/${plugin_name} 2>&-
+  [ ! -d "${TMP_DIR}/${plugin_name}" ] && /bin/mkdir -p ${TMP_DIR}/${plugin_name} 2>&-
   local filepath="${TMP_DIR}/${plugin_name}/${plugin_name}_$(/bin/mktemp -u XXXXXXXX 2>&-)"
   # only collect stderr output.
   errinfo=$( touch "${filepath}" 2>&1 1>/dev/null )

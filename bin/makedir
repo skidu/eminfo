@@ -35,13 +35,28 @@ array_directories=(
 	${BACK_DIR} 
 	${SNAPSHOT_DIR} 
 )
+### SHs DEF
+array_shs=(
+	${INCLUDE_FILE}
+	${PLUTIL}
+	${PRECHECK_SH}
+	${UPDATE_SH}
+	${REPORT_SH}
+	${CHECKCONF_SH}
+	${POSTLOG_SH}
+	${TAKESNAP_SH}
+	${SENDMAIL}
+	${SENDEMAIL}
+	${MAKEDIR_SH}
+	${SETINIT_SH}
+)
 
 MODE=0
 [ "$1" == "-c" ] && MODE=1
 
-### Create Directory
 mkrc=0
 ckrc=0
+### Create Directory
 for ((i=0;i<${#array_directories[@]};i++)) 
 do
 	if [ "${MODE}" == "1" ]; then
@@ -52,10 +67,28 @@ do
 			((ckrc++))
 		}
 	else
-		mkdir -v -p -m 755 "${array_directories[i]}"
+		/bin/mkdir -v -p -m 755 "${array_directories[i]}"
 		if [ "$?" != "0" ]; then
 			((mkrc++))
 		fi
 	fi
+done
+### +x SH
+for ((i=0;i<=${#array_shs[@]};i++))
+do
+	if [ "${MODE}" == "1" ]; then
+		[ -f "${array_shs[i]}" -a -x "${array_shs[i]}" ] && {
+			echo -e "[$(echo_green "OK")]   : [${array_shs[i]}] prepared."
+		} || {
+			echo -e "[$(echo_red "WARN")] : [${array_shs[i]}] not prepared."
+			((ckrc++))
+		}
+	else
+		/bin/chmod +x "${array_shs[i]}"
+		if [ "$?" != "0" ]; then
+			((mkrc++))
+		fi
+	fi
+
 done
 [ "${MODE}" == "1" ] && exit ${ckrc} || exit ${mkrc}
