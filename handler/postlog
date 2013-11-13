@@ -173,7 +173,7 @@ post_server_port=$(read_eminfo_config postlog post_server_port)
 }
 
 if [ -z "${DEBUG}" ]; then   ### if not specified from args, read from config file
-	debug=$(read_eminfo_config postlog debug)
+	debug=$(read_eminfo_config postlog post_debug)
 	if [ -z "${debug}" ]; then
 		write_log -f ${POSTLOG_LOG} "[${from}]"\
 			"WARN: debug empty, set debug=[no]"
