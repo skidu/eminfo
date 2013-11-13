@@ -4,9 +4,9 @@
 # This Script Responsible for Posting Data to HTTPSQS Server.
 #
 #
-# Usage:     ./postlog -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"
+# Usage:     ./postlog -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"  [-d]
 #
-# Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"  -h "auto handler result here"
+# Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"  -h "auto handler result here"  [-d]
 #
 
 
@@ -26,8 +26,8 @@ fi
 # def help
 #
 show_usage(){
-  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" "
-  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\" "
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\"  [-d] "
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\"  [-d] "
   exit 1
 }
 
@@ -109,7 +109,7 @@ EOF
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" ] && show_usage
 
 # read args
-while getopts f:s:i:h: opt
+while getopts f:s:i:h:d opt
 do
         case ${opt} in
         "f")
@@ -121,6 +121,8 @@ do
 		content="${OPTARG}"	  ;;
 	"h")
 		hd_content="${OPTARG}"	  ;;
+	"d")
+		DEBUG=1			  ;;
 	*)	
 		show_usage		  ;;
         esac
@@ -170,17 +172,23 @@ post_server_port=$(read_eminfo_config postlog post_server_port)
 	post_server_port="1218"
 }
 
-debug=$(read_eminfo_config postlog debug)
-if [ -z "${debug}" ]; then
-	write_log -f ${POSTLOG_LOG} "[${from}]"\
-		"WARN: debug empty, set debug=[no]"
-	debug="no"
-else
-	if [ "${debug}" != "yes" -a "${debug}" != "no" ]; then
+if [ -z "${DEBUG}" ]; then   ### if not specified from args, read from config file
+	debug=$(read_eminfo_config postlog debug)
+	if [ -z "${debug}" ]; then
 		write_log -f ${POSTLOG_LOG} "[${from}]"\
-			"WARN: invalid debug [${debug}], set debug=[no]"
-		result="no"
+			"WARN: debug empty, set debug=[no]"
+		debug="no"
+	else
+		if [ "${debug}" != "yes" -a "${debug}" != "no" ]; then
+			write_log -f ${POSTLOG_LOG} "[${from}]"\
+				"WARN: invalid debug [${debug}], set debug=[no]"
+			result="no"
+		fi
 	fi
+else
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"INFO: set debug=[yes] as specified from argument"
+	debug="yes"
 fi
 
 
