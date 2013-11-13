@@ -108,6 +108,7 @@ ARRAY_CONFIG_RULES=(
 	"postlog=>post_time_out"		"int:1:300"
 	"postlog=>charset"			"cbset:[utf-8]"
 	"postlog=>post_max_length"		"int:1:50001"
+	"postlog=>debug"			"set:[yes|no]"
 )
 
 

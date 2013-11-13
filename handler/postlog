@@ -6,7 +6,7 @@
 #
 # Usage:     ./postlog -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"
 #
-# Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"  -h "auth hanlder result here"
+# Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"  -h "auto handler result here"
 #
 
 
@@ -27,7 +27,7 @@ fi
 #
 show_usage(){
   echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" "
-  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auth hanlder result here\" "
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\" "
   exit 1
 }
 
@@ -134,7 +134,7 @@ done
 from="${plugin_name}.${jobid}"
 
 write_log -f ${POSTLOG_LOG} ""
-write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postLog"
+write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: begin to postlog"
 
 
 post_server=$(read_eminfo_config postlog post_server)
@@ -170,6 +170,19 @@ post_server_port=$(read_eminfo_config postlog post_server_port)
 	post_server_port="1218"
 }
 
+debug=$(read_eminfo_config postlog debug)
+if [ -z "${debug}" ]; then
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"WARN: debug empty, set debug=[no]"
+	debug="no"
+else
+	if [ "${debug}" != "yes" -a "${debug}" != "no" ]; then
+		write_log -f ${POSTLOG_LOG} "[${from}]"\
+			"WARN: invalid debug [${debug}], set debug=[no]"
+		result="no"
+	fi
+fi
+
 
 # check post host status
 if [ -f "${POSTHOST_STATUS}" -a -s "${POSTHOST_STATUS}" ]; then
@@ -190,17 +203,28 @@ fi
 
 
 # generate xml data, url-encoded data.
-postdata=$(genpost_asxml "${plugin_name}" "${jobid}" "${content}" "${hd_content}" | tr -d '\r\n')
-postdata=$(echo -n "${postdata}" | /usr/bin/od -t x1 -A n -w1000 | tr " " "%" | tr -d '\r\n')
-write_log -f ${POSTLOG_LOG} "[${from}]"\
-		"INFO: url-encode input data finished."
+xml=$(genpost_asxml "${plugin_name}" "${jobid}" "${content}" "${hd_content}"|tr -d '\r\n')
+if [ "${debug}" == "yes" ]; then			## => lead to huge postlog.log
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"DEBUG: job_id: [${jobid}]"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"DEBUG: plugin_name: [${plugin_name}]"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"DEBUG: plugin_output: [${content}]"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"DEBUG: handler_output: [${hd_content}]"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"DEBUG: xml_output: [${xml}]"
+fi
 
-write_log -f ${POSTLOG_LOG} "[${from}]"\
-	"INFO: posting data ..."
-#write_log -f ${POSTLOG_LOG} "[${from}]"\	## => lead to huge postlog.log
-	# "INFO: posting text-plain data: [${content}], [${hd_content}]"
-# write_log -f ${POSTLOG_LOG} "[$from]"\	## => lead to huge postlog.log
-	# "INFO: posting url-encoded data: [${postdata}]"
+postdata=$(echo -en "${xml}" | /usr/bin/od -t x1 -A n -w1000 | tr " " "%" | tr -d '\r\n')
+if [ "${debug}" == "yes" ]; then			## => lead to huge postlog.log
+	write_log -f ${POSTLOG_LOG} "[$from]"\
+		"DEBUG: url_encoded data: [${postdata}]"
+else
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"INFO: posting data ..."
+fi
 
 # curl -s: silient
 result=$( /usr/bin/curl -k -s --connect-timeout ${post_time_out} -d "${postdata}" "https://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
