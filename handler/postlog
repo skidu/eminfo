@@ -183,6 +183,9 @@ if [ -z "${DEBUG}" ]; then   ### if not specified from args, read from config fi
 			write_log -f ${POSTLOG_LOG} "[${from}]"\
 				"WARN: invalid debug [${debug}], set debug=[no]"
 			result="no"
+		else
+			write_log -f ${POSTLOG_LOG} "[${from}]"\
+        			"INFO: set debug=[${debug}]"
 		fi
 	fi
 else
