@@ -69,36 +69,38 @@ genpost_asxml(){
   cat <<-EOF
 	<?xml version="1.0" encoding="UTF-8"?>
 	<!-- eminfo postdata start -->
-		<eminfo_postdata>
-		<eminfo_id>${eminfo_id}</eminfo_id>
-		<eminfo_gname>${gname}</eminfo_gname>
-		<eminfo_jobid>${jobid}</eminfo_jobid>
-		<eminfo_jobts>${jobts}</eminfo_jobts>
-		<eminfo_plugin_config>
+		<data>
+		<id>${eminfo_id}</id>
+		<hname>${gname}</hname>
+		<jobid>${jobid}</jobid>
+		<jobts>${jobts}</jobts>
+		<result></result>
+		<act></act>
+		<config>
 			<basic>
 				<name>${plugin}</name>
 				<enable>${enable}</enable>
 				<comment>${comment}</comment>
-				<frequency>${frequency}</frequency>
-				<exec_tmout>${exec_tmout}</exec_tmout>
-				<maxerr_times>${maxerr_times}</maxerr_times>
-				<take_snapshot>${take_snapshot}</take_snapshot>
-				<mail_notify>${mail_notify}</mail_notify>
-				<post_notify>${post_notify}</post_notify>
-				<mail_receviers>${mail_receviers}</mail_receviers>
-				<attsnap_mail>${attsnap_mail}</attsnap_mail>
-				<auto_handle>${auto_handle}</auto_handle>
-				<auto_handler>${auto_handler}</auto_handler>
+				<freq>${frequency}</freq>
+				<timeout>${exec_tmout}</timeout>
+				<errnum>${maxerr_times}</errnum>
+				<snap>${take_snapshot}</snap>
+				<mail>${mail_notify}</mail>
+				<post>${post_notify}</post>
+				<recevier>${mail_receviers}</recevier>
+				<attsnap>${attsnap_mail}</attsnap>
+				<auto>${auto_handle}</auto>
+				<handler>${auto_handler}</handler>
 				<debug>${debug}</debug>
 			</basic>
-			<userdef>
+			<udef>
 				${userdef_asxml}
-			</userdef>
-		</eminfo_plugin_config>
+			</udef>
+		</config>
 		${plugin_handler_xmloutput}
-		<additional>
-		</additional>
-		</eminfo_postdata>
+		<extra>
+		</extra>
+		</data>
 	<!-- eminfo postdata end -->
 EOF
 }

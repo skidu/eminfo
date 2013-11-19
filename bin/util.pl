@@ -117,7 +117,7 @@ sub format_phoutput_toxml {
 	$max_length = 50000 if (!$max_length || $max_length =~ /\D/ || $max_length >= 50000);
 	### max_length: $max_length
 
-	my $xml_result = "<eminfo_plugin_result>\n";
+	my $xml_result = "<info>\n";
 
 	my $level = &part_pstr_output(1,$poutput,'perl') || '';
 	$xml_result .= "<level>$level</level>\n";
@@ -207,7 +207,6 @@ sub format_phoutput_toxml {
 			my $len = length($content);
 			next if $len == 0;
 
-			
 			$post_length += $len;
 			### content: $content
 			### +content_len: $len
@@ -226,39 +225,35 @@ sub format_phoutput_toxml {
 	}
 	PLUGIN_END: {
 		$xml_result .= "</body>\n";
-		$xml_result .= "</eminfo_plugin_result>\n";
-	}
+		$xml_result .= "<auto>\n";
+		my @hlines = split /###/, $houtput;
+		for (@hlines) {
+			s/\A\s+//g;   # trim head \s
+			s/[\r\n]//g;  # trim \r\n
+			s/&nbsp;/ /g;   # replace html space
+			# s/\<[^\<\>]*\>//g;  # trim (most likely) html-tag 
+			# replace unsupported chars
+			s/&/&amp;/g;  
+			s/</&lt;/g;
+			s/>/&gt;/g;
+			s/"/&quot;/g;
+			s/'/&apos;/g;
 	
-	$xml_result .= "<eminfo_autohandle_result>\n";
-	my @hlines = split /###/, $houtput;
-	for (@hlines) {
-		s/\A\s+//g;   # trim head \s
-		s/[\r\n]//g;  # trim \r\n
-		s/&nbsp;/ /g;   # replace html space
-		# s/\<[^\<\>]*\>//g;  # trim (most likely) html-tag 
-		# replace unsupported chars
-		s/&/&amp;/g;  
-		s/</&lt;/g;
-		s/>/&gt;/g;
-		s/"/&quot;/g;
-		s/'/&apos;/g;
+			next if length == 0;
 
-		next if length == 0;
+			$post_length += length;
+			### content: $_
+			### +content_len: length
+			### post_length: $post_length
+			if ($post_length >= $max_length){
+				$xml_result .= "<line>post length exceed $max_length</line>\n";
+				last;
+			}
 
-		$post_length += length;
-		### content: $_
-		### +content_len: length
-		### post_length: $post_length
-		if ($post_length >= $max_length){
-			$xml_result .= "<line>post length exceed $max_length</line>\n";
-			last;
+			$xml_result .= "<line size=\"".length($_)."\">$_</line>\n";
 		}
-
-		$xml_result .= "<line size=\"".length($_)."\">$_</line>\n";
+		$xml_result .= "</auto>\n";
+		$xml_result .= "</info>\n";
 	}
-	HANDLER_END: {
-		$xml_result .= "</eminfo_autohandle_result>\n";
-	}
-
 	print $xml_result;
 }
