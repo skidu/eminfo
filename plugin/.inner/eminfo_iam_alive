@@ -30,62 +30,23 @@ LEVEL=          ### { ok | warn | crit | unknown }
 TYPE=           ### { str| file }
 CONTENT=        ### { strings | /path/to/result.file }
 
-# Read plugin config value here
-post_server=$(read_eminfo_config postlog post_server)
-queue_name=$(read_eminfo_config postlog heartbeat_queue_name)
-auth_pass=$(read_eminfo_config postlog auth_pass)
-charset=$(read_eminfo_config postlog charset)
-post_time_out=$(read_eminfo_config postlog post_time_out)
-post_server_port=$(read_eminfo_config postlog post_server_port)
-
-# if null or invalid set default.
-[ -z "${charset}" ] && {
-        charset="utf-8"
-}
-
-[ -z "${post_time_out}" -o ! -z "${post_time_out//[0-9]}" ] && {
-        post_time_out="10"
-}
-
-[ -z "${post_server_port}" -o ! -z "${post_server_port//[0-9]}" ] && {
-        post_server_port="1218"
-}
-
-
-
 # check function here
 check() {
-  local result=
-  [ -z "${post_server}" -o -z "${queue_name}" -o -z "${auth_pass}" ] && {
-        EXIT_STATUS=${STATE_CRIT};
-        LEVEL="unknown";
-        TYPE="str";
-	CONTENT="Critical Error | configurations not complete | post_server,queue_name,auth_pass can't be empty."
-        return
-  }
-  local eminfo_id=$(get_eminfo_id) 
-  [ -z "${eminfo_id}" ] && {
-	EXIT_STATUS=${STATE_CRIT};
-	LEVEL="unknown";
-	TYPE="str";
-	CONTENT="Critical Error | eminfo id empty | maybe you need to exec setint"
-	return
-  }
+  local info=
   local timestamp=$(date +%s)
-  local heartbeat="eminfo_id=${eminfo_id}  timestamp=${timestamp}  heartbeat=iamalive"
-  local postdata=$(echo -n "${heartbeat}" | /usr/bin/od -t x1 -A n -w1000 | tr " " "%" | tr -d '\r\n')
-  # curl -s: silient
-  result=$( /usr/bin/curl -k -s --connect-timeout ${post_time_out} -d "${postdata}" "https://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
+  local info="${timestamp} | iamalive"
+  info="{ok}:{str}:{${info}}"
+  ${POSTLOG_SH} -f "eminfo_iam_alive" -s "IAMALIVE" -i "${info}" -h "Nothing to do" 2>&1
   if [ "$?" == "0" ]; then
 	EXIT_STATUS="${STATE_OK}"
 	LEVEL="ok"
 	TYPE="str"
-	CONTENT="Heartbeat Success | post heartbeat success | post heartbeat=[${heartbeat}] ### result=[${result}] ###"
+	CONTENT=" post eminfo heartbeat succeed | post eminfo heartbeat succeed "
   else
 	EXIT_STATUS="${STATE_WARNING}"
 	LEVEL="warn"
 	TYPE="str"
-	CONTENT="Heartbeat FAIL | post heartbeat failed | post heartbeat=[${heartbeat}] ### result=[${result}] ### maybe timeout on connect ${post_server}:${post_server_port} ###"
+	CONTENT=" post eminfo heartbeat failed | post eminfo heartbeat failed "
   fi
 }
 
