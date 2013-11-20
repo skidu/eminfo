@@ -2511,28 +2511,34 @@ process_plugin() {
 	fi
   fi
 
-  # Step 10: check action: post_notify
+  # Step 10: check action: mail_notify
+  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify ${rc})
+  local failed_eml_flag=0  failed_eml_lst=
+  if [ "${m_alert}" != "yes" ]; then
+	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
+  else
+	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
+	# eval  will return syntax error. why ?
+	failed_eml_lst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1 )
+	[ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
+	write_log ${jid} ${plugin_name} "mail notify finished, failed_eml_flag=[${failed_eml_flag}]."\
+		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
+  fi
+
+  # Step 11: check action: post_notify
   local p_alert=$(take_action_ornot "${plugin_name}" post_notify ${rc})
   if [ "${p_alert}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "post notify disabled. SKIP";
   else
 	write_log ${jid} ${plugin_name} "post notify enabled. CONTINUE";
 	# eval  will return syntax error. why ?
-	${POSTLOG_SH} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1
+	if [ "${failed_eml_flag}" == "0" ]; then
+		${POSTLOG_SH} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1
+	else
+		${POSTLOG_SH} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" -a "${failed_eml_lst}" 2>&1
+	fi
 	write_log ${jid} ${plugin_name} "post notify finished."\
 		"details in ${POSTLOG_LOG##*/}. CONTINUE";
-  fi
-
-  # Step 11: check action: mail_notify
-  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify ${rc})
-  if [ "${m_alert}" != "yes" ]; then
-	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
-  else
-	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
-	# eval  will return syntax error. why ?
-	${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}"
-	write_log ${jid} ${plugin_name} "mail notify finished."\
-		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
   fi
 
   # Step 12: plugin finished
@@ -2654,26 +2660,32 @@ process_plugin_timeout() {
         fi
   fi
 
-  # Step 4: post timeout information
+  # Step 4: send timeout notify mail
+  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify "tmout")
+  local failed_eml_flag=0  failed_eml_lst=
+  if [ "${m_alert}" != "yes" ]; then
+        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify disabled. SKIP";
+  else
+	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify enabled. CONTINUE";
+	failed_eml_lst=$( ${SENDMAIL} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}" 2>&1 )
+	[ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
+	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} send timeout mail finished, failed_eml_flag=[${failed_eml_flag}]."\
+		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
+  fi
+
+  # Step 5: post timeout information
   local p_alert=$(take_action_ornot "${plugin_name}" post_notify "tmout")
   if [ "${p_alert}" != "yes" ]; then
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify disabled. SKIP";
   else
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify enabled. CONTINUE";
-        ${POSTLOG_SH} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}" 2>&1 # eval will return syntax error. why?
+	if [ "${failed_eml_flag}" == "0" ]; then
+        	${POSTLOG_SH} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}" 2>&1
+	else
+        	${POSTLOG_SH} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}" -a "${failed_eml_lst}" 2>&1
+	fi
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post alert finished."\
 		"details in ${POSTLOG_LOG##*/}. CONTINUE";
-  fi
-
-  # Step 5: send timeout notify mail
-  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify "tmout")
-  if [ "${m_alert}" != "yes" ]; then
-        write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify disabled. SKIP";
-  else
-	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} mail notify enabled. CONTINUE";
-	${SENDMAIL} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}"
-	write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} send timeout mail:"\
-		"finished. details in ${SENDMAIL_LOG##*/}. CONTINUE";
   fi
 
 
@@ -2706,12 +2718,18 @@ process_sysoverload() {
   # Step 2: send alert mail whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
 	"[${sysload_now} >= ${sysload_limit}] 2 => sending alert mail";
-  ${SENDMAIL} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}"
+  local failed_eml_flag=0  failed_eml_lst=
+  failed_eml_lst=$( ${SENDMAIL} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}" 2>&1 )
+  [ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
 
   # Step 3: post alert information whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
 	"[${sysload_now} >= ${sysload_limit}] 3 => posting alert data";
-  ${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}" 2>&1
+  if [ "${failed_eml_flag}" == "0" ]; then
+  	${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}" 2>&1
+  else
+  	${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}" -a "${failed_eml_lst}" 2>&1
+  fi
 }
 
 
@@ -2742,12 +2760,18 @@ process_kidsexceed() {
   # Step 3: send alert mail whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
 	"[${kidsnum_now} >= ${kidsnum_limit}] 2 => sending alert mail";
-  ${SENDMAIL} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}"
+  local failed_eml_flag=0  failed_eml_lst=
+  failed_eml_lst=$( ${SENDMAIL} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}" 2>&1 )
+  [ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
 
   # Step 4: post alert information whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
 	"[${kidsnum_now} >= ${kidsnum_limit}] 3 => posting alert data";
-  ${POSTLOG_SH} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}" 2>&1
+  if [ "${failed_eml_flag}" == "0" ]; then
+  	${POSTLOG_SH} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}" 2>&1
+  else
+  	${POSTLOG_SH} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}" -a "${failed_eml_lst}" 2>&1
+  fi
 }
 
 # Process plugin exception rcode/output
@@ -2791,10 +2815,12 @@ process_plugin_exception() {
   # Step 2: send misforma notify-mail or not ?
   local notify_onmisform=$(read_eminfo_config global notify_onmisform)
   [ -z "${notify_onmisform}" ] && notify_onmisform="yes"
+  local failed_eml_flag=0  failed_eml_lst=
   if [ "${notify_onmisform}" == "yes" ]; then
   	write_log -f "${EMINFO_LOG}" "MISF0000 EMINFO output misforma:"\
         	"[${reason}] 1 => sending notify mail";
-  	${SENDMAIL} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}"
+  	failed_eml_lst=$( ${SENDMAIL} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}" 2>&1 )
+	[ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
   else
 	write_log -f "${EMINFO_LOG}" "MISF0000 EMINFO output misforma:"
 		"[${reason}] 1 => send notify mail disabled, SKIP" 
@@ -2803,8 +2829,11 @@ process_plugin_exception() {
   # Step 3: post misforma information whatever.
   write_log -f "${EMINFO_LOG}" "MISF0000 EMINFO output misforma:"\
         "[${reason}] 2 => posting notify data";
-  ${POSTLOG_SH} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}" 2>&1
-
+  if [ "${failed_eml_flag}" == "0" ]; then
+  	${POSTLOG_SH} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}" 2>&1
+  else
+  	${POSTLOG_SH} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}" -a "${failed_eml_lst}" 2>&1
+  fi
 }
 
 
