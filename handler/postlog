@@ -42,7 +42,6 @@ genpost_asxml(){
   local eminfo_id=$(get_eminfo_id)
   local gname=$(get_global_name)
   local jobts=$(date +%s)
-  local enable=$(get_enable "${plugin}")
   local comment=$(get_comment "${plugin}")
   local frequency=$(get_frequency "${plugin}")
   local exec_tmout=$(get_exec_tmout "${plugin}")
@@ -52,9 +51,11 @@ genpost_asxml(){
   local post_notify=$(get_action_type "${plugin}" post_notify)
   local mail_receviers=$(get_mail_receviers "${plugin}" mail_receviers)
   local attsnap_mail=$(get_attsnap_mail "${plugin}")
+  [ "${attsnap_mail}" == "yes" ] && attsnap_mail=1 || attsnap_mail=0
   local auto_handle=$(get_action_type "${plugin}" auto_handle)
   local auto_handler=$(get_auto_handler "${plugin}" auto_handler)
   local debug=$(get_debug "${plugin}")
+  [ "${debug}" == "yes" ] && debug=1 || debug=0
   userdef2xml() {
 	view_extra_config "$1" 1 | while read line
 	do
@@ -77,7 +78,6 @@ genpost_asxml(){
 		<eminfo_plugin_config>
 			<basic>
 				<name>${plugin}</name>
-				<enable>${enable}</enable>
 				<comment>${comment}</comment>
 				<frequency>${frequency}</frequency>
 				<exec_tmout>${exec_tmout}</exec_tmout>
