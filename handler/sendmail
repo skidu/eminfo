@@ -107,7 +107,18 @@ from="${plugin_name}.${jobid}"
 write_log -f "${SENDMAIL_LOG}" ""
 write_log -f "${SENDMAIL_LOG}" "[${from}]" "INFO: begin to sendmail..."
 
+# read global.name / read plugin comment / read plugin mail-receviers 
+gname=$(get_global_name)
+comment=$(get_comment "${plugin_name}")
+if [ "${jobid}" == "ovld" ]; then  
+	receviers=$(get_mail_receviers default)  # Read Default mail_receviers directly while jobid="ovld"
+else
+	receviers=$(get_mail_receviers "${plugin_name}")
+fi
+write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+	"INFO: set name=[${gname}], comment=[${comment}], receviers=[${receviers}]. CONTINUE"
 
+# begin to check sendmail config
 smtp_server=$(read_eminfo_config sendmail smtp_server)
 auth_user=$(read_eminfo_config sendmail auth_user)
 auth_pass=$(read_eminfo_config sendmail auth_pass)
@@ -115,6 +126,9 @@ auth_pass=$(read_eminfo_config sendmail auth_pass)
 	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 		"ERROR: configurations not complete:"\
 		"[smtp_server,auth_user,auth_pass can't be empty]. EXIT"
+	write_log -f "${SENDMAIL_LOG}" ""
+	write_log -f "${SENDMAIL_LOG}" ""
+	echo -en "${receviers}"         # output all receviers on configurations not complete 
 	exit 1
 }
 write_log -f "${SENDMAIL_LOG}" "[${from}]"\
@@ -141,7 +155,6 @@ smtp_server_port=$(read_eminfo_config sendmail smtp_server_port)
         smtp_server_port="25"
 }
 
-
 # check smtp host status
 if [ -f "${SMTPHOST_STATUS}" -a -s "${SMTPHOST_STATUS}" ]; then
 	status=$(/bin/awk '{print $1;exit}' "${SMTPHOST_STATUS}" 2>&-)
@@ -149,6 +162,9 @@ if [ -f "${SMTPHOST_STATUS}" -a -s "${SMTPHOST_STATUS}" ]; then
 	if [ "${status}" != "0" ]; then
 		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 			"WARN: smtp host seems down, [${conn_details}], exit"
+		write_log -f "${SENDMAIL_LOG}" ""
+		write_log -f "${SENDMAIL_LOG}" ""
+		echo -en "${receviers}"		# output all receviers on smtp host down
 		exit 2;
 	else
 		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
@@ -160,16 +176,6 @@ else
 fi
 
 
-# read global.name / read plugin comment / read plugin mail-receviers 
-gname=$(get_global_name)
-comment=$(get_comment "${plugin_name}")
-if [ "${jobid}" == "ovld" ]; then  
-	receviers=$(get_mail_receviers default)  # Read Default mail_receviers directly while jobid="ovld"
-else
-	receviers=$(get_mail_receviers "${plugin_name}")
-fi
-write_log -f "${SENDMAIL_LOG}" "[${from}]"\
-	"INFO: set name=[${gname}], comment=[${comment}], receviers=[${receviers}]. CONTINUE"
 
 ### attach_ini_mail 
 attach_ini_mail_args=
@@ -226,6 +232,8 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 
 
 ### sendmail depend on different {mail_type}.
+vexit=0
+outputexit=
 case "${mail_type}" in
   "file")
 	### 1. process attach files list.
@@ -292,7 +300,13 @@ case "${mail_type}" in
 			-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 			-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -m "Refer to attachments for details." \
 			-a ${att_file_args}  ${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
-			[ "$?" == "0" ] && ((t_s+=1)) || ((t_e+=1))
+			if [ "$?" == "0" ]; then
+				((t_s+=1)) 
+			else
+				((t_e+=1))
+				vexit=1
+				outputexit="${x} ${outputexit}"
+			fi
 			write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 				"INFO: [${n}/${t}], sending mail to [${x}] end. result: ${result}"
 	    	done
@@ -321,7 +335,13 @@ case "${mail_type}" in
 	    		-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 	    		-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -o message-file="${mailbody_path}" \
 	    		${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
-	    	  [ "$?" == "0" ] && ((t_s+=1)) || ((t_e+=1))
+		  if [ "$?" == "0" ]; then
+			((t_s+=1))
+		  else
+			((t_e+=1))
+			vexit=1
+			outputexit="${x} ${outputexit}"
+		  fi
 	    	  write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 			"INFO: [${n}/${t}], sending mail to [${x}] end. result: ${result}"
 		done
@@ -338,3 +358,5 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 	"INFO: end to sendmail. sesult: [total=${t}  success=${t_s}  fail=${t_e}]"
 write_log -f "${SENDMAIL_LOG}" ""
 write_log -f "${SENDMAIL_LOG}" ""
+echo -en "${outputexit}"
+exit "${vexit}"

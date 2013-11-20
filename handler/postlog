@@ -64,7 +64,7 @@ genpost_asxml(){
 		echo -en "<$cname>$cvalue</$cname>\n"
 	done
   }
-  local userdef_asxml=$(userdef2xml "${plugin}")
+  local userdef_xmloutput=$(userdef2xml "${plugin}")
   local plugin_handler_xmloutput=$( ${PLUTIL} format_phoutput_toxml "${content}" "${hd_content}" )
 
   cat <<-EOF
@@ -94,7 +94,7 @@ genpost_asxml(){
 				<debug>${debug}</debug>
 			</basic>
 			<udef>
-				${userdef_asxml}
+				${userdef_xmloutput}
 			</udef>
 		</config>
 		${plugin_handler_xmloutput}
