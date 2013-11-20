@@ -39,10 +39,14 @@ show_usage(){
 #
 genpost_asxml(){
   local plugin=$1 jobid=$2 content=$3 hd_content=$4 action=$5
+
+  local plugin_xmlfmt=$(echo -e "${plugin}" | sed -e 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/"/&quot;/g; s/'\''/&apos;/g;')
+  local jobts=$(date +%s)
   local eminfo_id=$(get_eminfo_id)
   local hname=$(get_global_name)
-  local jobts=$(date +%s)
+  hname=$(echo -e "${hname}" | sed -e 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/"/&quot;/g; s/'\''/&apos;/g;')
   local comment=$(get_comment "${plugin}")
+  comment=$(echo -e "${comment}" | sed -e 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/"/&quot;/g; s/'\''/&apos;/g;')
   local frequency=$(get_frequency "${plugin}")
   local exec_tmout=$(get_exec_tmout "${plugin}")
   local maxerr_times=$(get_maxerr_times "${plugin}")
@@ -50,14 +54,16 @@ genpost_asxml(){
   local mail_notify=$(get_action_type "${plugin}" mail_notify)
   local post_notify=$(get_action_type "${plugin}" post_notify)
   local mail_receviers=$(get_mail_receviers "${plugin}" mail_receviers)
+  mail_receviers=$( echo -e "${mail_receviers}" | sed -e 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/"/&quot;/g; s/'\''/&apos;/g;')
   local attsnap_mail=$(get_attsnap_mail "${plugin}")
   [ "${attsnap_mail}" == "yes" ] && attsnap_mail=1 || attsnap_mail=0
   local auto_handle=$(get_action_type "${plugin}" auto_handle)
   local auto_handler=$(get_auto_handler "${plugin}" auto_handler)
+  auto_handler=$(echo -e "${auto_handler}" | sed -e 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/"/&quot;/g; s/'\''/&apos;/g;')
   local debug=$(get_debug "${plugin}")
   [ "${debug}" == "yes" ] && debug=1 || debug=0
-  local result=0 emllst= smslst=
-  local act="{ mail:[${emllst}], sms:[${smslst}] }"
+
+  local result=0 emllst= smslst= act="{ mail:[], sms:[] }"
   if [ -z "${action//[ \t]}" ]; then
 	result=0
   else
@@ -68,16 +74,19 @@ genpost_asxml(){
 	done
 	act="{ mail:[${emllst}], sms:[${smslst}] }"
   fi
+  act=$(echo -e "${act}" | sed -e 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/"/&quot;/g; s/'\''/&apos;/g;')
+
   userdef2xml() {
 	view_extra_config "$1" 1 | while read line
 	do
 		cname=$(echo -e "${line}" | awk '{gsub(" ","",$1);print $1;exit;}')
 		cvalue=$(echo -e "${line}" | awk '{$1="";print}')
-		echo -en "<$cname>$cvalue</$cname>\n"
+		cvalue=$(echo -e "${cvalue}" | sed -e 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/"/&quot;/g; s/'\''/&apos;/g;')
+		echo -en "<$cname>${cvalue}</$cname>\n"
 	done
   }
   local userdef_xmloutput=$(userdef2xml "${plugin}")
-  local plugin_handler_xmloutput=$( ${PLUTIL} format_phoutput_toxml "${content}" "${hd_content}" )
+  local plugin_handler_xmloutput=$( LANG=C ${PLUTIL} format_phoutput_toxml "${content}" "${hd_content}" )
 
   cat <<-EOF
 	<?xml version="1.0" encoding="UTF-8"?>
@@ -91,7 +100,7 @@ genpost_asxml(){
 		<act>${act}</act>
 		<config>
 			<basic>
-				<name>${plugin}</name>
+				<name>${plugin_xmlfmt}</name>
 				<comment>${comment}</comment>
 				<freq>${frequency}</freq>
 				<timeout>${exec_tmout}</timeout>
