@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+#
+# Inner Plugin:  periodic post plugin list.
+#
+
+BASE_DIR="/usr/local/eminfo"
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }   
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# check function here
+check() {
+  local info=  enabled_plugins= disabled_plugins=
+  local inner_plugins="$(list_inner_plugin_section)"
+  local all_plugins=( $(list_plugin_section | tr -s "\n" " ") )
+  local enabled_sections=( $(list_enabled_plugin_section | tr -s "\n" " ") )
+  for ((i=0;i<${#enabled_sections[*]};i++))
+  do
+	if [ "$(echo -e "${inner_plugins}"|grep -E -o -w "${enabled_section[${i}]}")" == "" ]; then 
+		enabled_plugins=( ${enabled_plugins[*]} ${enabled_section[${i}]} )
+	fi
+  done
+  for ((i=0;i<${#all_plugins[*]};i++))
+  do
+	if [ "$(echo -e "${enabled_plugins[*]}"|grep -E -o -w "${all_plugins[${i}]}")" == "" ]; then 
+		disabled_plugins=( ${disabled_plugins[*]} ${all_plugins[${i}]} )
+	fi
+  done
+
+  info="total=${#all_plugins[*]} | enabled=${#enabled_plugins[*]} disabled=${#disabled_plugins[*]} |"
+  info="${info} enabled_plugins: ${enabled_plugins[*]} ### disabled_plugins: ${disabled_plugins[*]} "
+  info="{ok}:{str}:{${info}}"
+  ${POSTLOG_SH} -f "eminfo_plugin_list" -s "PLUGLIST" -i "${info}" -h "Nothing to do" 2>&1
+  if [ "$?" == "0" ]; then
+  	EXIT_STATUS="${STATE_OK}"
+  	LEVEL="ok"
+  	TYPE="str"
+  	CONTENT=" post plugin list succeed | post plugin list succeed ";
+  else
+	EXIT_STATUS="${STATE_WARNING}"
+        LEVEL="warn"
+        TYPE="str"
+        CONTENT=" post plugin list failed | post plugin list failed "
+  fi
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}  
