@@ -2518,7 +2518,7 @@ process_plugin() {
   else
 	write_log ${jid} ${plugin_name} "post notify enabled. CONTINUE";
 	# eval  will return syntax error. why ?
-	${POSTLOG_SH} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}"
+	${POSTLOG_SH} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1
 	write_log ${jid} ${plugin_name} "post notify finished."\
 		"details in ${POSTLOG_LOG##*/}. CONTINUE";
   fi
@@ -2660,7 +2660,7 @@ process_plugin_timeout() {
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify disabled. SKIP";
   else
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post notify enabled. CONTINUE";
-        ${POSTLOG_SH} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}" # eval will return syntax error. why?
+        ${POSTLOG_SH} -f "${plugin_name}" -s "tmout" -i "${output}" -h "${hd_output}" 2>&1 # eval will return syntax error. why?
         write_log -f "${EMINFO_LOG}" "TMT00000 ${plugin_name} post alert finished."\
 		"details in ${POSTLOG_LOG##*/}. CONTINUE";
   fi
@@ -2711,7 +2711,7 @@ process_sysoverload() {
   # Step 3: post alert information whatever.
   write_log -f "${EMINFO_LOG}" "OVLD0000 EMINFO sysload overloaded:"\
 	"[${sysload_now} >= ${sysload_limit}] 3 => posting alert data";
-  ${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}"
+  ${POSTLOG_SH} -f "${plugin_name}" -s "ovld" -i "${output}" -h "${hd_output}" 2>&1
 }
 
 
@@ -2747,7 +2747,7 @@ process_kidsexceed() {
   # Step 4: post alert information whatever.
   write_log -f "${EMINFO_LOG}" "KIDS0000 EMINFO kidsnum exceed:"\
 	"[${kidsnum_now} >= ${kidsnum_limit}] 3 => posting alert data";
-  ${POSTLOG_SH} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}"
+  ${POSTLOG_SH} -f "${plugin_name}" -s "kids" -i "${output}" -h "${hd_output}" 2>&1
 }
 
 # Process plugin exception rcode/output
@@ -2803,7 +2803,7 @@ process_plugin_exception() {
   # Step 3: post misforma information whatever.
   write_log -f "${EMINFO_LOG}" "MISF0000 EMINFO output misforma:"\
         "[${reason}] 2 => posting notify data";
-  ${POSTLOG_SH} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}"
+  ${POSTLOG_SH} -f "${plugin_name}" -s "misf" -i "${output}" -h "${hd_output}" 2>&1
 
 }
 

@@ -238,10 +238,13 @@ else
 fi
 
 # curl -s: silient
+vexit=0
 result=$( /usr/bin/curl -k -s --connect-timeout ${post_time_out} -d "${postdata}" "https://${post_server}:${post_server_port}/?charset=${charset}&name=${queue_name}&opt=put&auth=${auth_pass}"  2>&1 )
 if [ "$?" == "0" ]; then
+	vexit=0
 	result="SUCCESS: ${result}"
 else
+	vexit=1
 	if [ -z "${result}" ]; then
 		result="FAIL: return nothing, maybe timeout on connect [https://$post_server:$post_server_port]"
 	else
@@ -252,3 +255,4 @@ fi
 write_log -f ${POSTLOG_LOG} "[${from}]" "INFO: end to postLog. result "${result}""
 write_log -f ${POSTLOG_LOG} ""
 write_log -f ${POSTLOG_LOG} ""
+exit "${vexit}"
