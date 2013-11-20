@@ -158,6 +158,7 @@ sub format_phoutput_toxml {
         		$title =~ s/>/&gt;/g;
         		$title =~ s/"/&quot;/g;
         		$title =~ s/'/&apos;/g;
+			$title =~ s/(\A\s+|\s+\Z)//g;
 			$xml_result .= "<title>$title</title>\n";
 		}
 
@@ -175,6 +176,7 @@ sub format_phoutput_toxml {
                         $summary =~ s/>/&gt;/g;
                         $summary =~ s/"/&quot;/g;
                         $summary =~ s/'/&apos;/g;
+			$summary =~ s/(\A\s+|\s+\Z)//g;
 			$xml_result .= "<summary>$summary</summary>\n";
 		}
 		
@@ -203,6 +205,7 @@ sub format_phoutput_toxml {
 			$content =~ s/>/&gt;/g;
 			$content =~ s/"/&quot;/g;
 			$content =~ s/'/&apos;/g;
+			$content =~ s/(\A\s+|\s+\Z)//g;
 
 			my $len = length($content);
 			next if $len == 0;
