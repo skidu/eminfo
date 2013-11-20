@@ -4,9 +4,9 @@
 # This Script Responsible for Posting Data to HTTPSQS Server.
 #
 #
-# Usage:     ./postlog -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"  [-d]
+# Usage:     ./postlog -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"  [-d] [-a {actlst}]
 #
-# Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"  -h "auto handler result here"  [-d]
+# Example:   ./postlog -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}"  -h "auto handler result here"  [-d] [-a "zhangguangzheng@eyou.net root_bbk@126.com eyoutest@eyou.com"]
 #
 
 
@@ -26,8 +26,8 @@ fi
 # def help
 #
 show_usage(){
-  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\"  [-d] "
-  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\"  [-d] "
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\"  [-d] [-a {actlst}]"
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\"  [-d] [-a \"zhangguangzheng@eyou.net root_bbk@126.com eyoutest@eyou.com\"] "
   exit 1
 }
 
@@ -38,9 +38,9 @@ show_usage(){
 # Exmaple:	genpost_asxml port 12345678 "{crit}:{str}:{title | summary | details: item1. ### item2. ### item3. ### }" "autohand"
 #
 genpost_asxml(){
-  local plugin=$1 jobid=$2 content=$3 hd_content=$4
+  local plugin=$1 jobid=$2 content=$3 hd_content=$4 action=$5
   local eminfo_id=$(get_eminfo_id)
-  local gname=$(get_global_name)
+  local hname=$(get_global_name)
   local jobts=$(date +%s)
   local comment=$(get_comment "${plugin}")
   local frequency=$(get_frequency "${plugin}")
@@ -56,6 +56,18 @@ genpost_asxml(){
   local auto_handler=$(get_auto_handler "${plugin}" auto_handler)
   local debug=$(get_debug "${plugin}")
   [ "${debug}" == "yes" ] && debug=1 || debug=0
+  local result=0 emllst= smslst=
+  local act="{ mail:[${emllst}], sms:[${smslst}] }"
+  if [ -z "${action//[ \t]}" ]; then
+	result=0
+  else
+	result=1
+	for x in `echo "${action}"`
+        do
+		[ -z "${emllst}" ] && emllst="${x}" || emllst="${emllst},${x}"
+	done
+	act="{ mail:[${emllst}], sms:[${smslst}] }"
+  fi
   userdef2xml() {
 	view_extra_config "$1" 1 | while read line
 	do
@@ -72,11 +84,11 @@ genpost_asxml(){
 	<!-- eminfo postdata start -->
 		<data>
 		<id>${eminfo_id}</id>
-		<hname>${gname}</hname>
+		<hname>${hname}</hname>
 		<jobid>${jobid}</jobid>
 		<jobts>${jobts}</jobts>
-		<result></result>
-		<act></act>
+		<result>${result}</result>
+		<act>${act}</act>
 		<config>
 			<basic>
 				<name>${plugin}</name>
@@ -111,7 +123,7 @@ EOF
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" ] && show_usage
 
 # read args
-while getopts f:s:i:h:d opt
+while getopts f:s:i:h:a:d opt
 do
         case ${opt} in
         "f")
@@ -123,6 +135,8 @@ do
 		content="${OPTARG}"	  ;;
 	"h")
 		hd_content="${OPTARG}"	  ;;
+	"a")
+		action="${OPTARG}"	  ;;
 	"d")
 		DEBUG=1			  ;;
 	*)	
@@ -216,7 +230,7 @@ fi
 
 
 # generate xml data, url-encoded data.
-xml=$(genpost_asxml "${plugin_name}" "${jobid}" "${content}" "${hd_content}"|tr -d '\r\n')
+xml=$(genpost_asxml "${plugin_name}" "${jobid}" "${content}" "${hd_content}" "${action}" |tr -d '\r\n')
 if [ "${debug}" == "yes" ]; then			## => lead to huge postlog.log
 	write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"DEBUG: job_id: [${jobid}]"
@@ -226,6 +240,8 @@ if [ "${debug}" == "yes" ]; then			## => lead to huge postlog.log
 		"DEBUG: plugin_output: [${content}]"
 	write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"DEBUG: handler_output: [${hd_content}]"
+	write_log -f ${POSTLOG_LOG} "[${from}]"\
+		"DEBUG: action: [${action}]"
 	write_log -f ${POSTLOG_LOG} "[${from}]"\
 		"DEBUG: xml_output: [${xml}]"
 fi

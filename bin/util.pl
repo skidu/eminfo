@@ -109,33 +109,25 @@ sub format_pstr_output_toterm {
 sub format_phoutput_toxml {
 	my $poutput = shift;
 	my $houtput = shift;
-	### poutput: $poutput
-	### houtput: $houtput
 
 	my $post_length = 0;
 	(my $max_length = `/usr/local/eminfo/eminfo view postlog post_max_length 2>&-`) =~ s/[\r\n]//g;
 	$max_length = 50000 if (!$max_length || $max_length =~ /\D/ || $max_length >= 50000);
-	### max_length: $max_length
 
 	my $xml_result = "<info>\n";
 
 	my $level = &part_pstr_output(1,$poutput,'perl') || '';
 	$xml_result .= "<level>$level</level>\n";
-	### level: $level
 
 	my $type = &part_pstr_output(2,$poutput,'perl') || '';
 	$xml_result .= "<type>$type</type>\n";
-	### type: $type
 
 	$xml_result .= "<body>\n";
 	if ($type eq 'file'){
 		my $files = &part_pstr_output(3,$poutput,'perl') || '';
-		### files: $files
 		my @files = split /\s+/, $files;
-		### array_files: @files
 		for (@files) {
 			my $file_size = -s || 'unkn';
-			# replace unsupported chars
 			s/&/&amp;/g;
         		s/</&lt;/g;
         		s/>/&gt;/g;
@@ -144,15 +136,13 @@ sub format_phoutput_toxml {
 			$xml_result .= "<file size=$file_size>$_</file>\n";
 		}
 	} elsif ($type eq 'str'){
+		# 1. process titl
 		my $title = &part_pstr_output(4,$poutput,'perl') || '';
-		### title: $title
 		$post_length += length($title);
-		### post_length: $post_length
 		if ($post_length >= $max_length){
 			$xml_result .= "<title>post length exceed $max_length</title>\n";
 			goto PLUGIN_END;
 		} else {
-			# replace unsupported chars
 			$title =~ s/&/&amp;/g;
         		$title =~ s/</&lt;/g;
         		$title =~ s/>/&gt;/g;
@@ -161,16 +151,14 @@ sub format_phoutput_toxml {
 			$title =~ s/(\A\s+|\s+\Z)//g;
 			$xml_result .= "<title>$title</title>\n";
 		}
-
+		
+		# 2. process summary
 		my $summary = &part_pstr_output(5,$poutput,'perl') || '';
-		### summary: $summary
 		$post_length += length($summary);
-		### post_length: $post_length
 		if ($post_length >= $max_length){
 			$xml_result .= "<summary>post length exceed $max_length</summary>\n";
 			goto PLUGIN_END;
 		} else {
-			# replace unsupported chars
                         $summary =~ s/&/&amp;/g;
                         $summary =~ s/</&lt;/g;
                         $summary =~ s/>/&gt;/g;
@@ -180,26 +168,19 @@ sub format_phoutput_toxml {
 			$xml_result .= "<summary>$summary</summary>\n";
 		}
 		
-
+		# 3. process details
 		my $body = &part_pstr_output(6,$poutput,'perl') || '';
-		### body: $body
 		my @lines = split /###/ , $body;
-		### array_lines: @lines
 		for (@lines) {
 			my ($color,$content);
-			# must whole-line matches     ~     <font color=(\w+)>content</font>
+			# Notice: must be the whole-line matches  <font color=(\w+)>content</font>
 			if (m/\A\s*(<\s*font\s+color=(\w+)\s*>)\s*(.+?)\s*(<\s*\/font\s*>)\s*\Z/) { 
 				($color,$content) = ($2,$3);
-				### color: $color
-				### content: $content
 			} else {
 				$content = $_;
 			}
-			$content =~ s/\A\s+//g;   # trim head \s
-			$content =~ s/[\r\n]//g;  # trim \r\n
-			$content =~ s/&nbsp;/ /g;  # replace html space
-			# $content =~ s/\<[^\<\>]*\>//g;  # trim (most likely) html-tag 
-			# replace unsupported chars
+			$content =~ s/[\r\n]//g;
+			$content =~ s/&nbsp;/ /g;
 			$content =~ s/&/&amp;/g;
 			$content =~ s/</&lt;/g;
 			$content =~ s/>/&gt;/g;
@@ -211,9 +192,6 @@ sub format_phoutput_toxml {
 			next if $len == 0;
 
 			$post_length += $len;
-			### content: $content
-			### +content_len: $len
-			### post_length: $post_length
 			if ($post_length >= $max_length){
 				$xml_result .= "<line>post length exceed $max_length</line>\n";
 				last;
@@ -231,23 +209,18 @@ sub format_phoutput_toxml {
 		$xml_result .= "<auto>\n";
 		my @hlines = split /###/, $houtput;
 		for (@hlines) {
-			s/\A\s+//g;   # trim head \s
-			s/[\r\n]//g;  # trim \r\n
-			s/&nbsp;/ /g;   # replace html space
-			# s/\<[^\<\>]*\>//g;  # trim (most likely) html-tag 
-			# replace unsupported chars
+			s/[\r\n]//g;
+			s/&nbsp;/ /g;
 			s/&/&amp;/g;  
 			s/</&lt;/g;
 			s/>/&gt;/g;
 			s/"/&quot;/g;
 			s/'/&apos;/g;
+			s/(\A\s+|\s+\Z)//g;
 	
 			next if length == 0;
 
 			$post_length += length;
-			### content: $_
-			### +content_len: length
-			### post_length: $post_length
 			if ($post_length >= $max_length){
 				$xml_result .= "<line>post length exceed $max_length</line>\n";
 				last;
