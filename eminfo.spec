@@ -33,14 +33,14 @@ pluginable platform written by perl/shell for linux ops.
 %build
 
 %install 
-[ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT
+[ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && /bin/rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/local/eminfo/
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d/
 cp -a *  $RPM_BUILD_ROOT/usr/local/eminfo/
 cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 
 %clean
-[ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT
+[ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && /bin/rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
@@ -62,7 +62,7 @@ fi
 
 %postun
 if [ -L "/usr/bin/eminfo" ]; then
-	rm -f /usr/bin/eminfo
+	/bin/rm -f /usr/bin/eminfo
 else
 	:
 fi

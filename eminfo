@@ -324,7 +324,7 @@ else
 				stop_single_plugin "${rp}"
 				clear_dead_lock_pid "${rp}"			
 			done
-			rm -f "${PID_FILE}" 1>&- 2>&-
+			/bin/rm -f "${PID_FILE}" 1>&- 2>&-
 			write_log -f "${EMINFO_LOG}" "TRAP0000 EMINFO Main:::EXIT"
 			exit 1
 		' 15

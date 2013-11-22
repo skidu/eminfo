@@ -89,7 +89,7 @@ write_log -f ${TAKESNAP_LOG} "[${from}]"\
 
 ### create snap_workdir dircoty 
 # only collect stderr output
-errstr=$( mkdir -p "${snap_workdir}" 2>&1  1>/dev/null )   
+errstr=$( /bin/mkdir -p "${snap_workdir}" 2>&1  1>/dev/null )   
 if [ "$?" != 0 ]; then
   	write_log -f ${TAKESNAP_LOG} "[${from}]"\
 		"ERROR: create snap workdir error: [${errstr}]"

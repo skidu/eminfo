@@ -134,7 +134,7 @@ check() {
   # for line in `echo -e "${dellist}"`     ### can't deal filename with space.
   echo -e "${dellist}" | while read line
   do
-	[ ! -z "${line//[ ]}" -a -f "${line}" ] && rm -f "${line}" 2>&-
+	[ ! -z "${line//[ ]}" -a -f "${line}" ] && /bin/rm -f "${line}" 2>&-
   done
 
   # 5. check snapdir_maxsize
@@ -145,7 +145,7 @@ check() {
   else
   	if [ $snap_dirsize -gt ${snapdir_maxsize} ]; then
 		result="${result} snap directory size [${snap_dirsize}M] >= [${snapdir_maxsize}M], cleaning up ###"
-		oldestdir=$( /usr/bin/find "${SNAPSHOT_DIR}" -mindepth 1 -maxdepth 1 | sort -n | head -n1)
+		oldestdir=$( /usr/bin/find "${SNAPSHOT_DIR}" -mindepth 1 -maxdepth 1 2>&- | sort -n | head -n1)
 		if [ "$( sub_str "${oldestdir}" "eminfo/log/snapshot/" )" == "yes" ]; then
 			result="${result} oldest dir: [${oldestdir}] will be removed ###"
 			rmerr=$( /bin/rm -rf "${oldestdir}" 2>&1 1>/dev/null )

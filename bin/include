@@ -1616,7 +1616,7 @@ del_fpid() {
         logfile="${INNER_LOG}"
   }
   # only collect stderr output.
-  errinfo=$( rm -f "${RUN_DIR}/${plugin_name}.pid" 2>&1 1>/dev/null )
+  errinfo=$( /bin/rm -f "${RUN_DIR}/${plugin_name}.pid" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
 	write_log -f "${logfile}" "E0000000 del_fpid on plugin:"\
@@ -1815,7 +1815,7 @@ stopps_by_pidfile() {
 	done
 
 	local errinfo=  rc=
-  	errinfo=$( rm -f "${fpid}" 2>&1 1>/dev/null )    ### step: 2
+  	errinfo=$( /bin/rm -f "${fpid}" 2>&1 1>/dev/null )    ### step: 2
 	rc=$?
 	if [ "${rc}" != "0" ]; then
 		write_log -f "${EMINFO_LOG}" "STP00000 EMINFO remove pidfile:"\
